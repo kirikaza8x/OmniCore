@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/OmniCore.Shared/">
+    <Project Path="OmniCore.Shared/OmniCore.Shared.Api/OmniCore.Shared.Api.csproj" />
+    <Project Path="OmniCore.Shared/OmniCore.Shared.Application/OmniCore.Shared.Application.csproj" />
+    <Project Path="OmniCore.Shared/OmniCore.Shared.Domain/OmniCore.Shared.Domain.csproj" />
+    <Project Path="OmniCore.Shared/OmniCore.Shared.Infrastructure/OmniCore.Shared.Infrastructure.csproj" />
+  </Folder>
+</Solution>
