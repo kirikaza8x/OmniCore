@@ -1,7 +1,7 @@
-﻿namespace Shared.Application.Abstractions.EventBus;
+﻿namespace OmniCore.Shared.Application.Abstractions.EventBus;
 
 public interface IIntegrationEvent
 {
-    public Guid Id { get; }
+    Guid Id { get; }
     DateTime OccurredOnUtc { get; }
 }

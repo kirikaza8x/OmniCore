@@ -1,7 +1,8 @@
-﻿namespace Shared.Domain.Queries;
+﻿namespace OmniCore.Shared.Domain.Queries;
 
 public interface IPageable
 {
-    int? PageNumber { get; }
-    int? PageSize { get; }
+    int PageNumber { get; }
+    int PageSize { get; }
+    int Skip { get; }
 }

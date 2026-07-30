@@ -3,19 +3,26 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Diagnostics;
-using OmniCore.Shared.Domain.DDD;
 using OmniCore.Shared.Application.Abstractions.Authentication;
+using OmniCore.Shared.Application.Abstractions.Time;
+using OmniCore.Shared.Domain.DDD;
 
 public sealed class AuditableEntityInterceptor : SaveChangesInterceptor
 {
     private readonly ICurrentUser _currentUser;
+    private readonly IDateTimeProvider _dateTimeProvider;
 
-    public AuditableEntityInterceptor(ICurrentUser currentUser)
+    public AuditableEntityInterceptor(
+        ICurrentUser currentUser,
+        IDateTimeProvider dateTimeProvider)
     {
         _currentUser = currentUser;
+        _dateTimeProvider = dateTimeProvider;
     }
 
-    public override InterceptionResult<int> SavingChanges(DbContextEventData eventData, InterceptionResult<int> result)
+    public override InterceptionResult<int> SavingChanges(
+        DbContextEventData eventData, 
+        InterceptionResult<int> result)
     {
         UpdateAuditProperties(eventData.Context);
         return base.SavingChanges(eventData, result);
@@ -34,8 +41,9 @@ public sealed class AuditableEntityInterceptor : SaveChangesInterceptor
     {
         if (context is null) return;
 
-        string currentUserId = _currentUser.UserId.ToString() ?? "System";
-        DateTime utcNow = DateTime.UtcNow;
+        // FIXED: Using null-conditional operator ?. to prevent string.Empty evaluation on null Guid?
+        string currentUserId = _currentUser.UserId?.ToString() ?? "System";
+        DateTime utcNow = _dateTimeProvider.UtcNow;
 
         foreach (EntityEntry entry in context.ChangeTracker.Entries())
         {
@@ -52,13 +60,33 @@ public sealed class AuditableEntityInterceptor : SaveChangesInterceptor
                 {
                     entry.Property(nameof(IAuditableEntity.ModifiedBy)).CurrentValue = currentUserId;
                     entry.Property(nameof(IAuditableEntity.ModifiedAt)).CurrentValue = utcNow;
+
+                    // Prevent overwriting original creation metadata
+                    entry.Property(nameof(IAuditableEntity.CreatedBy)).IsModified = false;
+                    entry.Property(nameof(IAuditableEntity.CreatedAt)).IsModified = false;
                 }
             }
 
-            // 2. Soft Delete Default Initialization (ISoftDeletable)
-            if (entry.Entity is ISoftDeletable && entry.State == EntityState.Added)
+            // 2. Soft Delete Interception & Initialization (ISoftDeletable)
+            if (entry.Entity is ISoftDeletable)
             {
-                entry.Property(nameof(ISoftDeletable.IsActive)).CurrentValue = true;
+                if (entry.State == EntityState.Added)
+                {
+                    entry.Property(nameof(ISoftDeletable.IsActive)).CurrentValue = true;
+                }
+                else if (entry.State == EntityState.Deleted)
+                {
+                    // FIXED: Intercept hard deletes and convert into soft deletes
+                    entry.State = EntityState.Modified;
+                    entry.Property(nameof(ISoftDeletable.IsActive)).CurrentValue = false;
+
+                    // If entity is also auditable, update modification timestamps
+                    if (entry.Entity is IAuditableEntity)
+                    {
+                        entry.Property(nameof(IAuditableEntity.ModifiedBy)).CurrentValue = currentUserId;
+                        entry.Property(nameof(IAuditableEntity.ModifiedAt)).CurrentValue = utcNow;
+                    }
+                }
             }
         }
     }

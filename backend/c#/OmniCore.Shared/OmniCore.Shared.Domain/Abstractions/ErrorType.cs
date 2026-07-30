@@ -1,4 +1,4 @@
-﻿namespace Shared.Domain.Abstractions;
+﻿namespace OmniCore.Shared.Domain.Abstractions;
 
 public enum ErrorType
 {

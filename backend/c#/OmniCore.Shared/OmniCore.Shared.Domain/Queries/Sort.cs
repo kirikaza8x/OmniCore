@@ -1,7 +1,3 @@
-﻿namespace Shared.Domain.Queries;
+﻿namespace OmniCore.Shared.Domain.Queries;
 
-public class Sort
-{
-    public string Field { get; set; } = string.Empty;
-    public string Dir { get; set; } = "asc";
-}
+public record Sort(string Field, SortOrder Order = SortOrder.Ascending);

@@ -1,9 +1,9 @@
-﻿namespace OmniCore.Shared.Infrastructure.Inbox;
+﻿using OmniCore.Shared.Infrastructure.Configs;
 
-public sealed class InboxOptions
+namespace OmniCore.Shared.Infrastructure.Inbox;
+
+public sealed class InboxOptions : ConfigBase
 {
-    public const string SectionName = "Inbox";
-
     public int IntervalInSeconds { get; set; } = 5;
 
     public int BatchSize { get; set; } = 20;

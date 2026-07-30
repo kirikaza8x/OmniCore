@@ -10,6 +10,9 @@ public class IntegrationEventConsumer<TIntegrationEvent>(
 {
     public async Task Consume(ConsumeContext<TIntegrationEvent> context)
     {
+        // Executes registered application handlers sequentially.
+        // NOTE: Handlers must be idempotent because if a subsequent handler throws,
+        // MassTransit's retry pipeline will re-execute all previous handlers in this loop.
         foreach (var handler in handlers)
         {
             await handler.HandleAsync(context.Message, context.CancellationToken);

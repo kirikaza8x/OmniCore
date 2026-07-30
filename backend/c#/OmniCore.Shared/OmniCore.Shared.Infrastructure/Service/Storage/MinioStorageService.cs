@@ -1,224 +1,292 @@
-﻿// using Amazon.S3;
-// using Amazon.S3.Model;
-// using Amazon.S3.Transfer;
-// using Microsoft.Extensions.Logging;
-// using Microsoft.Extensions.Options;
+﻿namespace OmniCore.Shared.Infrastructure.Services.Storage;
 
-// namespace Shared.Infrastructure.Service.Storage;
+using System.Net;
+using Amazon.S3;
+using Amazon.S3.Model;
+using Amazon.S3.Transfer;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using OmniCore.Shared.Application.Abstractions.Storage;
+using OmniCore.Shared.Infrastructure.Configs.Storage;
 
-// public sealed class MinioStorageService : IStorageService
-// {
-//     private readonly IAmazonS3 _s3Client;
-//     private readonly StorageConfig _config;
-//     private readonly ILogger<MinioStorageService> _logger;
-//     private bool _bucketChecked;
+/// <summary>
+/// Storage service implementation for MinIO and Amazon S3 object storage compatibility.
+/// </summary>
+public sealed class MinioStorageService : IStorageService, IDisposable
+{
+    private readonly IAmazonS3 _s3Client;
+    private readonly StorageConfig _config;
+    private readonly ILogger<MinioStorageService> _logger;
+    private readonly SemaphoreSlim _bucketLock = new(1, 1);
+    private bool _bucketChecked;
 
-//     public MinioStorageService(
-//         IOptions<StorageConfig> config,
-//         ILogger<MinioStorageService> logger)
-//     {
-//         _config = config.Value;
-//         _logger = logger;
+    /// <summary>
+    /// Initializes a new instance of the <see cref="MinioStorageService"/> class.
+    /// </summary>
+    public MinioStorageService(
+        IOptions<StorageConfig> config,
+        ILogger<MinioStorageService> logger)
+    {
+        _config = config.Value;
+        _logger = logger;
 
-//         // Ensure endpoint has protocol
-//         var endpoint = _config.Endpoint;
-//         if (!endpoint.StartsWith("http://") && !endpoint.StartsWith("https://"))
-//         {
-//             endpoint = _config.UseSSL ? $"https://{endpoint}" : $"http://{endpoint}";
-//         }
+        var endpoint = _config.Endpoint;
+        if (!endpoint.StartsWith("http://", StringComparison.OrdinalIgnoreCase) &&
+            !endpoint.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+        {
+            endpoint = _config.UseSSL ? $"https://{endpoint}" : $"http://{endpoint}";
+        }
 
-//         var s3Config = new AmazonS3Config
-//         {
-//             ServiceURL = endpoint,
-//             ForcePathStyle = false,
-//             UseHttp = !_config.UseSSL
-//         };
+        var s3Config = new AmazonS3Config
+        {
+            ServiceURL = endpoint,
+            ForcePathStyle = true, // Required for MinIO
+            UseHttp = !_config.UseSSL
+        };
 
-//         _s3Client = new AmazonS3Client(
-//             _config.AccessKey,
-//             _config.SecretKey,
-//             s3Config);
-//     }
+        _s3Client = new AmazonS3Client(
+            _config.AccessKey,
+            _config.SecretKey,
+            s3Config);
+    }
 
-//     public async Task<string> UploadAsync(
-//         Stream fileStream,
-//         string fileName,
-//         string contentType,
-//         string? folder = null,
-//         CancellationToken cancellationToken = default)
-//     {
-//         // Ensure bucket exists
-//         await EnsureBucketExistsAsync(cancellationToken);
+    /// <inheritdoc />
+    public async Task<UploadResult> UploadAsync(
+        IFileUpload file,
+        string? folder = null,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(file);
 
-//         var objectKey = GenerateObjectKey(fileName, folder);
+        await using var stream = file.OpenReadStream();
+        return await UploadAsync(stream, file.FileName, file.ContentType, folder, cancellationToken);
+    }
 
-//         try
-//         {
-//             var uploadRequest = new TransferUtilityUploadRequest
-//             {
-//                 InputStream = fileStream,
-//                 Key = objectKey,
-//                 BucketName = _config.BucketName,
-//                 ContentType = contentType
-//             };
+    /// <inheritdoc />
+    public async Task<UploadResult> UploadAsync(
+        Stream fileStream,
+        string fileName,
+        string contentType,
+        string? folder = null,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(fileStream);
+        ArgumentException.ThrowIfNullOrWhiteSpace(fileName);
+        ArgumentException.ThrowIfNullOrWhiteSpace(contentType);
 
-//             using var transferUtility = new TransferUtility(_s3Client);
-//             await transferUtility.UploadAsync(uploadRequest, cancellationToken);
+        await EnsureBucketExistsAsync(cancellationToken);
 
-//             _logger.LogInformation("File uploaded successfully: {ObjectKey}", objectKey);
+        var objectKey = GenerateObjectKey(fileName, folder);
+        long fileSize = fileStream.CanSeek ? fileStream.Length : 0;
 
-//             return GetPublicUrl(objectKey);
-//         }
-//         catch (Exception ex)
-//         {
-//             _logger.LogError(ex, "Failed to upload file: {FileName}", fileName);
-//             throw;
-//         }
-//     }
+        try
+        {
+            var uploadRequest = new TransferUtilityUploadRequest
+            {
+                InputStream = fileStream,
+                Key = objectKey,
+                BucketName = _config.BucketName,
+                ContentType = contentType
+            };
 
-//     public async Task<string> UploadAsync(
-//         byte[] fileBytes,
-//         string fileName,
-//         string contentType,
-//         string? folder = null,
-//         CancellationToken cancellationToken = default)
-//     {
-//         using var stream = new MemoryStream(fileBytes);
-//         return await UploadAsync(stream, fileName, contentType, folder, cancellationToken);
-//     }
+            using var transferUtility = new TransferUtility(_s3Client);
+            await transferUtility.UploadAsync(uploadRequest, cancellationToken);
 
-//     public async Task DeleteAsync(string fileUrl, CancellationToken cancellationToken = default)
-//     {
-//         var objectKey = ExtractObjectKeyFromUrl(fileUrl);
+            var publicUrl = GetPublicUrl(objectKey);
 
-//         try
-//         {
-//             var deleteRequest = new DeleteObjectRequest
-//             {
-//                 BucketName = _config.BucketName,
-//                 Key = objectKey
-//             };
+            _logger.LogInformation("File uploaded successfully: {ObjectKey}", objectKey);
 
-//             await _s3Client.DeleteObjectAsync(deleteRequest, cancellationToken);
-//             _logger.LogInformation("File deleted successfully: {ObjectKey}", objectKey);
-//         }
-//         catch (Exception ex)
-//         {
-//             _logger.LogError(ex, "Failed to delete file: {ObjectKey}", objectKey);
-//             throw;
-//         }
-//     }
+            return new UploadResult(
+                ObjectKey: objectKey,
+                PublicUrl: publicUrl,
+                FileName: fileName,
+                ContentType: contentType,
+                FileSize: fileSize);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to upload file: {FileName}", fileName);
+            throw;
+        }
+    }
 
-//     public async Task<Stream?> DownloadAsync(string fileUrl, CancellationToken cancellationToken = default)
-//     {
-//         var objectKey = ExtractObjectKeyFromUrl(fileUrl);
+    /// <inheritdoc />
+    public async Task<UploadResult> UploadAsync(
+        byte[] fileBytes,
+        string fileName,
+        string contentType,
+        string? folder = null,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(fileBytes);
 
-//         try
-//         {
-//             var response = await _s3Client.GetObjectAsync(
-//                 _config.BucketName,
-//                 objectKey,
-//                 cancellationToken);
+        using var stream = new MemoryStream(fileBytes);
+        return await UploadAsync(stream, fileName, contentType, folder, cancellationToken);
+    }
 
-//             return response.ResponseStream;
-//         }
-//         catch (AmazonS3Exception ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
-//         {
-//             _logger.LogWarning("File not found: {ObjectKey}", objectKey);
-//             return null;
-//         }
-//     }
+    /// <inheritdoc />
+    public async Task DeleteAsync(string objectKeyOrUrl, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(objectKeyOrUrl);
 
-//     public string GetPublicUrl(string objectKey)
-//     {
-//         if (!string.IsNullOrEmpty(_config.PublicUrl))
-//         {
-//             return $"{_config.PublicUrl.TrimEnd('/')}/{objectKey}";
-//         }
+        var objectKey = ExtractObjectKeyFromUrl(objectKeyOrUrl);
 
-//         return $"https://{_config.BucketName}.s3.{_config.Region}.amazonaws.com/{objectKey}";
-//     }
+        try
+        {
+            var deleteRequest = new DeleteObjectRequest
+            {
+                BucketName = _config.BucketName,
+                Key = objectKey
+            };
 
-//     private async Task EnsureBucketExistsAsync(CancellationToken cancellationToken = default)
-//     {
-//         if (_bucketChecked) return;
+            await _s3Client.DeleteObjectAsync(deleteRequest, cancellationToken);
+            _logger.LogInformation("File deleted successfully: {ObjectKey}", objectKey);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to delete file: {ObjectKey}", objectKey);
+            throw;
+        }
+    }
 
-//         try
-//         {
-//             var bucketExists = await Amazon.S3.Util.AmazonS3Util.DoesS3BucketExistV2Async(
-//                 _s3Client,
-//                 _config.BucketName);
+    /// <inheritdoc />
+    public async Task<Stream?> DownloadAsync(string objectKeyOrUrl, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(objectKeyOrUrl);
 
-//             if (!bucketExists)
-//             {
-//                 _logger.LogInformation("Creating bucket: {BucketName}", _config.BucketName);
+        var objectKey = ExtractObjectKeyFromUrl(objectKeyOrUrl);
 
-//                 await _s3Client.PutBucketAsync(new PutBucketRequest
-//                 {
-//                     BucketName = _config.BucketName,
-//                     UseClientRegion = true
-//                 }, cancellationToken);
+        try
+        {
+            var response = await _s3Client.GetObjectAsync(
+                _config.BucketName,
+                objectKey,
+                cancellationToken);
 
-//                 // Set bucket policy for public read (optional)
-//                 var policy = $$"""
-//                 {
-//                     "Version": "2012-10-17",
-//                     "Statement": [
-//                         {
-//                             "Effect": "Allow",
-//                             "Principal": "*",
-//                             "Action": ["s3:GetObject"],
-//                             "Resource": ["arn:aws:s3:::{{_config.BucketName}}/*"]
-//                         }
-//                     ]
-//                 }
-//                 """;
+            return response.ResponseStream;
+        }
+        catch (AmazonS3Exception ex) when (ex.StatusCode == HttpStatusCode.NotFound)
+        {
+            _logger.LogWarning("File not found: {ObjectKey}", objectKey);
+            return null;
+        }
+    }
 
-//                 await _s3Client.PutBucketPolicyAsync(new PutBucketPolicyRequest
-//                 {
-//                     BucketName = _config.BucketName,
-//                     Policy = policy
-//                 }, cancellationToken);
+    /// <inheritdoc />
+    public string GetPublicUrl(string objectKey)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(objectKey);
 
-//                 _logger.LogInformation("Bucket created successfully: {BucketName}", _config.BucketName);
-//             }
+        if (!string.IsNullOrWhiteSpace(_config.PublicUrl))
+        {
+            return $"{_config.PublicUrl.TrimEnd('/')}/{objectKey}";
+        }
 
-//             _bucketChecked = true;
-//         }
-//         catch (Exception ex)
-//         {
-//             _logger.LogError(ex, "Failed to ensure bucket exists: {BucketName}", _config.BucketName);
-//             throw;
-//         }
-//     }
+        var endpoint = _config.Endpoint.TrimEnd('/');
+        if (!endpoint.StartsWith("http://", StringComparison.OrdinalIgnoreCase) &&
+            !endpoint.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+        {
+            endpoint = _config.UseSSL ? $"https://{endpoint}" : $"http://{endpoint}";
+        }
 
-//     private static string GenerateObjectKey(string fileName, string? folder)
-//     {
-//         var sanitizedFileName = SanitizeFileName(fileName);
-//         var uniqueFileName = $"{Guid.NewGuid():N}_{sanitizedFileName}";
+        return $"{endpoint}/{_config.BucketName}/{objectKey}";
+    }
 
-//         return string.IsNullOrEmpty(folder)
-//             ? uniqueFileName
-//             : $"{folder.Trim('/')}/{uniqueFileName}";
-//     }
+    private async Task EnsureBucketExistsAsync(CancellationToken cancellationToken = default)
+    {
+        if (_bucketChecked) return;
 
-//     private static string SanitizeFileName(string fileName)
-//     {
-//         var invalidChars = Path.GetInvalidFileNameChars();
-//         return string.Join("_", fileName.Split(invalidChars, StringSplitOptions.RemoveEmptyEntries));
-//     }
+        await _bucketLock.WaitAsync(cancellationToken);
+        try
+        {
+            if (_bucketChecked) return;
 
-//     private string ExtractObjectKeyFromUrl(string fileUrl)
-//     {
-//         if (Uri.TryCreate(fileUrl, UriKind.Absolute, out var uri))
-//         {
-//             var path = uri.AbsolutePath.TrimStart('/');
-//             if (path.StartsWith(_config.BucketName))
-//             {
-//                 path = path[(_config.BucketName.Length + 1)..];
-//             }
-//             return path;
-//         }
-//         return fileUrl;
-//     }
-// }
+            var bucketExists = await Amazon.S3.Util.AmazonS3Util.DoesS3BucketExistV2Async(
+                _s3Client,
+                _config.BucketName);
+
+            if (!bucketExists)
+            {
+                _logger.LogInformation("Creating bucket: {BucketName}", _config.BucketName);
+
+                await _s3Client.PutBucketAsync(new PutBucketRequest
+                {
+                    BucketName = _config.BucketName,
+                    UseClientRegion = true
+                }, cancellationToken);
+
+                var policy = $$"""
+                {
+                    "Version": "2012-10-17",
+                    "Statement": [
+                        {
+                            "Effect": "Allow",
+                            "Principal": "*",
+                            "Action": ["s3:GetObject"],
+                            "Resource": ["arn:aws:s3:::{{_config.BucketName}}/*"]
+                        }
+                    ]
+                }
+                """;
+
+                await _s3Client.PutBucketPolicyAsync(new PutBucketPolicyRequest
+                {
+                    BucketName = _config.BucketName,
+                    Policy = policy
+                }, cancellationToken);
+
+                _logger.LogInformation("Bucket created successfully: {BucketName}", _config.BucketName);
+            }
+
+            _bucketChecked = true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to ensure bucket exists: {BucketName}", _config.BucketName);
+            throw;
+        }
+        finally
+        {
+            _bucketLock.Release();
+        }
+    }
+
+    private static string GenerateObjectKey(string fileName, string? folder)
+    {
+        var sanitizedFileName = SanitizeFileName(fileName);
+        var uniqueFileName = $"{Guid.NewGuid():N}_{sanitizedFileName}";
+
+        return string.IsNullOrWhiteSpace(folder)
+            ? uniqueFileName
+            : $"{folder.Trim('/')}/{uniqueFileName}";
+    }
+
+    private static string SanitizeFileName(string fileName)
+    {
+        var invalidChars = Path.GetInvalidFileNameChars();
+        return string.Join("_", fileName.Split(invalidChars, StringSplitOptions.RemoveEmptyEntries));
+    }
+
+    private string ExtractObjectKeyFromUrl(string fileUrl)
+    {
+        if (Uri.TryCreate(fileUrl, UriKind.Absolute, out var uri))
+        {
+            var path = uri.AbsolutePath.TrimStart('/');
+            var bucketPrefix = $"{_config.BucketName}/";
+
+            if (path.StartsWith(bucketPrefix, StringComparison.OrdinalIgnoreCase))
+            {
+                path = path[bucketPrefix.Length..];
+            }
+            return path;
+        }
+        return fileUrl;
+    }
+
+    /// <inheritdoc />
+    public void Dispose()
+    {
+        _s3Client.Dispose();
+        _bucketLock.Dispose();
+    }
+}

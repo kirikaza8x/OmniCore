@@ -1,24 +1,33 @@
-﻿namespace Shared.Application.Abstractions.Storage;
+﻿namespace OmniCore.Shared.Application.Abstractions.Storage;
 
 public interface IStorageService
 {
-    Task<string> UploadAsync(
+    Task<UploadResult> UploadAsync(
+        IFileUpload file,
+        string? folder = null,
+        CancellationToken cancellationToken = default);
+
+    Task<UploadResult> UploadAsync(
         Stream fileStream,
         string fileName,
         string contentType,
         string? folder = null,
         CancellationToken cancellationToken = default);
 
-    Task<string> UploadAsync(
+    Task<UploadResult> UploadAsync(
         byte[] fileBytes,
         string fileName,
         string contentType,
         string? folder = null,
         CancellationToken cancellationToken = default);
 
-    Task DeleteAsync(string fileUrl, CancellationToken cancellationToken = default);
+    Task DeleteAsync(
+        string objectKeyOrUrl, 
+        CancellationToken cancellationToken = default);
 
-    Task<Stream?> DownloadAsync(string fileUrl, CancellationToken cancellationToken = default);
+    Task<Stream?> DownloadAsync(
+        string objectKeyOrUrl, 
+        CancellationToken cancellationToken = default);
 
     string GetPublicUrl(string objectKey);
 }

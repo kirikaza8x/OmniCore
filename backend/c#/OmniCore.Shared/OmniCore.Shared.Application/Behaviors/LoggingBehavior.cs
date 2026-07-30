@@ -1,13 +1,12 @@
-﻿using System.Diagnostics;
+﻿namespace OmniCore.Shared.Application.Behaviors;
+
+using System.Diagnostics;
 using MediatR;
 using Microsoft.Extensions.Logging;
-using Serilog.Context;
-using Shared.Domain.Abstractions;
-
-namespace Shared.Application.Behaviors;
+using OmniCore.Shared.Domain.Abstractions;
 
 /// <summary>
-/// Pipeline behavior for request logging with Serilog structured logging
+/// Pipeline behavior for structured request logging and OpenTelemetry activity tracking.
 /// </summary>
 internal sealed class LoggingBehavior<TRequest, TResponse>(
     ILogger<LoggingBehavior<TRequest, TResponse>> logger)
@@ -20,8 +19,8 @@ internal sealed class LoggingBehavior<TRequest, TResponse>(
         RequestHandlerDelegate<TResponse> next,
         CancellationToken cancellationToken)
     {
-        string moduleName = GetModuleName(typeof(TRequest).FullName!);
         string requestName = typeof(TRequest).Name;
+        string moduleName = GetModuleName(typeof(TRequest).FullName ?? requestName);
 
         // OpenTelemetry Activity tags
         Activity.Current?.SetTag("request.module", moduleName);
@@ -29,7 +28,11 @@ internal sealed class LoggingBehavior<TRequest, TResponse>(
 
         var stopwatch = Stopwatch.StartNew();
 
-        using (LogContext.PushProperty("Module", moduleName))
+        using (logger.BeginScope(new Dictionary<string, object>
+        {
+            ["Module"] = moduleName,
+            ["RequestName"] = requestName
+        }))
         {
             logger.LogInformation("Processing request {RequestName}", requestName);
 
@@ -40,19 +43,17 @@ internal sealed class LoggingBehavior<TRequest, TResponse>(
             if (result.IsSuccess)
             {
                 logger.LogInformation(
-                    "Completed request {RequestName} in {ElapsedMilliseconds}ms",
+                    "Completed request {RequestName} successfully in {ElapsedMilliseconds}ms",
                     requestName,
                     stopwatch.ElapsedMilliseconds);
             }
             else
             {
-                using (LogContext.PushProperty("Error", result.Error, destructureObjects: true))
-                {
-                    logger.LogError(
-                        "Completed request {RequestName} with error in {ElapsedMilliseconds}ms",
-                        requestName,
-                        stopwatch.ElapsedMilliseconds);
-                }
+                logger.LogWarning(
+                    "Completed request {RequestName} with error {@Error} in {ElapsedMilliseconds}ms",
+                    requestName,
+                    result.Error,
+                    stopwatch.ElapsedMilliseconds);
             }
 
             return result;
@@ -61,7 +62,13 @@ internal sealed class LoggingBehavior<TRequest, TResponse>(
 
     private static string GetModuleName(string fullName)
     {
-        var parts = fullName.Split('.');
+        string[] parts = fullName.Split('.');
+
+        if (parts.Length > 1 && parts[0].Equals("OmniCore", StringComparison.OrdinalIgnoreCase))
+        {
+            return parts[1]; // e.g., OmniCore.Ordering -> Ordering
+        }
+
         return parts.Length > 0 ? parts[0] : "Unknown";
     }
 }

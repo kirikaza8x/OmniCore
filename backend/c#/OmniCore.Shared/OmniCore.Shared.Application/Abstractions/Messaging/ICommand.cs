@@ -1,15 +1,16 @@
-﻿using MediatR;
-using Shared.Domain.Abstractions;
+﻿namespace OmniCore.Shared.Application.Abstractions.Messaging;
 
-namespace Shared.Application.Abstractions.Messaging;
+using MediatR;
+using OmniCore.Shared.Domain.Abstractions;
 
-public interface ICommand : IRequest<Result>
-{
-}
-public interface ICommand<TResponse> : IRequest<Result<TResponse>>
+public interface ICommand : IRequest<Result>, IBaseCommand
 {
 }
 
-public interface IStreamCommand<out TResponse> : IStreamRequest<TResponse>
+public interface ICommand<TResponse> : IRequest<Result<TResponse>>, IBaseCommand
+{
+}
+
+public interface IStreamCommand<out TResponse> : IStreamRequest<TResponse>, IBaseCommand
 {
 }

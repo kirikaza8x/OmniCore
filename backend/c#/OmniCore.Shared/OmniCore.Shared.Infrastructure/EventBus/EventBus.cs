@@ -10,7 +10,10 @@ public sealed class EventBus(IPublishEndpoint publishEndpoint) : IEventBus
         CancellationToken cancellationToken = default)
         where TEvent : class, IIntegrationEvent
     {
-        await publishEndpoint.Publish(@event, cancellationToken);
+        ArgumentNullException.ThrowIfNull(@event);
+
+        
+        await publishEndpoint.Publish(@event, @event.GetType(), cancellationToken);
     }
 
     public async Task PublishAsync<TEvent>(
@@ -18,6 +21,11 @@ public sealed class EventBus(IPublishEndpoint publishEndpoint) : IEventBus
         CancellationToken cancellationToken = default)
         where TEvent : class, IIntegrationEvent
     {
-        await publishEndpoint.PublishBatch(events, cancellationToken);
+        ArgumentNullException.ThrowIfNull(events);
+
+        var eventList = events as IReadOnlyList<TEvent> ?? events.ToList();
+        if (eventList.Count == 0) return;
+
+        await publishEndpoint.PublishBatch(eventList, cancellationToken);
     }
 }

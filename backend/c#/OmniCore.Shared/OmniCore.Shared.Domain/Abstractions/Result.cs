@@ -1,4 +1,4 @@
-﻿namespace Shared.Domain.Abstractions;
+﻿namespace OmniCore.Shared.Domain.Abstractions;
 
 public class Result
 {
@@ -7,7 +7,7 @@ public class Result
         if (isSuccess && error != Error.None ||
             !isSuccess && error == Error.None)
         {
-            throw new ArgumentException("Invalid error", nameof(error));
+            throw new ArgumentException("Invalid error state for Result", nameof(error));
         }
 
         IsSuccess = isSuccess;
@@ -23,6 +23,13 @@ public class Result
 
     public static Result<TValue> Success<TValue>(TValue value) => new(value, true, Error.None);
     public static Result<TValue> Failure<TValue>(Error error) => new(default!, false, error);
+
+    // Implicit conversion from Error to Result
+    public static implicit operator Result(Error error) => Failure(error);
+
+    // Functional pattern matching helper
+    public TMatch Match<TMatch>(Func<TMatch> onSuccess, Func<Error, TMatch> onFailure) =>
+        IsSuccess ? onSuccess() : onFailure(Error);
 }
 
 public class Result<TValue> : Result
@@ -37,10 +44,17 @@ public class Result<TValue> : Result
 
     public TValue Value => IsSuccess
         ? _value!
-        : throw new InvalidOperationException("Cannot access value of a failed result");
+        : throw new InvalidOperationException("Cannot access the value of a failed result.");
 
+    public TValue? GetValueOrDefault() => _value;
+
+    // Implicit conversions
     public static implicit operator Result<TValue>(TValue value) =>
         value is not null ? Success(value) : Failure<TValue>(Error.NullValue);
 
-    public TValue? GetValueOrDefault() => _value;
+    public static implicit operator Result<TValue>(Error error) => Failure<TValue>(error);
+
+    // Functional pattern matching helper
+    public TMatch Match<TMatch>(Func<TValue, TMatch> onSuccess, Func<Error, TMatch> onFailure) =>
+        IsSuccess ? onSuccess(Value) : onFailure(Error);
 }

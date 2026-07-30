@@ -1,7 +1,9 @@
-﻿namespace Shared.Application.Abstractions.EventBus;
+﻿namespace OmniCore.Shared.Application.Abstractions.EventBus;
 
 public abstract class IntegrationEventHandler<TIntegrationEvent> : IIntegrationEventHandler<TIntegrationEvent>
-    where TIntegrationEvent : class, IIntegrationEvent
+    where TIntegrationEvent : IIntegrationEvent
 {
-    public abstract Task Handle(TIntegrationEvent integrationEvent, CancellationToken cancellationToken = default);
+    public abstract Task HandleAsync(
+        TIntegrationEvent integrationEvent, 
+        CancellationToken cancellationToken = default);
 }

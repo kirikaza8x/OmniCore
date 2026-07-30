@@ -1,21 +1,38 @@
-// using Microsoft.AspNetCore.SignalR;
+namespace OmniCore.Shared.Infrastructure.Services.SignalR;
 
-// public class SignalRLogNotifier : ILogNotifier
-// {
-//     private readonly IHubContext<LogHub> _hubContext;
+using Microsoft.AspNetCore.SignalR;
+using OmniCore.Shared.Application.Abstractions.SignalR;
+using OmniCore.Shared.Application.DTOs;
+using OmniCore.Shared.Infrastructure.Hubs;
 
-//     public SignalRLogNotifier(IHubContext<LogHub> hubContext)
-//     {
-//         _hubContext = hubContext;
-//     }
+/// <summary>
+/// Real-time notifier that broadcasts log entries to connected SignalR hub clients.
+/// </summary>
+public sealed class SignalRLogNotifier : ILogNotifier
+{
+    private readonly IHubContext<LogHub> _hubContext;
 
-//     public async Task NotifyAsync(string message, string level)
-//     {
-//         await _hubContext.Clients.All.SendAsync("ReceiveLog", new 
-//         { 
-//             message, 
-//             level,
-//             timestamp = DateTime.Now.ToString("HH:mm:ss") 
-//         });
-//     }
-// }
+    /// <summary>
+    /// Initializes a new instance of the <see cref="SignalRLogNotifier"/> class.
+    /// </summary>
+    public SignalRLogNotifier(IHubContext<LogHub> hubContext)
+    {
+        _hubContext = hubContext;
+    }
+
+    /// <inheritdoc />
+    public async Task NotifyAsync(
+        string category, 
+        string message, 
+        string level, 
+        CancellationToken cancellationToken = default)
+    {
+        var payload = new LogNotificationDto(
+            Category: category,
+            Message: message,
+            Level: level,
+            TimestampUtc: DateTime.UtcNow);
+
+        await _hubContext.Clients.All.SendAsync("ReceiveLog", payload, cancellationToken);
+    }
+}

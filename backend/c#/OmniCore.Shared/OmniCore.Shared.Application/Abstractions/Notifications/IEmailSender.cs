@@ -1,7 +1,12 @@
-namespace Shared.Application.Abstractions.Notifications
+namespace OmniCore.Shared.Application.Abstractions.Notifications;
+
+public interface IEmailSender
 {
-    public interface IEmailSender
-    {
-        Task SendAsync(EmailMessage message, CancellationToken cancellationToken = default);
-    }
+    Task SendAsync(
+        EmailMessage message, 
+        CancellationToken cancellationToken = default);
+
+    Task SendBatchAsync(
+        IEnumerable<EmailMessage> messages, 
+        CancellationToken cancellationToken = default);
 }

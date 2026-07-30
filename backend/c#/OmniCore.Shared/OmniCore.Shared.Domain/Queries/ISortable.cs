@@ -1,7 +1,7 @@
-﻿namespace Shared.Domain.Queries;
+﻿namespace OmniCore.Shared.Domain.Queries;
 
 public interface ISortable
 {
     string? SortColumn { get; }
-    SortOrder? SortOrder { get; }
+    SortOrder SortOrder { get; }
 }

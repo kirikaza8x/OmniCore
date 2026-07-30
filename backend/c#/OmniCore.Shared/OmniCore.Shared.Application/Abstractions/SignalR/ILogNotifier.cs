@@ -1,5 +1,6 @@
-namespace Shared.Application.Abstractions.SignalR;
+namespace OmniCore.Shared.Application.Abstractions.SignalR;
+
 public interface ILogNotifier
 {
-    Task NotifyAsync(string message, string level);
+    Task NotifyAsync(string category, string message, string level, CancellationToken cancellationToken = default);
 }

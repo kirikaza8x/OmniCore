@@ -1,135 +1,90 @@
-// using Shared.Application.Abstractions.Authentication;
-// using Shared.Application.DTOs;
-// using UAParser;
+namespace OmniCore.Shared.Infrastructure.Services.Authentication;
 
-// namespace Shared.Infrastructure.Service.Authentication;
+using OmniCore.Shared.Application.Abstractions.Authentication;
+using OmniCore.Shared.Application.DTOs;
+using UAParser;
 
-// public class DeviceDetectionService : IDeviceDetectionService
-// {
-//     private readonly Parser _uaParser;
+/// <summary>
+/// Service responsible for parsing HTTP User-Agent headers to resolve device, browser, and operating system details.
+/// </summary>
+public sealed class DeviceDetectionService : IDeviceDetectionService
+{
+    private static readonly Parser UaParser = Parser.GetDefault();
 
-//     public DeviceDetectionService()
-//     {
-//         _uaParser = Parser.GetDefault();
-//     }
+    /// <inheritdoc />
+    public DeviceInfo GetDeviceInfo(
+        string? userAgent,
+        string? ipAddress = null,
+        string? existingDeviceId = null)
+    {
+        var deviceId = string.IsNullOrWhiteSpace(existingDeviceId)
+            ? GenerateDeviceId()
+            : existingDeviceId;
 
-//     public DeviceInfo GetDeviceInfo(
-//         string? userAgent,
-//         string? ipAddress = null,
-//         string? existingDeviceId = null)
-//     {
-//         if (string.IsNullOrWhiteSpace(existingDeviceId))
-//         {
-//             throw new InvalidOperationException(
-//                 "DeviceId must be explicitly generated during login.");
-//         }
+        if (string.IsNullOrWhiteSpace(userAgent))
+        {
+            return new DeviceInfo(
+                DeviceId: deviceId,
+                DeviceName: "Unknown Device",
+                OperatingSystem: "Unknown",
+                Browser: "Unknown",
+                IpAddress: ipAddress);
+        }
 
-//         var deviceId = existingDeviceId;
+        // OPTIMIZATION: Parse User-Agent ONCE and reuse across helpers
+        var clientInfo = UaParser.Parse(userAgent);
+        var browser = GetBrowserName(clientInfo);
+        var os = GetOperatingSystemName(clientInfo);
+        var deviceName = ResolveDeviceNameFromClientInfo(clientInfo, browser, os);
 
-//         if (string.IsNullOrWhiteSpace(userAgent))
-//         {
-//             return new DeviceInfo
-//             {
-//                 DeviceId = deviceId,
-//                 DeviceName = "Unknown Device",
-//                 Browser = "Unknown",
-//                 OperatingSystem = "Unknown",
-//                 DeviceType = "Unknown",
-//                 UserAgent = userAgent,
-//                 IpAddress = ipAddress
-//             };
-//         }
+        return new DeviceInfo(
+            DeviceId: deviceId,
+            DeviceName: deviceName,
+            OperatingSystem: os,
+            Browser: browser,
+            IpAddress: ipAddress);
+    }
 
-//         var clientInfo = _uaParser.Parse(userAgent);
+    /// <inheritdoc />
+    public string GenerateDeviceId()
+    {
+        return Guid.NewGuid().ToString("N");
+    }
 
-//         var browser = GetBrowserName(clientInfo);
-//         var os = GetOperatingSystemName(clientInfo);
-//         var deviceType = GetDeviceType(clientInfo);
-//         var deviceName = ResolveDeviceName(userAgent);
+    /// <inheritdoc />
+    public string? ResolveDeviceName(string? userAgent)
+    {
+        if (string.IsNullOrWhiteSpace(userAgent))
+            return "Unknown Device";
 
-//         return new DeviceInfo
-//         {
-//             DeviceId = deviceId,
-//             DeviceName = deviceName ?? "Unknown Device",
-//             Browser = browser,
-//             OperatingSystem = os,
-//             DeviceType = deviceType,
-//             BrowserVersion = clientInfo.UA.Major,
-//             OSVersion = clientInfo.OS.Major,
-//             UserAgent = userAgent,
-//             IpAddress = ipAddress
-//         };
-//     }
+        var clientInfo = UaParser.Parse(userAgent);
+        var browser = GetBrowserName(clientInfo);
+        var os = GetOperatingSystemName(clientInfo);
 
-//     public string GenerateDeviceId()
-//     {
-//         return Guid.NewGuid().ToString();
-//     }
+        return ResolveDeviceNameFromClientInfo(clientInfo, browser, os);
+    }
 
-//     public string? ResolveDeviceName(string? userAgent)
-//     {
-//         if (string.IsNullOrWhiteSpace(userAgent))
-//             return "Unknown Device";
+    private static string ResolveDeviceNameFromClientInfo(ClientInfo clientInfo, string browser, string os)
+    {
+        var deviceFamily = clientInfo.Device.Family;
 
-//         var clientInfo = _uaParser.Parse(userAgent);
-//         var browser = GetBrowserName(clientInfo);
-//         var os = GetOperatingSystemName(clientInfo);
-//         var deviceFamily = clientInfo.Device.Family;
+        if (!string.IsNullOrWhiteSpace(deviceFamily) && deviceFamily != "Other")
+        {
+            return $"{deviceFamily} ({browser} on {os})";
+        }
 
-//         if (!string.IsNullOrWhiteSpace(deviceFamily) && deviceFamily != "Other")
-//         {
-//             return $"{deviceFamily} ({browser} on {os})";
-//         }
+        return $"{browser} on {os}";
+    }
 
-//         return $"{browser} on {os}";
-//     }
+    private static string GetBrowserName(ClientInfo clientInfo)
+    {
+        var browser = clientInfo.UA.Family;
+        return string.IsNullOrWhiteSpace(browser) ? "Unknown Browser" : browser;
+    }
 
-//     private string GetBrowserName(ClientInfo clientInfo)
-//     {
-//         var browser = clientInfo.UA.Family;
-//         return browser switch
-//         {
-//             "Chrome" => "Chrome",
-//             "Firefox" => "Firefox",
-//             "Safari" => "Safari",
-//             "Edge" => "Edge",
-//             "Opera" => "Opera",
-//             "IE" => "Internet Explorer",
-//             _ => browser ?? "Unknown Browser"
-//         };
-//     }
-
-//     private string GetOperatingSystemName(ClientInfo clientInfo)
-//     {
-//         var os = clientInfo.OS.Family;
-//         return os switch
-//         {
-//             "Windows" => "Windows",
-//             "Mac OS X" => "macOS",
-//             "iOS" => "iOS",
-//             "Android" => "Android",
-//             "Linux" => "Linux",
-//             "Ubuntu" => "Ubuntu",
-//             _ => os ?? "Unknown OS"
-//         };
-//     }
-
-//     private string GetDeviceType(ClientInfo clientInfo)
-//     {
-//         var device = clientInfo.Device.Family;
-
-//         if (clientInfo.Device.IsSpider)
-//             return "Bot";
-
-//         if (device.Contains("iPhone") || device.Contains("iPad"))
-//             return "Mobile";
-
-//         if (device.Contains("Android"))
-//             return "Mobile";
-
-//         if (clientInfo.OS.Family == "iOS" || clientInfo.OS.Family == "Android")
-//             return "Mobile";
-
-//         return "Desktop";
-//     }
-// }
+    private static string GetOperatingSystemName(ClientInfo clientInfo)
+    {
+        var os = clientInfo.OS.Family;
+        return string.IsNullOrWhiteSpace(os) ? "Unknown OS" : os;
+    }
+}

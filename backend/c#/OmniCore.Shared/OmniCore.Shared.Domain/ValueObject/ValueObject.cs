@@ -1,4 +1,4 @@
-﻿namespace Shared.Domain.DDD;
+﻿namespace OmniCore.Shared.Domain.ValueObject;
 
 public abstract class ValueObject : IEquatable<ValueObject>
 {
@@ -26,4 +26,8 @@ public abstract class ValueObject : IEquatable<ValueObject>
         return GetType() == other.GetType()
             && GetAtomicValues().SequenceEqual(other.GetAtomicValues());
     }
+
+    public static bool operator ==(ValueObject? left, ValueObject? right) => Equals(left, right);
+
+    public static bool operator !=(ValueObject? left, ValueObject? right) => !Equals(left, right);
 }

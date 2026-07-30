@@ -1,4 +1,4 @@
-namespace Shared.Application.Abstractions.Storage;
+namespace OmniCore.Shared.Application.Abstractions.Storage;
 
 public interface IFileUpload
 {

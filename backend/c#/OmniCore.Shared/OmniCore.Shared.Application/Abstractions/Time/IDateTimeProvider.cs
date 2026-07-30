@@ -1,4 +1,4 @@
-﻿namespace Shared.Application.Abstractions.Time;
+namespace OmniCore.Shared.Application.Abstractions.Time;
 
 public interface IDateTimeProvider
 {

@@ -1,6 +1,11 @@
-namespace Shared.Application.Abstractions.Outbox;
+namespace OmniCore.Shared.Application.Abstractions.Outbox;
+
+using OmniCore.Shared.Application.Abstractions.EventBus;
 
 public interface IOutboxService
 {
-    void Preserve<T>(T integrationEvent) where T : class;
+    Task EnqueueAsync<T>(
+        T integrationEvent, 
+        CancellationToken cancellationToken = default) 
+        where T : class, IIntegrationEvent;
 }

@@ -1,32 +1,31 @@
-// using Microsoft.EntityFrameworkCore;
-// using Microsoft.EntityFrameworkCore.Metadata.Builders;
-// using OmniCore.Shared.Domain.DDD;
+namespace OmniCore.Shared.Infrastructure.Extensions;
 
-// namespace Shared.Infrastructure.Extensions
-// {
-//     public static class AuditConfigurationExtensions
-//     {
-//         public static void ConfigureAudit<TEntity, TId>(this EntityTypeBuilder<TEntity> builder)
-//             where TEntity : Entity<TId>
-//         {
-//             builder.Property(e => e.CreatedAt)
-//                    .HasColumnName("created_at")
-//                    .HasColumnType("timestamp with time zone");
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using OmniCore.Shared.Domain.DDD;
 
-//             builder.Property(e => e.CreatedBy)
-//                    .HasColumnName("created_by")
-//                    .HasMaxLength(100);
 
-//             builder.Property(e => e.ModifiedAt)
-//                    .HasColumnName("modified_at")
-//                    .HasColumnType("timestamp with time zone");
+public static class AuditConfigurationExtensions
+{
+    public static EntityTypeBuilder<TEntity> ConfigureAuditProperties<TEntity>(
+        this EntityTypeBuilder<TEntity> builder)
+        where TEntity : class, IAuditableEntity,ISoftDeletable
+    {
+        builder.Property(x => x.CreatedAt)
+            .IsRequired();
 
-//             builder.Property(e => e.ModifiedBy)
-//                    .HasColumnName("modified_by")
-//                    .HasMaxLength(100);
+        builder.Property(x => x.CreatedBy)
+            .HasMaxLength(256);
 
-//             builder.Property(e => e.IsActive)
-//                    .HasColumnName("is_active");
-//         }
-//     }
-// }
+        builder.Property(x => x.ModifiedAt);
+
+        builder.Property(x => x.ModifiedBy)
+            .HasMaxLength(256);
+
+        builder.Property(x => x.IsActive)
+            .HasDefaultValue(true)
+            .IsRequired();
+
+        return builder;
+    }
+}

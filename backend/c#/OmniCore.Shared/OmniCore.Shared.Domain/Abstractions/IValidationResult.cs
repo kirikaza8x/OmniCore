@@ -1,6 +1,8 @@
-﻿namespace Shared.Domain.Abstractions;
+﻿namespace OmniCore.Shared.Domain.Abstractions;
 
 public interface IValidationResult
 {
-    Error[] Errors { get; }
+    public static readonly Error ValidationError = Error.Validation("ValidationError", "Validation failed");
+    
+    IReadOnlyCollection<Error> Errors { get; }
 }

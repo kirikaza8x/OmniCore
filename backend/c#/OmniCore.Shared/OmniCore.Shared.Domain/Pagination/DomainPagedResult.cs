@@ -1,35 +1,23 @@
-﻿using System.Text.Json.Serialization;
+﻿namespace OmniCore.Shared.Domain.Pagination;
 
-namespace Shared.Domain.Pagination;
-
-public sealed record PagedResult<T>
+public sealed record DomainPagedResult<T>
 {
-    public IReadOnlyList<T> Items { get; init; } = [];
-
+    public IReadOnlyList<T> Items { get; init; } = Array.Empty<T>();
     public int PageNumber { get; init; }
-
     public int PageSize { get; init; }
-
     public int TotalCount { get; init; }
 
     public int CurrentPageSize => Items.Count;
-
     public int CurrentStartIndex => TotalCount == 0 ? 0 : ((PageNumber - 1) * PageSize) + 1;
-
     public int CurrentEndIndex => TotalCount == 0 ? 0 : CurrentStartIndex + CurrentPageSize - 1;
-
     public int TotalPages => PageSize == 0 ? 0 : (int)Math.Ceiling(TotalCount / (double)PageSize);
-
     public bool HasPrevious => PageNumber > 1;
-
     public bool HasNext => PageNumber < TotalPages;
 
-    public PagedResult()
-    {
-    }
+    // Parameterless constructor for standard deserializers
+    public DomainPagedResult() { }
 
-    [JsonConstructor]
-    public PagedResult(
+    public DomainPagedResult(
         IReadOnlyList<T> items,
         int pageNumber,
         int pageSize,
@@ -41,18 +29,27 @@ public sealed record PagedResult<T>
         TotalCount = totalCount;
     }
 
-    public static PagedResult<T> Empty => new(
+    public static DomainPagedResult<T> Empty => new(
         Array.Empty<T>(),
-        0,
-        0,
+        1,
+        10,
         0);
 
-    public static PagedResult<T> Create(
+    public static DomainPagedResult<T> Create(
         IReadOnlyList<T> items,
         int pageNumber,
         int pageSize,
         int totalCount)
     {
-        return new PagedResult<T>(items, pageNumber, pageSize, totalCount);
+        return new DomainPagedResult<T>(items, pageNumber, pageSize, totalCount);
+    }
+
+    /// <summary>
+    /// Maps the items of the current PagedResult to a new target type (e.g., Domain Entity to DTO).
+    /// </summary>
+    public DomainPagedResult<TResult> Map<TResult>(Func<T, TResult> mapper)
+    {
+        var mappedItems = Items.Select(mapper).ToList().AsReadOnly();
+        return new DomainPagedResult<TResult>(mappedItems, PageNumber, PageSize, TotalCount);
     }
 }

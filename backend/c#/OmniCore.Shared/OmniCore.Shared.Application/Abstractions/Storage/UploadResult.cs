@@ -1,8 +1,8 @@
-﻿namespace Shared.Application.Abstractions.Storage;
+﻿namespace OmniCore.Shared.Application.Abstractions.Storage;
 
-public sealed record UploadResult(
-    string Url,
+public record UploadResult(
     string ObjectKey,
+    string PublicUrl,
     string FileName,
-    long Size,
-    string ContentType);
+    string ContentType,
+    long FileSize);

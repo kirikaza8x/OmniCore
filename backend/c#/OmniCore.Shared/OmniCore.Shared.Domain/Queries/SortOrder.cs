@@ -1,4 +1,4 @@
-﻿namespace Shared.Domain.Queries;
+﻿namespace OmniCore.Shared.Domain.Queries;
 
 public enum SortOrder
 {

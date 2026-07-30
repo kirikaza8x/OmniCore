@@ -1,40 +1,79 @@
-// using Microsoft.Extensions.DependencyInjection;
-// using Microsoft.Extensions.Logging;
-// using Shared.Application.Abstractions.SignalR;
+namespace OmniCore.Shared.Infrastructure.Logging;
 
-// public class SignalRLogger : ILogger
-// {
-//     private readonly IServiceScopeFactory _scopeFactory;
-//     private readonly string _categoryName;
+using System.Threading.Channels;
+using Microsoft.Extensions.Logging;
 
-//     public SignalRLogger(IServiceScopeFactory scopeFactory, string categoryName)
-//     {
-//         _scopeFactory = scopeFactory;
-//         _categoryName = categoryName;
-//     }
+/// <summary>
+/// Custom <see cref="ILogger"/> implementation that writes log entries into an in-memory channel for real-time SignalR streaming.
+/// </summary>
+public sealed class SignalRLogger : ILogger
+{
+    private readonly string _categoryName;
+    private readonly ChannelWriter<LogMessageEntry> _writer;
+    private static readonly AsyncLocal<bool> IsLogging = new();
 
-//     IDisposable? ILogger.BeginScope<TState>(TState state) => null;
+    /// <summary>
+    /// Initializes a new instance of the <see cref="SignalRLogger"/> class.
+    /// </summary>
+    public SignalRLogger(string categoryName, ChannelWriter<LogMessageEntry> writer)
+    {
+        _categoryName = categoryName;
+        _writer = writer;
+    }
 
-//     public bool IsEnabled(LogLevel logLevel) => logLevel >= LogLevel.Information;
+    /// <inheritdoc />
+    public IDisposable? BeginScope<TState>(TState state) where TState : notnull => NullScope.Instance;
 
-//     public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
-//     {
-//         if (!IsEnabled(logLevel)) return;
+    /// <inheritdoc />
+    public bool IsEnabled(LogLevel logLevel)
+    {
+        if (logLevel < LogLevel.Information) 
+            return false;
 
-//         var message = formatter(state, exception);
+        // Prevent infinite recursive logging loops from ASP.NET Core & SignalR internals
+        if (_categoryName.StartsWith("Microsoft.AspNetCore", StringComparison.OrdinalIgnoreCase) ||
+            _categoryName.StartsWith("System.Net", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
 
-//         Task.Run(async () =>
-//         {
-//             try
-//             {
-//                 using var scope = _scopeFactory.CreateScope();
-//                 var notifier = scope.ServiceProvider.GetService<ILogNotifier>();
-//                 if (notifier != null)
-//                 {
-//                     await notifier.NotifyAsync($"[{_categoryName}] {message}", logLevel.ToString());
-//                 }
-//             }
-//             catch { /* Keep the logger silent on internal failure */ }
-//         });
-//     }
-// }
+        return true;
+    }
+
+    /// <inheritdoc />
+    public void Log<TState>(
+        LogLevel logLevel, 
+        EventId eventId, 
+        TState state, 
+        Exception? exception, 
+        Func<TState, Exception?, string> formatter)
+    {
+        if (!IsEnabled(logLevel)) return;
+
+        // Prevent thread reentrancy
+        if (IsLogging.Value) return;
+
+        try
+        {
+            IsLogging.Value = true;
+
+            var message = formatter(state, exception);
+            if (string.IsNullOrWhiteSpace(message)) return;
+
+            var entry = new LogMessageEntry(_categoryName, message, logLevel.ToString());
+            
+            // Non-blocking write to channel
+            _writer.TryWrite(entry);
+        }
+        finally
+        {
+            IsLogging.Value = false;
+        }
+    }
+
+    private sealed class NullScope : IDisposable
+    {
+        public static NullScope Instance { get; } = new();
+        public void Dispose() { }
+    }
+}

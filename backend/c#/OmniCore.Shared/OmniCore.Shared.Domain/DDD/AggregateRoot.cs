@@ -1,28 +1,34 @@
-﻿namespace Shared.Domain.DDD;
+﻿namespace OmniCore.Shared.Domain.DDD;
+
+public interface IAggregateRoot : IEntity
+{
+    IReadOnlyCollection<IDomainEvent> DomainEvents { get; }
+    IReadOnlyCollection<IDomainEvent> ClearDomainEvents();
+}
+
+public interface IAggregateRoot<TId> : IAggregateRoot, IEntity<TId>
+{
+}
 
 public abstract class AggregateRoot<TId> : Entity<TId>, IAggregateRoot<TId>
 {
     private readonly List<IDomainEvent> _domainEvents = new();
-    public IReadOnlyList<IDomainEvent> DomainEvents => _domainEvents.AsReadOnly();
+
+    protected AggregateRoot() { }
+
+    protected AggregateRoot(TId id) : base(id) { }
+
+    public IReadOnlyCollection<IDomainEvent> DomainEvents => _domainEvents.AsReadOnly();
 
     protected void RaiseDomainEvent(IDomainEvent domainEvent)
     {
-        Apply(domainEvent);
         _domainEvents.Add(domainEvent);
     }
 
-    public IDomainEvent[] ClearDomainEvents()
+    public IReadOnlyCollection<IDomainEvent> ClearDomainEvents()
     {
-        IDomainEvent[] dequeueEvents = _domainEvents.ToArray();
+        var clearedEvents = _domainEvents.ToArray();
         _domainEvents.Clear();
-        return dequeueEvents;
+        return clearedEvents;
     }
-
-    public void ReplayEvent(IDomainEvent @event)
-    {
-        Apply(@event);
-    }
-
-    protected abstract void Apply(IDomainEvent @event);
-
 }

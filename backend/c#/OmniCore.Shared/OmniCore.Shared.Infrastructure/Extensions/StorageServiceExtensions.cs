@@ -1,20 +1,28 @@
-﻿// using Microsoft.Extensions.Configuration;
-// using Microsoft.Extensions.DependencyInjection;
-// using Shared.Application.Abstractions.Storage;
-// using Shared.Infrastructure.Configs.Storage;
-// using Shared.Infrastructure.Service.Storage;
+﻿namespace OmniCore.Shared.Infrastructure.Extensions;
 
-// namespace Shared.Infrastructure.Extensions;
+using Microsoft.Extensions.DependencyInjection;
+using OmniCore.Shared.Application.Abstractions.Storage;
+using OmniCore.Shared.Infrastructure.Configs.Storage;
+using OmniCore.Shared.Infrastructure.Services.Storage;
 
-// public static class StorageServiceExtensions
-// {
-//     public static IServiceCollection AddStorageService(
-//         this IServiceCollection services,
-//         IConfiguration configuration)
-//     {
-//         services.ConfigureOptions<StorageConfigSetup>();
-//         services.AddSingleton<IStorageService, MinioStorageService>();
+/// <summary>
+/// Extension methods for registering object storage infrastructure services.
+/// </summary>
+public static class StorageServiceExtensions
+{
+    /// <summary>
+    /// Registers the storage configuration options and the <see cref="IStorageService"/> implementation into the dependency injection container.
+    /// </summary>
+    /// <param name="services">The service collection to add services to.</param>
+    /// <returns>The updated <see cref="IServiceCollection"/>.</returns>
+    public static IServiceCollection AddStorageService(this IServiceCollection services)
+    {
+        // Bind & validate StorageConfig via the ConfigBase pipeline
+        services.AddConfig<StorageConfig>();
 
-//         return services;
-//     }
-// }
+        // Register MinIO / S3 implementation of IStorageService
+        services.AddSingleton<IStorageService, MinioStorageService>();
+
+        return services;
+    }
+}

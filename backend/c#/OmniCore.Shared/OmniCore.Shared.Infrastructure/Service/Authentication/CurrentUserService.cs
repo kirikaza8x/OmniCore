@@ -1,84 +1,113 @@
-// using System.Security.Claims;
-// using Microsoft.AspNetCore.Http;
-// using Shared.Application.Abstractions.Authentication;
-// using Shared.Application.DTOs;
+namespace OmniCore.Shared.Infrastructure.Services.Authentication;
 
-// namespace Shared.Infrastructure.Service.Authentication;
+using System.Security.Claims;
+using Microsoft.AspNetCore.Http;
+using OmniCore.Shared.Application.Abstractions.Authentication;
+using OmniCore.Shared.Application.DTOs;
+using OmniCore.Shared.Infrastructure.Middleware;
 
-// public class CurrentUserService : ICurrentUserService
-// {
-//     private readonly IHttpContextAccessor _httpContextAccessor;
-//     private readonly IDeviceDetectionService _deviceDetectionService;
+/// <summary>
+/// Service providing access to the currently authenticated user's contextual information, claims, and device data.
+/// </summary>
+public sealed class CurrentUserService : ICurrentUser
+{
+    private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly IDeviceDetectionService _deviceDetectionService;
 
-//     public CurrentUserService(
-//         IHttpContextAccessor httpContextAccessor,
-//         IDeviceDetectionService deviceDetectionService)
-//     {
-//         _httpContextAccessor = httpContextAccessor ?? throw new ArgumentNullException(nameof(httpContextAccessor));
-//         _deviceDetectionService = deviceDetectionService ?? throw new ArgumentNullException(nameof(deviceDetectionService));
-//     }
+    /// <summary>
+    /// Initializes a new instance of the <see cref="CurrentUserService"/> class.
+    /// </summary>
+    /// <param name="httpContextAccessor">Accessor for the active HTTP context.</param>
+    /// <param name="deviceDetectionService">Service for parsing client device information.</param>
+    public CurrentUserService(
+        IHttpContextAccessor httpContextAccessor,
+        IDeviceDetectionService deviceDetectionService)
+    {
+        _httpContextAccessor = httpContextAccessor;
+        _deviceDetectionService = deviceDetectionService;
+    }
 
-//     private HttpContext? Context => _httpContextAccessor.HttpContext;
-//     private ClaimsPrincipal? User => Context?.User;
+    private HttpContext? Context => _httpContextAccessor.HttpContext;
+    private ClaimsPrincipal? User => Context?.User;
 
-//     public Guid UserId => GetGuidClaim(ClaimTypes.NameIdentifier);
+    /// <inheritdoc />
+    public bool IsAuthenticated => User?.Identity?.IsAuthenticated ?? false;
 
-//     public string? Email => GetClaimValue(ClaimTypes.Email);
+    /// <inheritdoc />
+    public Guid? UserId
+    {
+        get
+        {
+            var value = GetClaimValue(ClaimTypes.NameIdentifier) ?? GetClaimValue("sub");
+            return Guid.TryParse(value, out var guid) ? guid : null;
+        }
+    }
 
-//     public string? Name => GetClaimValue(ClaimTypes.Name);
+    /// <inheritdoc />
+    public string? Email => GetClaimValue(ClaimTypes.Email) ?? GetClaimValue("email");
 
-//     public IEnumerable<string> Roles =>
-//         User?.FindAll(ClaimTypes.Role)
-//              .Select(c => c.Value)
-//              .Where(role => !string.IsNullOrWhiteSpace(role))
-//              .Distinct()
-//         ?? Enumerable.Empty<string>();
+    /// <inheritdoc />
+    public string? Name => GetClaimValue(ClaimTypes.Name) ?? GetClaimValue("name");
 
-//     public string? Jti => GetClaimValue("jti");
+    /// <inheritdoc />
+    public IReadOnlyList<string> Roles =>
+    User?.FindAll(c => c.Type == ClaimTypes.Role || c.Type == "role")
+    .Select(c => c.Value)
+    .Where(role => !string.IsNullOrWhiteSpace(role))
+    .Distinct()
+    .ToList()
+     ?? new List<string>();
 
-//     public string? IpAddress => Context?.Connection?.RemoteIpAddress?.ToString();
 
-//     public string? UserAgent => Context?.Request?.Headers["User-Agent"].ToString();
+    /// <inheritdoc />
+    public string? Jti => GetClaimValue("jti") ?? GetClaimValue(ClaimTypes.SerialNumber);
 
-//     public string? DeviceId => GetDeviceIdFromHeader();
+    /// <inheritdoc />
+    public string? IpAddress => Context?.Connection.RemoteIpAddress?.ToString();
 
-//     public CurrentUserDto GetCurrentUser()
-//     {
-//         var deviceInfo = _deviceDetectionService.GetDeviceInfo(UserAgent, IpAddress, DeviceId);
+    /// <inheritdoc />
+    public string? UserAgent => Context?.Request.Headers.UserAgent.ToString();
 
-//         return new CurrentUserDto
-//         {
-//             UserId = UserId,
-//             Email = Email,
-//             Name = Name,
-//             Roles = Roles.ToList(),
-//             Jti = Jti,
-//             IpAddress = deviceInfo.IpAddress,
-//             DeviceId = deviceInfo.DeviceId,
-//             DeviceName = deviceInfo.DeviceName,
-//             Browser = deviceInfo.Browser,
-//             OperatingSystem = deviceInfo.OperatingSystem,
-//             DeviceType = deviceInfo.DeviceType,
-//             BrowserVersion = deviceInfo.BrowserVersion,
-//             OSVersion = deviceInfo.OSVersion,
-//             UserAgent = deviceInfo.UserAgent
-//         };
-//     }
+    /// <inheritdoc />
+    public string? DeviceId => GetDeviceIdFromContext() ?? GetDeviceIdFromHeader();
 
-//     private string? GetClaimValue(string claimType)
-//     {
-//         return User?.FindFirst(claimType)?.Value;
-//     }
+    /// <inheritdoc />
+    public bool IsInRole(string role)
+    {
+        if (string.IsNullOrWhiteSpace(role)) return false;
+        return Roles.Contains(role, StringComparer.OrdinalIgnoreCase);
+    }
 
-//     private Guid GetGuidClaim(string claimType)
-//     {
-//         var value = GetClaimValue(claimType);
-//         return Guid.TryParse(value, out var guid) ? guid : Guid.Empty;
-//     }
+    /// <inheritdoc />
+    public CurrentUserDto GetCurrentUser()
+    {
+        var deviceInfo = _deviceDetectionService.GetDeviceInfo(UserAgent, IpAddress, DeviceId);
 
-//     private string? GetDeviceIdFromHeader()
-//     {
-//         // Allow client to send device ID via custom header
-//         return Context?.Request?.Headers["X-Device-ID"].ToString();
-//     }
-// }
+        return new CurrentUserDto
+        {
+            UserId = UserId ?? Guid.Empty,
+            Email = Email,
+            Name = Name,
+            Roles = Roles,
+            Jti = Jti,
+            IpAddress = IpAddress,
+            Device = deviceInfo,
+            UserAgent = UserAgent
+        };
+    }
+
+    private string? GetClaimValue(string claimType)
+    {
+        return User?.FindFirst(claimType)?.Value;
+    }
+
+    private string? GetDeviceIdFromContext()
+    {
+        return Context?.Items[DeviceIdMiddleware.ItemKey] as string;
+    }
+
+    private string? GetDeviceIdFromHeader()
+    {
+        return Context?.Request.Headers[DeviceIdMiddleware.HeaderName].ToString();
+    }
+}

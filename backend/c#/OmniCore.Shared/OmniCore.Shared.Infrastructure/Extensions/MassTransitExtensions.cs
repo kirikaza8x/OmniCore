@@ -1,121 +1,103 @@
-﻿// using System.Reflection;
-// using MassTransit;
-// using Microsoft.Extensions.Configuration;
-// using Microsoft.Extensions.DependencyInjection;
-// using Microsoft.Extensions.Options;
-// using Shared.Application.Abstractions.EventBus;
-// using Shared.Infrastructure.Configs.MessageBroker;
-// using Shared.Infrastructure.EventBus;
+﻿namespace OmniCore.Shared.Infrastructure.Extensions;
 
-// namespace Shared.Infrastructure.Extensions;
+using System.Reflection;
+using MassTransit;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
+using OmniCore.Shared.Application.Abstractions.EventBus;
+using OmniCore.Shared.Infrastructure.Configs.MessageBroker;
+using OmniCore.Shared.Infrastructure.EventBus;
 
-// public static class MassTransitExtentions
-// {
-//     public static IServiceCollection AddMassTransitWithAssemblies
-//         (this IServiceCollection services,
-//             IConfiguration configuration,
-//             params Assembly[] assemblies)
-//     {
+/// <summary>
+/// Extension methods for configuring MassTransit message broker integration and registering integration event handlers.
+/// </summary>
+public static class MassTransitExtensions
+{
+    /// <summary>
+    /// Registers and configures MassTransit with RabbitMQ, scanning assemblies for consumers, sagas, activities, and custom integration handlers.
+    /// </summary>
+    /// <param name="services">The service collection to add services to.</param>
+    /// <param name="configuration">The configuration instance for section binding.</param>
+    /// <param name="assemblies">The assemblies to scan for message handlers and consumers.</param>
+    /// <returns>The updated <see cref="IServiceCollection"/>.</returns>
+    public static IServiceCollection AddMassTransitWithAssemblies(
+        this IServiceCollection services,
+        IConfiguration configuration,
+        params Assembly[] assemblies)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+        ArgumentNullException.ThrowIfNull(configuration);
 
-//         var redisConfig = configuration.GetSection("MessageBroker").Get<MessageBrokerConfig>() ?? new MessageBrokerConfig();
+        // 1. Bind Options properly into DI
+        services.Configure<MessageBrokerConfig>(configuration.GetSection("MessageBroker"));
 
-//         // Register IEventBus
-//         services.AddScoped<IEventBus, EventBus.EventBus>();
+        // 2. Register IEventBus implementation
+        services.AddScoped<IEventBus, EventBus>();
 
-//         // Auto-register all IntegrationEventHandlers
-//         RegisterIntegrationEventHandlers(services, assemblies);
+        // 3. Auto-register all IIntegrationEventHandler<T> into DI via Scrutor
+        RegisterIntegrationEventHandlers(services, assemblies);
 
-//         services.AddMassTransit(redisConfig =>
-//         {
-//             redisConfig.SetKebabCaseEndpointNameFormatter();
-//             redisConfig.SetInMemorySagaRepositoryProvider();
+        // 4. Configure MassTransit
+        services.AddMassTransit(busConfigurator =>
+        {
+            busConfigurator.SetKebabCaseEndpointNameFormatter();
+            busConfigurator.SetInMemorySagaRepositoryProvider();
 
-//             // Register regular consumers from assemblies
-//             redisConfig.AddConsumers(assemblies);
+            // Register standard MassTransit consumers
+            busConfigurator.AddConsumers(assemblies);
 
-//             // Register consumers for IntegrationEventHandlers
-//             RegisterIntegrationEventConsumers(redisConfig, assemblies);
+            // Dynamically register IntegrationEventConsumer<T> wrappers
+            RegisterIntegrationEventConsumers(busConfigurator, assemblies);
 
-//             redisConfig.AddSagaStateMachines(assemblies);
-//             redisConfig.AddSagas(assemblies);
-//             redisConfig.AddActivities(assemblies);
+            busConfigurator.AddSagaStateMachines(assemblies);
+            busConfigurator.AddSagas(assemblies);
+            busConfigurator.AddActivities(assemblies);
 
-//             redisConfig.UsingRabbitMq((context, configurator) =>
-//             {
-//                 var brokerConfig = context.GetRequiredService<IOptions<MessageBrokerConfig>>().Value;
-//                 configurator.Host(new Uri(brokerConfig.Host), host =>
-//                 {
-//                     host.Username(brokerConfig.Username);
-//                     host.Password(brokerConfig.Password);
-//                 });
-//                 configurator.ConfigureEndpoints(context);
-//             });
-//         });
+            busConfigurator.UsingRabbitMq((context, configurator) =>
+            {
+                var brokerConfig = context.GetRequiredService<IOptions<MessageBrokerConfig>>().Value;
 
-//         return services;
-//     }
+                configurator.Host(new Uri(brokerConfig.Host), host =>
+                {
+                    host.Username(brokerConfig.Username);
+                    host.Password(brokerConfig.Password);
+                });
 
-//     /// <summary>
-//     /// Scan assemblies with Scrutor to find all IIntegrationEventHandler<T> and register them into DI container
-//     /// </summary>
-//     /// <param name="services"></param>
-//     /// <param name="assemblies"></param>
-//     private static void RegisterIntegrationEventHandlers(IServiceCollection services, Assembly[] assemblies)
-//     {
-//         services.Scan(scan => scan
-//             .FromAssemblies(assemblies)
-//             .AddClasses(classes => classes
-//                 .AssignableTo(typeof(IIntegrationEventHandler<>)), publicOnly: false)
-//             .AsImplementedInterfaces()
-//             .WithScopedLifetime());
-//     }
+                configurator.ConfigureEndpoints(context);
+            });
+        });
 
-//     /// <summary>
-//     /// Scan assemblies to find all IIntegrationEventHandler<T> and register corresponding IntegrationEventConsumer<T> into MassTransit
-//     /// </summary>
-//     /// <param name="config"></param>
-//     /// <param name="assemblies"></param>
-//     // private static void RegisterIntegrationEventHandlers(IServiceCollection services, Assembly[] assemblies)
-//     // {
-//     //     // find all class implement IIntegrationEventHandler<T>
-//     //     var handlerTypes = assemblies
-//     //         .SelectMany(a => a.GetTypes())
-//     //         .Where(t => t.IsClass && !t.IsAbstract &&
-//     //                t.GetInterfaces().Any(i => i.IsGenericType &&
-//     //                i.GetGenericTypeDefinition() == typeof(IIntegrationEventHandler<>)))
-//     //         .ToList();
+        return services;
+    }
 
-//     //     foreach (var handlerType in handlerTypes)
-//     //     {
-//     //         var interfaceType = handlerType.GetInterfaces()
-//     //             .First(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IIntegrationEventHandler<>));
+    private static void RegisterIntegrationEventHandlers(IServiceCollection services, Assembly[] assemblies)
+    {
+        services.Scan(scan => scan
+            .FromAssemblies(assemblies)
+            .AddClasses(classes => classes
+                .AssignableTo(typeof(IIntegrationEventHandler<>)), publicOnly: false)
+            .AsImplementedInterfaces()
+            .WithScopedLifetime());
+    }
 
-//     //         // Regiser handler into DI container
-//     //         services.AddScoped(interfaceType, handlerType);
-//     //     }
-//     // }
+    private static void RegisterIntegrationEventConsumers(IRegistrationConfigurator config, Assembly[] assemblies)
+    {
+        var eventTypes = assemblies
+            .SelectMany(a => a.GetTypes())
+            .Where(t => t.IsClass && !t.IsAbstract &&
+                        t.GetInterfaces().Any(i => i.IsGenericType &&
+                        i.GetGenericTypeDefinition() == typeof(IIntegrationEventHandler<>)))
+            .SelectMany(t => t.GetInterfaces())
+            .Where(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IIntegrationEventHandler<>))
+            .Select(i => i.GetGenericArguments()[0])
+            .Distinct()
+            .ToList();
 
-//     private static void RegisterIntegrationEventConsumers(IRegistrationConfigurator config, Assembly[] assemblies)
-//     {
-//         // Find all integration event types handled in provided assemblies.
-//         var eventTypes = assemblies
-//             .SelectMany(a => a.GetTypes())
-//             .Where(t => t.IsClass && !t.IsAbstract &&
-//                    t.GetInterfaces().Any(i => i.IsGenericType &&
-//                    i.GetGenericTypeDefinition() == typeof(IIntegrationEventHandler<>)))
-//             .SelectMany(t => t.GetInterfaces())
-//             .Where(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IIntegrationEventHandler<>))
-//             .Select(i => i.GetGenericArguments()[0])
-//             .Distinct()
-//             .ToList();
-
-//         foreach (var eventType in eventTypes)
-//         {
-//             // Create consumer wrapper type
-//             var consumerType = typeof(IntegrationEventConsumer<>).MakeGenericType(eventType);
-//             config.AddConsumer(consumerType);
-//         }
-//     }
-// }
-
-
+        foreach (var eventType in eventTypes)
+        {
+            var consumerType = typeof(IntegrationEventConsumer<>).MakeGenericType(eventType);
+            config.AddConsumer(consumerType);
+        }
+    }
+}

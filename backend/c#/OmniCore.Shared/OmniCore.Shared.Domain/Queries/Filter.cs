@@ -1,10 +1,10 @@
-﻿namespace Shared.Domain.Queries;
+﻿namespace OmniCore.Shared.Domain.Queries;
 
-public class Filter
+public record Filter
 {
-    public string? Field { get; set; }
-    public string? Operator { get; set; }
-    public object? Value { get; set; }
-    public string? Logic { get; set; }
-    public IEnumerable<Filter>? Filters { get; set; }
+    public string? Field { get; init; }
+    public string? Operator { get; init; }
+    public object? Value { get; init; }
+    public string? Logic { get; init; } // "and" or "or"
+    public IReadOnlyList<Filter>? Filters { get; init; }
 }
