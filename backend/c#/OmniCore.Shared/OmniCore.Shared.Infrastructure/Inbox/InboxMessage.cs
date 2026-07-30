@@ -1,6 +1,8 @@
-﻿namespace Shared.Infrastructure.Inbox;
+﻿using OmniCore.Shared.Infrastructure.Configs;
 
-public sealed class InboxMessage
+namespace OmniCore.Shared.Infrastructure.Inbox;
+
+public sealed class InboxMessage : ConfigBase
 {
     public Guid Id { get; init; }
 
@@ -13,4 +15,6 @@ public sealed class InboxMessage
     public DateTime? ProcessedOnUtc { get; set; }
 
     public string? Error { get; set; }
+
+    public int RetryCount { get; set; }
 }

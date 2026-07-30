@@ -1,11 +1,20 @@
-﻿namespace Shared.Infrastructure.Configs.MessageBroker;
+﻿namespace OmniCore.Shared.Infrastructure.Configs.MessageBroker;
 
-public sealed class MessageBrokerConfig : ConfigBase
+using System.ComponentModel.DataAnnotations;
+
+public class MessageBrokerConfig : ConfigBase
 {
     public override string SectionName => "MessageBroker";
-    public string Host { get; set; } = string.Empty;
-    public string Username { get; set; } = string.Empty;
-    public string Password { get; set; } = string.Empty;
+
+    [Required]
+    public string Host { get; set; } = "localhost";
+
+    public string Username { get; set; } = "guest";
+    public string Password { get; set; } = "guest";
+
+    [Range(1, 300)]
     public ushort Heartbeat { get; set; } = 10;
+
+    [Range(1000, 60000)]
     public int RequestedConnectionTimeout { get; set; } = 30000;
 }

@@ -1,4 +1,4 @@
-﻿namespace Shared.Infrastructure.Outbox;
+﻿namespace OmniCore.Shared.Infrastructure.Outbox;
 
 public sealed class OutboxMessage
 {
@@ -11,6 +11,8 @@ public sealed class OutboxMessage
     public DateTime OccurredOnUtc { get; init; }
 
     public DateTime? ProcessedOnUtc { get; set; }
+
+    public int RetryCount { get; set; }
 
     public string? Error { get; set; }
 }

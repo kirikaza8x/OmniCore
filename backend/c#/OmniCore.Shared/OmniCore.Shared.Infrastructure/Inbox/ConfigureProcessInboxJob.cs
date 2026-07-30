@@ -1,18 +1,14 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿namespace OmniCore.Shared.Infrastructure.Inbox;
+
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Quartz;
 
-namespace Shared.Infrastructure.Inbox;
-
-public sealed class ConfigureProcessInboxJob<TDbContext> : IConfigureOptions<QuartzOptions>
+public sealed class ConfigureProcessInboxJob<TDbContext>(IOptions<InboxOptions> inboxOptions) 
+    : IConfigureOptions<QuartzOptions>
     where TDbContext : DbContext
 {
-    private readonly InboxOptions _inboxOptions;
-
-    public ConfigureProcessInboxJob(IOptions<InboxOptions> inboxOptions)
-    {
-        _inboxOptions = inboxOptions.Value;
-    }
+    private readonly InboxOptions _inboxOptions = inboxOptions.Value;
 
     public void Configure(QuartzOptions options)
     {

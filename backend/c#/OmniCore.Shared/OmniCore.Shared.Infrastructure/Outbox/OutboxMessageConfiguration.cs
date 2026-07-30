@@ -1,7 +1,7 @@
-﻿using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Metadata.Builders;
+﻿namespace OmniCore.Shared.Infrastructure.Outbox;
 
-namespace Shared.Infrastructure.Outbox;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 public sealed class OutboxMessageConfiguration : IEntityTypeConfiguration<OutboxMessage>
 {
@@ -24,10 +24,14 @@ public sealed class OutboxMessageConfiguration : IEntityTypeConfiguration<Outbox
 
         builder.Property(x => x.ProcessedOnUtc);
 
+        builder.Property(x => x.RetryCount)
+            .HasDefaultValue(0);
+
         builder.Property(x => x.Error)
             .HasMaxLength(2000);
 
-        builder.HasIndex(x => x.ProcessedOnUtc)
-            .HasDatabaseName("ix_outbox_messages_processed_on_utc");
+        // Composite index optimized for pending message queries
+        builder.HasIndex(x => new { x.ProcessedOnUtc, x.OccurredOnUtc })
+            .HasDatabaseName("ix_outbox_messages_processing");
     }
 }

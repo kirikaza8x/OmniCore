@@ -1,22 +1,23 @@
-﻿using MassTransit;
-using Shared.Application.Abstractions.EventBus;
+﻿namespace OmniCore.Shared.Infrastructure.EventBus;
 
-namespace Shared.Infrastructure.EventBus;
+using MassTransit;
+using OmniCore.Shared.Application.Abstractions.EventBus;
 
-public sealed class EventBus : IEventBus
+public sealed class EventBus(IPublishEndpoint publishEndpoint) : IEventBus
 {
-    private readonly IPublishEndpoint _publishEndpoint;
-
-    public EventBus(IPublishEndpoint publishEndpoint)
+    public async Task PublishAsync<TEvent>(
+        TEvent @event,
+        CancellationToken cancellationToken = default)
+        where TEvent : class, IIntegrationEvent
     {
-        _publishEndpoint = publishEndpoint;
+        await publishEndpoint.Publish(@event, cancellationToken);
     }
 
-    public async Task PublishAsync<T>(
-        T integrationEvent,
+    public async Task PublishAsync<TEvent>(
+        IEnumerable<TEvent> events,
         CancellationToken cancellationToken = default)
-        where T : IIntegrationEvent
+        where TEvent : class, IIntegrationEvent
     {
-        await _publishEndpoint.Publish(integrationEvent, cancellationToken);
+        await publishEndpoint.PublishBatch(events, cancellationToken);
     }
 }

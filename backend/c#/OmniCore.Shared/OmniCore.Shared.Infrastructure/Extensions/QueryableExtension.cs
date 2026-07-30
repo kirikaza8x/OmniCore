@@ -1,17 +1,17 @@
-﻿using System.Linq.Dynamic.Core;
+﻿namespace OmniCore.Shared.Infrastructure.Extensions;
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Linq.Dynamic.Core;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
-using Shared.Domain.Pagination;
-using Shared.Domain.Queries;
+using OmniCore.Shared.Domain.Pagination;
+using OmniCore.Shared.Domain.Queries;
 
-namespace Shared.Infrastructure.Extensions;
-
-/// <summary>
-/// Provides extension methods for IQueryable to support dynamic filtering, sorting, and asynchronous pagination.
-/// </summary>
 public static class QueryableExtensions
 {
-    private static readonly IDictionary<string, string> Operators = new Dictionary<string, string>
+    private static readonly IDictionary<string, string> Operators = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
     {
         {"eq", "="}, {"neq", "!="}, {"lt", "<"}, {"lte", "<="},
         {"gt", ">"}, {"gte", ">="},
@@ -19,79 +19,73 @@ public static class QueryableExtensions
         {"contains", "Contains"}, {"doesnotcontain", "Contains"}
     };
 
-    #region Pagination (Merged with IPageable and int?)
+    #region Pagination
     public static IQueryable<TEntity> ApplyPagination<TEntity>(
         this IQueryable<TEntity> query, IPageable pageable)
     {
-        int page = pageable.PageNumber ?? 1;
-        int size = pageable.PageSize ?? 10;
-        return query.Skip((page - 1) * size).Take(size);
+        int page = pageable.PageNumber > 0 ? pageable.PageNumber : 1;
+        int size = pageable.PageSize > 0 ? pageable.PageSize : 10;
+        return System.Linq.Queryable.Skip(query, (page - 1) * size).Take(size);
     }
 
-    /// <summary>
-    /// Executes query and returns Domain-specific PagedResult.
-    /// </summary>
-    public static async Task<Domain.Pagination.PagedResult<T>> ToPagedResultAsync<T>(
+    public static async Task<DomainPagedResult<T>> ToPagedResultAsync<T>(
         this IQueryable<T> query,
         int pageNumber,
         int pageSize,
         CancellationToken cancellationToken = default)
     {
-        var totalCount = await query.CountAsync(cancellationToken);
-        var items = await query.Skip((pageNumber - 1) * pageSize).Take(pageSize).ToListAsync(cancellationToken);
+        int validPage = pageNumber > 0 ? pageNumber : 1;
+        int validSize = pageSize > 0 ? pageSize : 10;
 
-        return Domain.Pagination.PagedResult<T>.Create(items, pageNumber, pageSize, totalCount);
+        int totalCount = await query.CountAsync(cancellationToken);
+        List<T> items = await System.Linq.Queryable.Skip(query, (validPage - 1) * validSize)
+            .Take(validSize)
+            .ToListAsync(cancellationToken);
+
+        return DomainPagedResult<T>.Create(items, validPage, validSize, totalCount);
     }
 
-    /// <summary>
-    /// Helper for PagedQuery objects (Safely handles null values).
-    /// </summary>
-    public static async Task<Domain.Pagination.PagedResult<T>> ToPagedResultAsync<T>(
+    public static async Task<DomainPagedResult<T>> ToPagedResultAsync<T>(
         this IQueryable<T> query,
         PagedQuery pagedQuery,
         CancellationToken cancellationToken = default)
     {
-        // Apply sorting if SortColumn is provided
         if (!string.IsNullOrWhiteSpace(pagedQuery.SortColumn))
         {
-            var sortDir = pagedQuery.SortOrder == SortOrder.Descending ? "desc" : "asc";
-            query = query.OrderBy($"{pagedQuery.SortColumn} {sortDir}");
+            query = query.ApplyDynamicSorting(new[] { new Sort(pagedQuery.SortColumn, pagedQuery.SortOrder) });
         }
 
         return await query.ToPagedResultAsync(
-            pagedQuery.PageNumber ?? 1,
-            pagedQuery.PageSize ?? 10,
+            pagedQuery.PageNumber,
+            pagedQuery.PageSize,
             cancellationToken);
     }
 
-    public static async Task<Domain.Pagination.PagedResult<T>> ToPagedResultAsync<T>(
+    public static async Task<DomainPagedResult<T>> ToPagedResultAsync<T>(
         this IQueryable<T> query,
         IPageable pageable,
         CancellationToken cancellationToken = default)
     {
-        var totalCount = await query.CountAsync(cancellationToken);
-        var items = await query.ApplyPagination(pageable).ToListAsync(cancellationToken);
+        int totalCount = await query.CountAsync(cancellationToken);
+        List<T> items = await query.ApplyPagination(pageable).ToListAsync(cancellationToken);
 
-        return Domain.Pagination.PagedResult<T>.Create(
+        return DomainPagedResult<T>.Create(
             items,
-            pageable.PageNumber ?? 1,
-            pageable.PageSize ?? 10,
+            pageable.PageNumber > 0 ? pageable.PageNumber : 1,
+            pageable.PageSize > 0 ? pageable.PageSize : 10,
             totalCount);
     }
     #endregion
 
-    #region Dynamic Filtering (Merged with Teammate's Guard Clauses)
-    /// <summary>
-    /// Applies complex, nested filtering to the query using System.Linq.Dynamic.Core.
-    /// </summary>
+    #region Dynamic Filtering
     public static IQueryable<T> ApplyDynamicFilters<T>(this IQueryable<T> query, Filter? filter)
     {
-        if (filter == null) return query;
+        if (filter is null) return query;
 
         bool hasChildFilters = filter.Filters != null && filter.Filters.Any();
         bool hasValidCurrentFilter = !string.IsNullOrWhiteSpace(filter.Field) &&
                                      !string.IsNullOrWhiteSpace(filter.Operator) &&
-                                     Operators.ContainsKey(filter.Operator.ToLower());
+                                     Operators.ContainsKey(filter.Operator);
 
         if (hasChildFilters || hasValidCurrentFilter)
         {
@@ -109,9 +103,6 @@ public static class QueryableExtensions
         return query;
     }
 
-    /// <summary>
-    /// Flatten recursive filters.
-    /// </summary>
     private static IList<Filter> GetAllFilters(Filter filter)
     {
         var filters = new List<Filter>();
@@ -119,9 +110,6 @@ public static class QueryableExtensions
         return filters;
     }
 
-    /// <summary>
-    /// Recursive traversal helper.
-    /// </summary>
     private static void GetFilters(Filter filter, IList<Filter> filters)
     {
         if (filter.Filters != null && filter.Filters.Any())
@@ -134,10 +122,6 @@ public static class QueryableExtensions
         }
     }
 
-    /// <summary>
-    /// Transforms Filter to LINQ string. 
-    /// GUARDED: Uses TryGetValue to prevent KeyNotFoundException on invalid operators.
-    /// </summary>
     private static string Transform(Filter filter, IList<Filter> filters)
     {
         if (filter.Filters != null && filter.Filters.Any())
@@ -153,8 +137,7 @@ public static class QueryableExtensions
         int index = filters.IndexOf(filter);
         if (index < 0) return "";
 
-        // GUARD: Handle unknown operators gracefully
-        if (string.IsNullOrWhiteSpace(filter.Operator) || !Operators.TryGetValue(filter.Operator.ToLower(), out var comparison))
+        if (string.IsNullOrWhiteSpace(filter.Operator) || !Operators.TryGetValue(filter.Operator, out var comparison))
         {
             return "";
         }
@@ -164,7 +147,7 @@ public static class QueryableExtensions
             return $"(!{filter.Field}.Contains(@{index}))";
         }
 
-        if (comparison == "StartsWith" || comparison == "EndsWith" || comparison == "Contains")
+        if (comparison is "StartsWith" or "EndsWith" or "Contains")
         {
             return $"({filter.Field}.{comparison}(@{index}))";
         }
@@ -172,10 +155,6 @@ public static class QueryableExtensions
         return $"{filter.Field} {comparison} @{index}";
     }
 
-    /// <summary>
-    /// Extracts value from JsonElement.
-    /// GUARDED: Handles Null/None ValueKinds to prevent NullReferenceException.
-    /// </summary>
     private static object? ExtractValue(object? value)
     {
         if (value is JsonElement element)
@@ -187,8 +166,7 @@ public static class QueryableExtensions
                                         element.TryGetGuid(out var g) ? g : element.GetString(),
                 JsonValueKind.True => true,
                 JsonValueKind.False => false,
-                JsonValueKind.Null => null,
-                JsonValueKind.Undefined => null,
+                JsonValueKind.Null or JsonValueKind.Undefined => null,
                 _ => element.ToString()
             };
         }
@@ -196,13 +174,10 @@ public static class QueryableExtensions
     }
     #endregion
 
-    #region Dynamic Sorting (Merged with Teammate's Guard Clauses)
-    /// <summary>
-    /// Applies multiple sorting criteria. Guards against null collections and empty field names.
-    /// </summary>
+    #region Dynamic Sorting
     public static IQueryable<T> ApplyDynamicSorting<T>(this IQueryable<T> query, IEnumerable<Sort>? sorts)
     {
-        if (sorts == null) return query;
+        if (sorts is null) return query;
 
         var validSorts = sorts
             .Where(s => !string.IsNullOrWhiteSpace(s.Field))
@@ -210,7 +185,13 @@ public static class QueryableExtensions
 
         if (!validSorts.Any()) return query;
 
-        var ordering = string.Join(",", validSorts.Select(s => $"{s.Field} {s.Dir}"));
+        var sortExpressions = validSorts.Select(s =>
+        {
+            string sortDir = s.Order == SortOrder.Descending ? "desc" : "asc";
+            return $"{s.Field} {sortDir}";
+        });
+
+        string ordering = string.Join(", ", sortExpressions);
         return !string.IsNullOrWhiteSpace(ordering) ? query.OrderBy(ordering) : query;
     }
     #endregion

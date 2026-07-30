@@ -1,49 +1,23 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿namespace OmniCore.Shared.Infrastructure.Data.Interceptors;
+
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Diagnostics;
-using Shared.Application.Abstractions.Authentication;
-using Shared.Domain.DDD;
+using OmniCore.Shared.Domain.DDD;
+using OmniCore.Shared.Application.Abstractions.Authentication;
 
-namespace Shared.Infrastructure.Data.Interceptors;
-
-public class AuditableEntityInterceptor : SaveChangesInterceptor
+public sealed class AuditableEntityInterceptor : SaveChangesInterceptor
 {
-    private readonly ICurrentUserService _currentUser;
+    private readonly ICurrentUser _currentUser;
 
-    public AuditableEntityInterceptor(ICurrentUserService currentUser)
+    public AuditableEntityInterceptor(ICurrentUser currentUser)
     {
         _currentUser = currentUser;
     }
 
-    private void UpdateEntities(DbContext? context)
-    {
-        if (context == null) return;
-
-        var id = _currentUser.UserId.ToString() ?? "System";
-
-        foreach (var entry in context.ChangeTracker.Entries<IEntity>())
-        {
-            if (entry.State == EntityState.Added)
-            {
-                entry.Entity.CreatedBy = id;
-                entry.Entity.CreatedAt = DateTime.UtcNow;
-                entry.Entity.IsActive = true;
-            }
-
-            if (
-                entry.State == EntityState.Modified ||
-                entry.HasChangeOwnedEntities()
-                )
-            {
-                entry.Entity.ModifiedBy = id;
-                entry.Entity.ModifiedAt = DateTime.UtcNow;
-            }
-        }
-    }
-
     public override InterceptionResult<int> SavingChanges(DbContextEventData eventData, InterceptionResult<int> result)
     {
-        UpdateEntities(eventData.Context);
+        UpdateAuditProperties(eventData.Context);
         return base.SavingChanges(eventData, result);
     }
 
@@ -52,18 +26,51 @@ public class AuditableEntityInterceptor : SaveChangesInterceptor
         InterceptionResult<int> result,
         CancellationToken cancellationToken = default)
     {
-        UpdateEntities(eventData.Context);
+        UpdateAuditProperties(eventData.Context);
         return base.SavingChangesAsync(eventData, result, cancellationToken);
+    }
+
+    private void UpdateAuditProperties(DbContext? context)
+    {
+        if (context is null) return;
+
+        string currentUserId = _currentUser.UserId.ToString() ?? "System";
+        DateTime utcNow = DateTime.UtcNow;
+
+        foreach (EntityEntry entry in context.ChangeTracker.Entries())
+        {
+            // 1. Audit Trail Updates (IAuditableEntity)
+            if (entry.Entity is IAuditableEntity)
+            {
+                if (entry.State == EntityState.Added)
+                {
+                    entry.Property(nameof(IAuditableEntity.CreatedBy)).CurrentValue = currentUserId;
+                    entry.Property(nameof(IAuditableEntity.CreatedAt)).CurrentValue = utcNow;
+                }
+
+                if (entry.State == EntityState.Modified || entry.HasChangedOwnedEntities())
+                {
+                    entry.Property(nameof(IAuditableEntity.ModifiedBy)).CurrentValue = currentUserId;
+                    entry.Property(nameof(IAuditableEntity.ModifiedAt)).CurrentValue = utcNow;
+                }
+            }
+
+            // 2. Soft Delete Default Initialization (ISoftDeletable)
+            if (entry.Entity is ISoftDeletable && entry.State == EntityState.Added)
+            {
+                entry.Property(nameof(ISoftDeletable.IsActive)).CurrentValue = true;
+            }
+        }
     }
 }
 
-public static class EntryExtensions
+public static class EntityEntryExtensions
 {
-    public static bool HasChangeOwnedEntities(this EntityEntry entry) =>
+    public static bool HasChangedOwnedEntities(this EntityEntry entry) =>
         entry.References.Any(r =>
             r.TargetEntry != null &&
             r.TargetEntry.Metadata.IsOwned() &&
             (r.TargetEntry.State == EntityState.Added ||
              r.TargetEntry.State == EntityState.Modified ||
-             r.TargetEntry.HasChangeOwnedEntities()));
+             r.TargetEntry.HasChangedOwnedEntities()));
 }

@@ -1,22 +1,21 @@
-using Microsoft.AspNetCore.SignalR;
-using Shared.Application.Abstractions.SignalR;
+// using Microsoft.AspNetCore.SignalR;
 
-public class SignalRLogNotifier : ILogNotifier
-{
-    private readonly IHubContext<LogHub> _hubContext;
+// public class SignalRLogNotifier : ILogNotifier
+// {
+//     private readonly IHubContext<LogHub> _hubContext;
 
-    public SignalRLogNotifier(IHubContext<LogHub> hubContext)
-    {
-        _hubContext = hubContext;
-    }
+//     public SignalRLogNotifier(IHubContext<LogHub> hubContext)
+//     {
+//         _hubContext = hubContext;
+//     }
 
-    public async Task NotifyAsync(string message, string level)
-    {
-        await _hubContext.Clients.All.SendAsync("ReceiveLog", new 
-        { 
-            message, 
-            level,
-            timestamp = DateTime.Now.ToString("HH:mm:ss") 
-        });
-    }
-}
+//     public async Task NotifyAsync(string message, string level)
+//     {
+//         await _hubContext.Clients.All.SendAsync("ReceiveLog", new 
+//         { 
+//             message, 
+//             level,
+//             timestamp = DateTime.Now.ToString("HH:mm:ss") 
+//         });
+//     }
+// }

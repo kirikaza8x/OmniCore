@@ -1,110 +1,83 @@
-﻿using System.Text.Json;
-using MassTransit;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
-using Quartz;
-using Shared.Domain.DDD;
+﻿// namespace OmniCore.Shared.Infrastructure.Outbox;
 
-namespace Shared.Infrastructure.Outbox;
+// using System.Text.Json;
+// using MassTransit;
+// using Microsoft.EntityFrameworkCore;
+// using Microsoft.Extensions.Logging;
+// using Microsoft.Extensions.Options;
+// using Quartz;
 
-[DisallowConcurrentExecution]
-public sealed class ProcessOutboxJob<TDbContext> : IJob
-    where TDbContext : DbContext
-{
-    private readonly TDbContext _dbContext;
-    private readonly IPublishEndpoint _publishEndpoint;
-    private readonly ILogger<ProcessOutboxJob<TDbContext>> _logger;
-    private readonly OutboxOptions _options;
+// [DisallowConcurrentExecution]
+// public sealed class ProcessOutboxJob<TDbContext>(
+//     TDbContext dbContext,
+//     IPublishEndpoint publishEndpoint,
+//     ILogger<ProcessOutboxJob<TDbContext>> logger,
+//     IOptions<OutboxOptions> options) : IJob
+//     where TDbContext : DbContext
+// {
+//     private readonly OutboxOptions _options = options.Value;
 
-    public ProcessOutboxJob(
-        TDbContext dbContext,
-        IPublishEndpoint publishEndpoint,
-        ILogger<ProcessOutboxJob<TDbContext>> logger,
-        IOptions<OutboxOptions> options)
-    {
-        _dbContext = dbContext;
-        _publishEndpoint = publishEndpoint;
-        _logger = logger;
-        _options = options.Value;
-    }
+//     public async Task Execute(IJobExecutionContext context)
+//     {
+//         string moduleName = typeof(TDbContext).Name.Replace("DbContext", string.Empty);
 
-    public async Task Execute(IJobExecutionContext context)
-    {
-        var moduleName = typeof(TDbContext).Name.Replace("DbContext", "");
-        _logger.LogDebug("[{Module}] Processing outbox messages", moduleName);
+//         List<OutboxMessage> messages = await dbContext.Set<OutboxMessage>()
+//             .Where(m => m.ProcessedOnUtc == null)
+//             .OrderBy(m => m.OccurredOnUtc)
+//             .Take(_options.BatchSize)
+//             .ToListAsync(context.CancellationToken);
 
-        var messages = await _dbContext.Set<OutboxMessage>()
-            .Where(m => m.ProcessedOnUtc == null)
-            .OrderBy(m => m.OccurredOnUtc)
-            .Take(_options.BatchSize)
-            .ToListAsync(context.CancellationToken);
+//         if (messages.Count == 0) return;
 
-        if (!messages.Any())
-        {
-            return;
-        }
+//         logger.LogDebug("[{Module}] Found {Count} outbox message(s) to process.", moduleName, messages.Count);
 
-        _logger.LogInformation(
-            "[{Module}] Found {Count} outbox messages to process",
-            moduleName,
-            messages.Count);
+//         foreach (OutboxMessage message in messages)
+//         {
+//             try
+//             {
+//                 Type? eventType = Type.GetType(message.Type);
+//                 if (eventType is null)
+//                 {
+//                     logger.LogError("[{Module}] Outbox message {Id} has unknown type '{Type}'.", moduleName, message.Id, message.Type);
+//                     message.Error = $"Unknown assembly type: {message.Type}";
+//                     message.ProcessedOnUtc = DateTime.UtcNow;
+//                     continue;
+//                 }
 
-        foreach (var message in messages)
-        {
-            try
-            {
-                var eventType = Type.GetType(message.Type);
-                if (eventType == null)
-                {
-                    _logger.LogWarning(
-                        "[{Module}] Unknown event type: {Type}",
-                        moduleName,
-                        message.Type);
-                    message.Error = $"Unknown type: {message.Type}";
-                    message.ProcessedOnUtc = DateTime.UtcNow;
-                    continue;
-                }
+//                 object? domainEvent = JsonSerializer.Deserialize(message.Content, eventType);
+//                 if (domainEvent is null)
+//                 {
+//                     logger.LogError("[{Module}] Outbox message {Id} deserialization returned null.", moduleName, message.Id);
+//                     message.Error = "Deserialization failed.";
+//                     message.ProcessedOnUtc = DateTime.UtcNow;
+//                     continue;
+//                 }
 
-                var domainEvent = JsonSerializer.Deserialize(message.Content, eventType) as IDomainEvent;
-                if (domainEvent == null)
-                {
-                    _logger.LogWarning(
-                        "[{Module}] Failed to deserialize event: {MessageId}",
-                        moduleName,
-                        message.Id);
-                    message.Error = "Deserialization failed";
-                    message.ProcessedOnUtc = DateTime.UtcNow;
-                    continue;
-                }
+//                 // Explicit runtime type publish for correct MassTransit exchange targeting
+//                 await publishEndpoint.Publish(domainEvent, eventType, context.CancellationToken);
 
-                await _publishEndpoint.Publish(domainEvent, context.CancellationToken);
+//                 message.ProcessedOnUtc = DateTime.UtcNow;
+//                 message.Error = null;
 
-                message.ProcessedOnUtc = DateTime.UtcNow;
+//                 logger.LogDebug("[{Module}] Processed outbox message {Id} ({Type}).", moduleName, message.Id, eventType.Name);
+//             }
+//             catch (Exception ex)
+//             {
+//                 message.RetryCount++;
+//                 message.Error = ex.Message;
 
-                _logger.LogDebug(
-                    "[{Module}] Successfully processed message {MessageId} of type {Type}",
-                    moduleName,
-                    message.Id,
-                    eventType.Name);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(
-                    ex,
-                    "[{Module}] Error processing message {MessageId}",
-                    moduleName,
-                    message.Id);
+//                 if (message.RetryCount >= _options.MaxRetryCount)
+//                 {
+//                     message.ProcessedOnUtc = DateTime.UtcNow; // Dead-letter after max retries
+//                     logger.LogError(ex, "[{Module}] Outbox message {Id} reached max retry limit ({MaxRetries}) and was marked as failed.", moduleName, message.Id, _options.MaxRetryCount);
+//                 }
+//                 else
+//                 {
+//                     logger.LogWarning(ex, "[{Module}] Outbox message {Id} failed attempt {RetryCount}/{MaxRetries}.", moduleName, message.Id, message.RetryCount, _options.MaxRetryCount);
+//                 }
+//             }
+//         }
 
-                message.Error = ex.Message;
-            }
-        }
-
-        await _dbContext.SaveChangesAsync(context.CancellationToken);
-
-        _logger.LogInformation(
-            "[{Module}] Completed processing {Count} outbox messages",
-            moduleName,
-            messages.Count);
-    }
-}
+//         await dbContext.SaveChangesAsync(context.CancellationToken);
+//     }
+// }

@@ -1,8 +1,7 @@
-﻿namespace Shared.Infrastructure.Inbox;
+﻿namespace OmniCore.Shared.Infrastructure.Inbox;
 
 public sealed class InboxOptions
 {
-
     public const string SectionName = "Inbox";
 
     public int IntervalInSeconds { get; set; } = 5;

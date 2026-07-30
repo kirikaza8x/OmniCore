@@ -1,38 +1,34 @@
-﻿using System.Collections.Concurrent;
+﻿namespace OmniCore.Shared.Infrastructure.Data;
+
+using System.Collections.Concurrent;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
-using Shared.Domain.Data;
-using Shared.Domain.Data.Repositories;
-using Shared.Domain.DDD;
+using OmniCore.Shared.Domain.DDD;
+using OmniCore.Shared.Domain.Repositories;
+using OmniCore.Shared.Infrastructure.Data.Repositories;
 
-namespace Shared.Infrastructure.Data;
-
-public class UnitOfWorkBase<TDbContext> : IUnitOfWork where TDbContext : DbContext
+public class UnitOfWorkBase<TDbContext>(TDbContext dbContext) : IUnitOfWork
+    where TDbContext : DbContext
 {
-    private readonly TDbContext _dbContext;
-    private readonly ConcurrentDictionary<Type, object> _repositories;
+    private readonly TDbContext _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
+    private readonly ConcurrentDictionary<Type, object> _repositories = new();
     private IDbContextTransaction? _currentTransaction;
     private bool _disposed;
 
-    public UnitOfWorkBase(TDbContext dbContext)
-    {
-        _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
-        _repositories = new ConcurrentDictionary<Type, object>();
-    }
+    public bool IsInTransaction => _currentTransaction != null;
 
-    public IRepository<TEntity, TId> Repository<TEntity, TId>() where TEntity : Entity<TId>
+    public IRepository<TEntity, TId> Repository<TEntity, TId>() 
+        where TEntity : AggregateRoot<TId>
     {
-        return (IRepository<TEntity, TId>)_repositories.GetOrAdd(typeof(TEntity), _ =>
-            new RepositoryBase<TEntity, TId>(_dbContext));
+        return (IRepository<TEntity, TId>)_repositories.GetOrAdd(
+            typeof(TEntity), 
+            _ => new RepositoryBase<TEntity, TId>(_dbContext));
     }
 
     public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
         return await _dbContext.SaveChangesAsync(cancellationToken);
     }
-
-
-    public bool IsInTransaction => _currentTransaction != null;
 
     public async Task BeginTransactionAsync(CancellationToken cancellationToken = default)
     {
@@ -78,6 +74,30 @@ public class UnitOfWorkBase<TDbContext> : IUnitOfWork where TDbContext : DbConte
         }
     }
 
+    public async Task ExecuteInTransactionAsync(
+        Func<Task> operation, 
+        CancellationToken cancellationToken = default)
+    {
+        var strategy = _dbContext.Database.CreateExecutionStrategy();
+
+        await strategy.ExecuteAsync(async () =>
+        {
+            await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
+
+            try
+            {
+                await operation();
+                await _dbContext.SaveChangesAsync(cancellationToken);
+                await transaction.CommitAsync(cancellationToken);
+            }
+            catch
+            {
+                await transaction.RollbackAsync(cancellationToken);
+                throw;
+            }
+        });
+    }
+
     private async Task DisposeTransactionAsync()
     {
         if (_currentTransaction != null)
@@ -106,25 +126,25 @@ public class UnitOfWorkBase<TDbContext> : IUnitOfWork where TDbContext : DbConte
         _disposed = true;
     }
 
-    public async Task ExecuteInTransactionAsync(Func<Task> operation)
+    public async ValueTask DisposeAsync()
     {
-        var strategy = _dbContext.Database.CreateExecutionStrategy();
+        await DisposeAsyncCore();
 
-        await strategy.ExecuteAsync(async () =>
+        Dispose(false);
+        GC.SuppressFinalize(this);
+    }
+
+    protected virtual async ValueTask DisposeAsyncCore()
+    {
+        if (_disposed) return;
+
+        if (_currentTransaction != null)
         {
-            await using var transaction = await _dbContext.Database.BeginTransactionAsync();
+            await _currentTransaction.DisposeAsync();
+            _currentTransaction = null;
+        }
 
-            try
-            {
-                await operation();
-                await _dbContext.SaveChangesAsync();
-                await transaction.CommitAsync();
-            }
-            catch
-            {
-                await transaction.RollbackAsync();
-                throw;
-            }
-        });
+        await _dbContext.DisposeAsync();
+        _disposed = true;
     }
 }

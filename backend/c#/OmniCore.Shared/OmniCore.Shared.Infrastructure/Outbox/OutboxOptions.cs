@@ -1,12 +1,18 @@
-﻿namespace Shared.Infrastructure.Outbox;
+﻿namespace OmniCore.Shared.Infrastructure.Outbox;
 
-public sealed class OutboxOptions
+using System.ComponentModel.DataAnnotations;
+using OmniCore.Shared.Infrastructure.Configs;
+
+public sealed class OutboxOptions : ConfigBase
 {
-    public const string SectionName = "Outbox";
+    public override string SectionName => "Outbox";
 
+    [Range(1, 60)]
     public int IntervalInSeconds { get; set; } = 3;
 
-    public int BatchSize { get; set; } = 30;
+    [Range(1, 500)]
+    public int BatchSize { get; set; } = 50;
 
+    [Range(1, 10)]
     public int MaxRetryCount { get; set; } = 3;
 }

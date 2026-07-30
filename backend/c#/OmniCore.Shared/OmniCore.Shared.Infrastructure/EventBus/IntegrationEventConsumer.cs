@@ -1,23 +1,18 @@
-﻿using MassTransit;
-using Shared.Application.Abstractions.EventBus;
+﻿namespace OmniCore.Shared.Infrastructure.EventBus;
 
-namespace Shared.Infrastructure.EventBus;
+using MassTransit;
+using OmniCore.Shared.Application.Abstractions.EventBus;
 
-public class IntegrationEventConsumer<TIntegrationEvent> : IConsumer<TIntegrationEvent>
+public class IntegrationEventConsumer<TIntegrationEvent>(
+    IEnumerable<IIntegrationEventHandler<TIntegrationEvent>> handlers) 
+    : IConsumer<TIntegrationEvent>
     where TIntegrationEvent : class, IIntegrationEvent
 {
-    private readonly IEnumerable<IIntegrationEventHandler<TIntegrationEvent>> _handlers;
-
-    public IntegrationEventConsumer(IEnumerable<IIntegrationEventHandler<TIntegrationEvent>> handlers)
-    {
-        _handlers = handlers;
-    }
-
     public async Task Consume(ConsumeContext<TIntegrationEvent> context)
     {
-        foreach (var handler in _handlers)
+        foreach (var handler in handlers)
         {
-            await handler.Handle(context.Message, context.CancellationToken);
+            await handler.HandleAsync(context.Message, context.CancellationToken);
         }
     }
 }
