@@ -2,6 +2,7 @@
 
 using System.Reflection;
 using MassTransit;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -10,62 +11,76 @@ using OmniCore.Shared.Infrastructure.Configs.MessageBroker;
 using OmniCore.Shared.Infrastructure.EventBus;
 
 /// <summary>
-/// Extension methods for configuring MassTransit message broker integration and registering integration event handlers.
+/// Extension methods for setting up MassTransit with optional Kafka Riders and EF Core Outbox.
 /// </summary>
 public static class MassTransitExtensions
 {
     /// <summary>
-    /// Registers and configures MassTransit with RabbitMQ, scanning assemblies for consumers, sagas, activities, and custom integration handlers.
+    /// Configures MassTransit supporting RabbitMQ, Kafka, and EF Core Transactional Outbox.
     /// </summary>
-    /// <param name="services">The service collection to add services to.</param>
-    /// <param name="configuration">The configuration instance for section binding.</param>
-    /// <param name="assemblies">The assemblies to scan for message handlers and consumers.</param>
-    /// <returns>The updated <see cref="IServiceCollection"/>.</returns>
-    public static IServiceCollection AddMassTransitWithAssemblies(
+    /// <typeparam name="TDbContext">The EF Core <see cref="DbContext"/> used for outbox persistence.</typeparam>
+    public static IServiceCollection AddMassTransitWithBroker<TDbContext>(
         this IServiceCollection services,
         IConfiguration configuration,
-        params Assembly[] assemblies)
+        params Assembly[] assemblies) where TDbContext : DbContext
     {
         ArgumentNullException.ThrowIfNull(services);
         ArgumentNullException.ThrowIfNull(configuration);
 
-        // 1. Bind Options properly into DI
-        services.Configure<MessageBrokerConfig>(configuration.GetSection("MessageBroker"));
-
-        // 2. Register IEventBus implementation
+        services.AddConfig<MessageBrokerConfig>();
         services.AddScoped<IEventBus, EventBus>();
 
-        // 3. Auto-register all IIntegrationEventHandler<T> into DI via Scrutor
         RegisterIntegrationEventHandlers(services, assemblies);
 
-        // 4. Configure MassTransit
         services.AddMassTransit(busConfigurator =>
         {
             busConfigurator.SetKebabCaseEndpointNameFormatter();
-            busConfigurator.SetInMemorySagaRepositoryProvider();
 
-            // Register standard MassTransit consumers
+            // 1. Transactional Outbox Configuration
+            busConfigurator.AddEntityFrameworkOutbox<TDbContext>(outbox =>
+            {
+                outbox.UsePostgres(); // Or .UseSqlServer() based on your db provider
+                outbox.UseBusOutbox();
+            });
+
+            // 2. Register Consumers
             busConfigurator.AddConsumers(assemblies);
-
-            // Dynamically register IntegrationEventConsumer<T> wrappers
             RegisterIntegrationEventConsumers(busConfigurator, assemblies);
 
-            busConfigurator.AddSagaStateMachines(assemblies);
-            busConfigurator.AddSagas(assemblies);
-            busConfigurator.AddActivities(assemblies);
+            // 3. Configure Transport (RabbitMQ / Kafka)
+            var brokerConfig = configuration.GetSection("MessageBroker").Get<MessageBrokerConfig>() 
+                               ?? new MessageBrokerConfig();
 
-            busConfigurator.UsingRabbitMq((context, configurator) =>
+            if (brokerConfig.Provider.Equals("Kafka", StringComparison.OrdinalIgnoreCase) ||
+                brokerConfig.Provider.Equals("Both", StringComparison.OrdinalIgnoreCase))
             {
-                var brokerConfig = context.GetRequiredService<IOptions<MessageBrokerConfig>>().Value;
-
-                configurator.Host(new Uri(brokerConfig.Host), host =>
+                busConfigurator.AddRider(rider =>
                 {
-                    host.Username(brokerConfig.Username);
-                    host.Password(brokerConfig.Password);
+                    rider.AddConsumers(assemblies);
+                    rider.UsingKafka((context, k) =>
+                    {
+                        k.Host(brokerConfig.KafkaBootstrapServers);
+                    });
                 });
+            }
 
-                configurator.ConfigureEndpoints(context);
-            });
+            if (!brokerConfig.Provider.Equals("Kafka", StringComparison.OrdinalIgnoreCase))
+            {
+                busConfigurator.UsingRabbitMq((context, configurator) =>
+                {
+                    configurator.Host(new Uri(brokerConfig.Host), host =>
+                    {
+                        host.Username(brokerConfig.Username);
+                        host.Password(brokerConfig.Password);
+                    });
+
+                    configurator.ConfigureEndpoints(context);
+                });
+            }
+            else
+            {
+                busConfigurator.UsingInMemory((context, configurator) => configurator.ConfigureEndpoints(context));
+            }
         });
 
         return services;
@@ -75,8 +90,7 @@ public static class MassTransitExtensions
     {
         services.Scan(scan => scan
             .FromAssemblies(assemblies)
-            .AddClasses(classes => classes
-                .AssignableTo(typeof(IIntegrationEventHandler<>)), publicOnly: false)
+            .AddClasses(classes => classes.AssignableTo(typeof(IIntegrationEventHandler<>)), publicOnly: false)
             .AsImplementedInterfaces()
             .WithScopedLifetime());
     }
