@@ -460,7 +460,7 @@ Terraform/**/.terraform.lock.hcl
 Terraform/**/terraform.tfvars
 Terraform/**/*.tfvars.json
 Terraform/**/*.auto.tfvars
-*.md
+# *.md
 !README.md
 !readme.md
 

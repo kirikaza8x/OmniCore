@@ -1,6 +1,5 @@
 # ==============================================================================
 # OmniCore Developer Task Launcher
-# Path: backend/c#/scripts/powershell/run.ps1 (or scripts/shells/run.ps1)
 # ==============================================================================
 
 # Ensure execution policy allows current process script execution
@@ -23,7 +22,7 @@ function Get-ScriptMap {
 
 function Show-Header {
     Write-Host "=====================================================" -ForegroundColor Cyan
-    Write-Host "               OMNICORE SCRIPT LAUNCHER              " -ForegroundColor White
+    Write-Host "            [+] OMNICORE SCRIPT LAUNCHER             " -ForegroundColor White
     Write-Host "=====================================================" -ForegroundColor Cyan
 }
 

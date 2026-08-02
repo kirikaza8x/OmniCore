@@ -5,9 +5,12 @@
     generates markers, and updates the solution file.
 .PARAMETER ModuleName
     Name of the microservice (e.g., Auth, User, Order, Payment).
+.PARAMETER TargetFramework
+    Target framework moniker (default: net9.0).
 #>
 param(
-    [string]$ModuleName
+    [string]$ModuleName,
+    [string]$TargetFramework = "net9.0"
 )
 
 # Prompt if parameter is missing
@@ -23,7 +26,7 @@ if ([string]::IsNullOrWhiteSpace($ModuleName)) {
 # Normalize service name (e.g., "auth" -> "Auth")
 $ModuleName = (Get-Culture).TextInfo.ToTitleCase($ModuleName.ToLower())
 
-# Resolve backend root path relative to script location (scripts/powershell -> backend/c#)
+# Resolve backend root path relative to script location
 $ScriptDir  = $PSScriptRoot
 $BackendDir = (Resolve-Path (Join-Path $ScriptDir "../..")).Path
 
@@ -48,35 +51,34 @@ if (Test-Path $ServiceRoot) {
 }
 
 Write-Host "`n=====================================================" -ForegroundColor Cyan
-Write-Host " 🚀 Building OmniCore Service: $ServiceName" -ForegroundColor White
-Write-Host " 📁 Target Path : $ServiceRoot" -ForegroundColor DarkGray
-Write-Host " 📄 Solution    : $($SolutionFile.Name)" -ForegroundColor DarkGray
+Write-Host " [+] Building OmniCore Service: $ServiceName" -ForegroundColor White
+Write-Host " > Target Path     : $ServiceRoot" -ForegroundColor DarkGray
+Write-Host " > Target Framework: $TargetFramework" -ForegroundColor DarkGray
+Write-Host " > Solution         : $($SolutionFile.Name)" -ForegroundColor DarkGray
 Write-Host "=====================================================`n" -ForegroundColor Cyan
 
 # ------------------------------------------------------------------------------
 # 1. Create Folder Hierarchy
 # ------------------------------------------------------------------------------
-Write-Host "[1/5] Creating folder structure..." -ForegroundColor Cyan
-New-Item -ItemType Directory -Force -Path `
-    "$ServiceRoot/$ServiceName.Api",
-    "$ServiceRoot/$ServiceName.Application",
-    "$ServiceRoot/$ServiceName.Domain",
-    "$ServiceRoot/$ServiceName.Infrastructure",
-    "$ServiceRoot/$ServiceName.Contracts" | Out-Null
+Write-Host '[1/5] Creating folder structure...' -ForegroundColor Cyan
+$ApiDir       = Join-Path $ServiceRoot "$ServiceName.Api"
+$AppDir       = Join-Path $ServiceRoot "$ServiceName.Application"
+$DomainDir    = Join-Path $ServiceRoot "$ServiceName.Domain"
+$InfraDir     = Join-Path $ServiceRoot "$ServiceName.Infrastructure"
+$ContractsDir = Join-Path $ServiceRoot "$ServiceName.Contracts"
+
+New-Item -ItemType Directory -Force -Path $ApiDir, $AppDir, $DomainDir, $InfraDir, $ContractsDir | Out-Null
 
 # ------------------------------------------------------------------------------
-# 2. Create .NET 9 Projects
+# 2. Create Projects
 # ------------------------------------------------------------------------------
-Write-Host "[2/5] Initializing .NET 9 projects..." -ForegroundColor Cyan
+Write-Host "[2/5] Initializing $TargetFramework projects..." -ForegroundColor Cyan
 
-# API Layer (Minimal Web Host)
-dotnet new web -n "$ServiceName.Api" -o "$ServiceRoot/$ServiceName.Api" --no-https | Out-Null
-
-# Class Libraries
-dotnet new classlib -n "$ServiceName.Contracts"      -o "$ServiceRoot/$ServiceName.Contracts"      | Out-Null
-dotnet new classlib -n "$ServiceName.Domain"         -o "$ServiceRoot/$ServiceName.Domain"         | Out-Null
-dotnet new classlib -n "$ServiceName.Application"    -o "$ServiceRoot/$ServiceName.Application"    | Out-Null
-dotnet new classlib -n "$ServiceName.Infrastructure" -o "$ServiceRoot/$ServiceName.Infrastructure" | Out-Null
+dotnet new web -n "$ServiceName.Api"            -o $ApiDir       -f $TargetFramework --no-https | Out-Null
+dotnet new classlib -n "$ServiceName.Contracts"      -o $ContractsDir -f $TargetFramework            | Out-Null
+dotnet new classlib -n "$ServiceName.Domain"         -o $DomainDir    -f $TargetFramework            | Out-Null
+dotnet new classlib -n "$ServiceName.Application"    -o $AppDir       -f $TargetFramework            | Out-Null
+dotnet new classlib -n "$ServiceName.Infrastructure" -o $InfraDir    -f $TargetFramework            | Out-Null
 
 # Clean up default Class1.cs files
 Get-ChildItem -Path $ServiceRoot -Filter "Class1.cs" -Recurse | Remove-Item -Force
@@ -84,16 +86,16 @@ Get-ChildItem -Path $ServiceRoot -Filter "Class1.cs" -Recurse | Remove-Item -For
 # ------------------------------------------------------------------------------
 # 3. Wire Up Internal Clean Architecture & Shared Kernel References
 # ------------------------------------------------------------------------------
-Write-Host "[3/5] Wiring Clean Architecture & Shared Kernel project references..." -ForegroundColor Cyan
+Write-Host '[3/5] Wiring Clean Architecture and Shared Kernel project references...' -ForegroundColor Cyan
 
 # Service-Internal Layer Dependencies
-dotnet add "$ServiceRoot/$ServiceName.Application/$ServiceName.Application.csproj" reference "$ServiceRoot/$ServiceName.Domain/$ServiceName.Domain.csproj"       | Out-Null
-dotnet add "$ServiceRoot/$ServiceName.Application/$ServiceName.Application.csproj" reference "$ServiceRoot/$ServiceName.Contracts/$ServiceName.Contracts.csproj" | Out-Null
+dotnet add (Join-Path $AppDir "$ServiceName.Application.csproj") reference (Join-Path $DomainDir "$ServiceName.Domain.csproj")       | Out-Null
+dotnet add (Join-Path $AppDir "$ServiceName.Application.csproj") reference (Join-Path $ContractsDir "$ServiceName.Contracts.csproj") | Out-Null
 
-dotnet add "$ServiceRoot/$ServiceName.Infrastructure/$ServiceName.Infrastructure.csproj" reference "$ServiceRoot/$ServiceName.Application/$ServiceName.Application.csproj" | Out-Null
+dotnet add (Join-Path $InfraDir "$ServiceName.Infrastructure.csproj") reference (Join-Path $AppDir "$ServiceName.Application.csproj") | Out-Null
 
-dotnet add "$ServiceRoot/$ServiceName.Api/$ServiceName.Api.csproj" reference "$ServiceRoot/$ServiceName.Infrastructure/$ServiceName.Infrastructure.csproj" | Out-Null
-dotnet add "$ServiceRoot/$ServiceName.Api/$ServiceName.Api.csproj" reference "$ServiceRoot/$ServiceName.Application/$ServiceName.Application.csproj"    | Out-Null
+dotnet add (Join-Path $ApiDir "$ServiceName.Api.csproj") reference (Join-Path $InfraDir "$ServiceName.Infrastructure.csproj") | Out-Null
+dotnet add (Join-Path $ApiDir "$ServiceName.Api.csproj") reference (Join-Path $AppDir "$ServiceName.Application.csproj")     | Out-Null
 
 # Default Reference Mapping from OmniCore.Shared Kernel Layers
 $SharedDomainProj = Join-Path $SharedDir "OmniCore.Shared.Domain/OmniCore.Shared.Domain.csproj"
@@ -102,104 +104,121 @@ $SharedInfraProj  = Join-Path $SharedDir "OmniCore.Shared.Infrastructure/OmniCor
 $SharedApiProj    = Join-Path $SharedDir "OmniCore.Shared.Api/OmniCore.Shared.Api.csproj"
 
 if (Test-Path $SharedDomainProj) {
-    dotnet add "$ServiceRoot/$ServiceName.Domain/$ServiceName.Domain.csproj" reference "$SharedDomainProj" | Out-Null
+    dotnet add (Join-Path $DomainDir "$ServiceName.Domain.csproj") reference $SharedDomainProj | Out-Null
 }
 
 if (Test-Path $SharedAppProj) {
-    dotnet add "$ServiceRoot/$ServiceName.Application/$ServiceName.Application.csproj" reference "$SharedAppProj" | Out-Null
+    dotnet add (Join-Path $AppDir "$ServiceName.Application.csproj") reference $SharedAppProj | Out-Null
 }
 
 if (Test-Path $SharedInfraProj) {
-    dotnet add "$ServiceRoot/$ServiceName.Infrastructure/$ServiceName.Infrastructure.csproj" reference "$SharedInfraProj" | Out-Null
+    dotnet add (Join-Path $InfraDir "$ServiceName.Infrastructure.csproj") reference $SharedInfraProj | Out-Null
 }
 
 if (Test-Path $SharedApiProj) {
-    dotnet add "$ServiceRoot/$ServiceName.Api/$ServiceName.Api.csproj" reference "$SharedApiProj" | Out-Null
+    dotnet add (Join-Path $ApiDir "$ServiceName.Api.csproj") reference $SharedApiProj | Out-Null
 }
 
 # ------------------------------------------------------------------------------
 # 4. Generate AssemblyReference Markers & Program.cs
 # ------------------------------------------------------------------------------
-Write-Host "[4/5] Writing AssemblyReference markers & starter host..." -ForegroundColor Cyan
+Write-Host '[4/5] Writing AssemblyReference markers and starter host...' -ForegroundColor Cyan
 
-@"
-namespace $ServiceName.Contracts;
+# Contracts AssemblyReference.cs
+Set-Content -Path (Join-Path $ContractsDir "AssemblyReference.cs") -Value @(
+    "namespace ${ServiceName}.Contracts;",
+    "",
+    "public static class ContractsAssemblyReference",
+    "{",
+    "    public static readonly System.Reflection.Assembly Assembly = typeof(ContractsAssemblyReference).Assembly;",
+    "}"
+)
 
-public static class ContractsAssemblyReference
-{
-    public static readonly System.Reflection.Assembly Assembly = typeof(ContractsAssemblyReference).Assembly;
-}
-"@ | Set-Content "$ServiceRoot/$ServiceName.Contracts/AssemblyReference.cs"
+# Domain AssemblyReference.cs
+Set-Content -Path (Join-Path $DomainDir "AssemblyReference.cs") -Value @(
+    "namespace ${ServiceName}.Domain;",
+    "",
+    "public static class DomainAssemblyReference",
+    "{",
+    "    public static readonly System.Reflection.Assembly Assembly = typeof(DomainAssemblyReference).Assembly;",
+    "}"
+)
 
-@"
-namespace $ServiceName.Domain;
+# Application AssemblyReference.cs
+Set-Content -Path (Join-Path $AppDir "AssemblyReference.cs") -Value @(
+    "namespace ${ServiceName}.Application;",
+    "",
+    "public static class ApplicationAssemblyReference",
+    "{",
+    "    public static readonly System.Reflection.Assembly Assembly = typeof(ApplicationAssemblyReference).Assembly;",
+    "}"
+)
 
-public static class DomainAssemblyReference
-{
-    public static readonly System.Reflection.Assembly Assembly = typeof(DomainAssemblyReference).Assembly;
-}
-"@ | Set-Content "$ServiceRoot/$ServiceName.Domain/AssemblyReference.cs"
+# Infrastructure AssemblyReference.cs
+Set-Content -Path (Join-Path $InfraDir "AssemblyReference.cs") -Value @(
+    "namespace ${ServiceName}.Infrastructure;",
+    "",
+    "public static class InfrastructureAssemblyReference",
+    "{",
+    "    public static readonly System.Reflection.Assembly Assembly = typeof(InfrastructureAssemblyReference).Assembly;",
+    "}"
+)
 
-@"
-namespace $ServiceName.Application;
+# Api AssemblyReference.cs
+Set-Content -Path (Join-Path $ApiDir "AssemblyReference.cs") -Value @(
+    "namespace ${ServiceName}.Api;",
+    "",
+    "public static class ApiAssemblyReference",
+    "{",
+    "    public static readonly System.Reflection.Assembly Assembly = typeof(ApiAssemblyReference).Assembly;",
+    "}"
+)
 
-public static class ApplicationAssemblyReference
-{
-    public static readonly System.Reflection.Assembly Assembly = typeof(ApplicationAssemblyReference).Assembly;
-}
-"@ | Set-Content "$ServiceRoot/$ServiceName.Application/AssemblyReference.cs"
-
-@"
-namespace $ServiceName.Infrastructure;
-
-public static class InfrastructureAssemblyReference
-{
-    public static readonly System.Reflection.Assembly Assembly = typeof(InfrastructureAssemblyReference).Assembly;
-}
-"@ | Set-Content "$ServiceRoot/$ServiceName.Infrastructure/AssemblyReference.cs"
-
-@"
-namespace $ServiceName.Api;
-
-public static class ApiAssemblyReference
-{
-    public static readonly System.Reflection.Assembly Assembly = typeof(ApiAssemblyReference).Assembly;
-}
-"@ | Set-Content "$ServiceRoot/$ServiceName.Api/AssemblyReference.cs"
-
-# Generate starter Program.cs using Carter and Shared Presentation extensions
-@"
-using Carter;
-
-var builder = WebApplication.CreateBuilder(args);
-
-// Register presentation layer extensions from Shared Kernel
-builder.Services.AddPresentationLayer();
-builder.Services.AddCarter();
-
-var app = builder.Build();
-
-app.UseExceptionHandler();
-app.UseRateLimiter();
-
-app.MapCarter();
-
-app.Run();
-"@ | Set-Content "$ServiceRoot/$ServiceName.Api/Program.cs"
+# Starter Program.cs configured with OmniCore.Shared.Api
+Set-Content -Path (Join-Path $ApiDir "Program.cs") -Value @(
+    "using Carter;",
+    "using OmniCore.Shared.Api;",
+    "using ${ServiceName}.Api;",
+    "using ${ServiceName}.Application;",
+    "",
+    "var builder = WebApplication.CreateBuilder(args);",
+    "",
+    "// Register Shared API Kernel (Carter, Auth, Rate Limiting, CORS)",
+    "builder.Services.AddApi(",
+    "    new[]",
+    "    {",
+    "        ApiAssemblyReference.Assembly,",
+    "        ApplicationAssemblyReference.Assembly",
+    "    },",
+    "    builder.Configuration",
+    ");",
+    "",
+    "var app = builder.Build();",
+    "",
+    "app.UseCors();",
+    "app.UseRateLimiter();",
+    "app.UseAuthentication();",
+    "app.UseAuthorization();",
+    "",
+    "app.UseApi();",
+    "app.MapCarter();",
+    "",
+    "app.Run();"
+)
 
 # ------------------------------------------------------------------------------
 # 5. Add Projects to Solution
 # ------------------------------------------------------------------------------
-Write-Host "[5/5] Registering projects in solution file..." -ForegroundColor Cyan
+Write-Host '[5/5] Registering projects in solution file...' -ForegroundColor Cyan
 
-dotnet sln "$SolutionPath" add "$ServiceRoot/$ServiceName.Contracts/$ServiceName.Contracts.csproj"           | Out-Null
-dotnet sln "$SolutionPath" add "$ServiceRoot/$ServiceName.Domain/$ServiceName.Domain.csproj"                  | Out-Null
-dotnet sln "$SolutionPath" add "$ServiceRoot/$ServiceName.Application/$ServiceName.Application.csproj"     | Out-Null
-dotnet sln "$SolutionPath" add "$ServiceRoot/$ServiceName.Infrastructure/$ServiceName.Infrastructure.csproj"  | Out-Null
-dotnet sln "$SolutionPath" add "$ServiceRoot/$ServiceName.Api/$ServiceName.Api.csproj"                     | Out-Null
+dotnet sln "$SolutionPath" add (Join-Path $ContractsDir "$ServiceName.Contracts.csproj") | Out-Null
+dotnet sln "$SolutionPath" add (Join-Path $DomainDir "$ServiceName.Domain.csproj")       | Out-Null
+dotnet sln "$SolutionPath" add (Join-Path $AppDir "$ServiceName.Application.csproj")     | Out-Null
+dotnet sln "$SolutionPath" add (Join-Path $InfraDir "$ServiceName.Infrastructure.csproj")| Out-Null
+dotnet sln "$SolutionPath" add (Join-Path $ApiDir "$ServiceName.Api.csproj")             | Out-Null
 
 # ------------------------------------------------------------------------------
 # Done!
 # ------------------------------------------------------------------------------
-Write-Host "`n[OK] Service '$ServiceName' created successfully!" -ForegroundColor Green
+Write-Host "`n[OK] Service '$ServiceName' ($TargetFramework) created successfully!" -ForegroundColor Green
 Write-Host "Next step: Build the solution via 'dotnet build $SolutionPath'" -ForegroundColor Yellow

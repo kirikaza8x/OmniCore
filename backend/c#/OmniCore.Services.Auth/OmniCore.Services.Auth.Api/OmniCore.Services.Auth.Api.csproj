@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <ItemGroup>
+    <ProjectReference Include="..\OmniCore.Services.Auth.Infrastructure\OmniCore.Services.Auth.Infrastructure.csproj" />
+    <ProjectReference Include="..\OmniCore.Services.Auth.Application\OmniCore.Services.Auth.Application.csproj" />
+    <ProjectReference Include="..\..\OmniCore.Shared\OmniCore.Shared.Api\OmniCore.Shared.Api.csproj" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+</Project>

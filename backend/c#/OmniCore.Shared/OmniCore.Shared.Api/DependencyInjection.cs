@@ -5,9 +5,9 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using OmniCore.Shared.Api.Extensions;
 using OmniCore.Shared.Infrastructure.Configs;
 using OmniCore.Shared.Infrastructure.Hubs;
-using Shared.Api.Extensions;
 
 namespace OmniCore.Shared.Api;
 

@@ -1,4 +1,11 @@
 <Solution>
+  <Folder Name="/OmniCore.Services.Auth/">
+    <Project Path="OmniCore.Services.Auth/OmniCore.Services.Auth.Api/OmniCore.Services.Auth.Api.csproj" />
+    <Project Path="OmniCore.Services.Auth/OmniCore.Services.Auth.Application/OmniCore.Services.Auth.Application.csproj" />
+    <Project Path="OmniCore.Services.Auth/OmniCore.Services.Auth.Contracts/OmniCore.Services.Auth.Contracts.csproj" />
+    <Project Path="OmniCore.Services.Auth/OmniCore.Services.Auth.Domain/OmniCore.Services.Auth.Domain.csproj" />
+    <Project Path="OmniCore.Services.Auth/OmniCore.Services.Auth.Infrastructure/OmniCore.Services.Auth.Infrastructure.csproj" />
+  </Folder>
   <Folder Name="/OmniCore.Shared/">
     <Project Path="OmniCore.Shared/OmniCore.Shared.Api/OmniCore.Shared.Api.csproj" />
     <Project Path="OmniCore.Shared/OmniCore.Shared.Application/OmniCore.Shared.Application.csproj" />
