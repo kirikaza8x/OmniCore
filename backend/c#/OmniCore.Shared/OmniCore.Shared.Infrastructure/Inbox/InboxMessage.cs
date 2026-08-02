@@ -1,8 +1,11 @@
-﻿using OmniCore.Shared.Infrastructure.Configs;
+﻿namespace OmniCore.Shared.Infrastructure.Inbox;
 
-namespace OmniCore.Shared.Infrastructure.Inbox;
+using System;
 
-public sealed class InboxMessage : ConfigBase
+/// <summary>
+/// Represents an incoming integration event recorded in the Inbox table for idempotent processing.
+/// </summary>
+public sealed class InboxMessage
 {
     public Guid Id { get; init; }
 

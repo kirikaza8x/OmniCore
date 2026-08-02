@@ -1,7 +1,7 @@
-﻿using Microsoft.AspNetCore.Http;
-using OmniCore.Shared.Domain.Abstractions;
+﻿namespace OmniCore.Shared.Api.Results;
 
-namespace Shared.Api.Results;
+using Microsoft.AspNetCore.Http;
+using OmniCore.Shared.Domain.Abstractions;
 
 public static class CustomResults
 {
@@ -9,12 +9,12 @@ public static class CustomResults
     {
         if (result.IsSuccess)
         {
-            throw new InvalidOperationException("Cannot create problem from successful result");
+            throw new InvalidOperationException("Cannot create problem response from a successful result.");
         }
 
         var extensions = GetErrors(result) ?? new Dictionary<string, object?>();
 
-        if (httpContext != null)
+        if (httpContext != null && !extensions.ContainsKey("traceId"))
         {
             extensions["traceId"] = httpContext.TraceIdentifier;
         }
@@ -44,7 +44,7 @@ public static class CustomResults
         ErrorType.Conflict => error.Description,
         ErrorType.Unauthorized => error.Description,
         ErrorType.Forbidden => error.Description,
-        _ => "An unexpected error occurred"
+        _ => "An unexpected error occurred."
     };
 
     private static string GetType(ErrorType errorType) => errorType switch

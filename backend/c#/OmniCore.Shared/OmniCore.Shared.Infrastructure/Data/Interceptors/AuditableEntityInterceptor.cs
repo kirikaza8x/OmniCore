@@ -41,7 +41,6 @@ public sealed class AuditableEntityInterceptor : SaveChangesInterceptor
     {
         if (context is null) return;
 
-        // FIXED: Using null-conditional operator ?. to prevent string.Empty evaluation on null Guid?
         string currentUserId = _currentUser.UserId?.ToString() ?? "System";
         DateTime utcNow = _dateTimeProvider.UtcNow;
 

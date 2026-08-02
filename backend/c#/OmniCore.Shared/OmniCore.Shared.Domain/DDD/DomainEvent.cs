@@ -1,6 +1,8 @@
-﻿namespace OmniCore.Shared.Domain.DDD;
+﻿using MediatR;
 
-public interface IDomainEvent
+namespace OmniCore.Shared.Domain.DDD;
+
+public interface IDomainEvent : INotification 
 {
     Guid EventId { get; }
     DateTime OccurredOn { get; }
@@ -13,3 +15,4 @@ public abstract record DomainEvent : IDomainEvent
     public DateTime OccurredOn { get; init; } = DateTime.UtcNow;
     public string EventType => GetType().Name;
 }
+

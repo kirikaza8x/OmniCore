@@ -1,20 +1,20 @@
-﻿using System.Reflection;
+﻿namespace OmniCore.Shared.Api.Extensions;
+
+using System.Reflection;
 using Carter;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Shared.Api.Extensions;
-
 public static class CarterExtensions
 {
-    public static IServiceCollection AddCarterWithAssemblies
-        (this IServiceCollection services, params Assembly[] assemblies)
+    public static IServiceCollection AddCarterWithAssemblies(this IServiceCollection services, params Assembly[] assemblies)
     {
         services.AddCarter(configurator: config =>
         {
             foreach (var assembly in assemblies)
             {
                 var modules = assembly.GetTypes()
-                .Where(t => t.IsAssignableTo(typeof(ICarterModule))).ToArray();
+                    .Where(t => typeof(ICarterModule).IsAssignableFrom(t) && !t.IsAbstract && !t.IsInterface)
+                    .ToArray();
 
                 config.WithModules(modules);
             }

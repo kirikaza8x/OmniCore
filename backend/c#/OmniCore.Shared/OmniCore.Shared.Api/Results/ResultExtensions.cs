@@ -1,7 +1,7 @@
-﻿using Microsoft.AspNetCore.Http;
-using OmniCore.Shared.Domain.Abstractions;
+﻿namespace OmniCore.Shared.Api.Results;
 
-namespace Shared.Api.Results;
+using Microsoft.AspNetCore.Http;
+using OmniCore.Shared.Domain.Abstractions;
 
 public static class ResultExtensions
 {
@@ -59,5 +59,4 @@ public static class ResultExtensions
     {
         return CustomResults.Problem(result);
     }
-
 }

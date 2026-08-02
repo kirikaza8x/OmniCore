@@ -1,19 +1,15 @@
 ﻿using System.Reflection;
 using System.Security.Claims;
 using System.Threading.RateLimiting;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
+using OmniCore.Shared.Infrastructure.Configs;
+using OmniCore.Shared.Infrastructure.Hubs;
 using Shared.Api.Extensions;
-using Shared.Api.Results;
-using Shared.Domain.Abstractions;
-using Shared.Infrastructure.Configs;
 
-namespace Shared.Api;
+namespace OmniCore.Shared.Api;
 
 public class SharedApiAssemblyReference
 {

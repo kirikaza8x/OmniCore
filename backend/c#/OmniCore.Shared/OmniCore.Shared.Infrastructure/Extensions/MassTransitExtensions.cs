@@ -5,20 +5,19 @@ using MassTransit;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
 using OmniCore.Shared.Application.Abstractions.EventBus;
 using OmniCore.Shared.Infrastructure.Configs.MessageBroker;
 using OmniCore.Shared.Infrastructure.EventBus;
 
 /// <summary>
-/// Extension methods for setting up MassTransit with optional Kafka Riders and EF Core Outbox.
+/// Extension methods for setting up MassTransit with dynamic broker transport and generic outbox persistence.
 /// </summary>
 public static class MassTransitExtensions
 {
     /// <summary>
-    /// Configures MassTransit supporting RabbitMQ, Kafka, and EF Core Transactional Outbox.
+    /// Configures MassTransit supporting RabbitMQ, Kafka, and configurable EF Core Outbox persistence.
     /// </summary>
-    /// <typeparam name="TDbContext">The EF Core <see cref="DbContext"/> used for outbox persistence.</typeparam>
+    /// <typeparam name="TDbContext">The EF Core <see cref="DbContext"/> used for persistence.</typeparam>
     public static IServiceCollection AddMassTransitWithBroker<TDbContext>(
         this IServiceCollection services,
         IConfiguration configuration,
@@ -32,27 +31,46 @@ public static class MassTransitExtensions
 
         RegisterIntegrationEventHandlers(services, assemblies);
 
+        var brokerConfig = configuration.GetSection("MessageBroker").Get<MessageBrokerConfig>() 
+                           ?? new MessageBrokerConfig();
+
         services.AddMassTransit(busConfigurator =>
         {
             busConfigurator.SetKebabCaseEndpointNameFormatter();
 
-            // 1. Transactional Outbox Configuration
-            busConfigurator.AddEntityFrameworkOutbox<TDbContext>(outbox =>
+            // 1. Generic Transactional Outbox Configuration
+            if (brokerConfig.EnableOutbox)
             {
-                outbox.UsePostgres(); // Or .UseSqlServer() based on your db provider
-                outbox.UseBusOutbox();
-            });
+                busConfigurator.AddEntityFrameworkOutbox<TDbContext>(outbox =>
+                {
+                    outbox.UseBusOutbox();
 
-            // 2. Register Consumers
+                    switch (brokerConfig.OutboxDbProvider.ToLowerInvariant())
+                    {
+                        case "postgres":
+                        case "postgresql":
+                            outbox.UsePostgres();
+                            break;
+                        case "sqlserver":
+                        case "mssql":
+                            outbox.UseSqlServer();
+                            break;
+                        default:
+                            // Fallback to in-memory/custom outbox handling
+                            break;
+                    }
+                });
+            }
+
+            // 2. Register MassTransit Consumers & Integration Event Adapters
             busConfigurator.AddConsumers(assemblies);
             RegisterIntegrationEventConsumers(busConfigurator, assemblies);
 
-            // 3. Configure Transport (RabbitMQ / Kafka)
-            var brokerConfig = configuration.GetSection("MessageBroker").Get<MessageBrokerConfig>() 
-                               ?? new MessageBrokerConfig();
+            // 3. Configure Message Broker Transport (RabbitMQ / Kafka)
+            bool isKafka = brokerConfig.Provider.Equals("Kafka", StringComparison.OrdinalIgnoreCase);
+            bool isBoth = brokerConfig.Provider.Equals("Both", StringComparison.OrdinalIgnoreCase);
 
-            if (brokerConfig.Provider.Equals("Kafka", StringComparison.OrdinalIgnoreCase) ||
-                brokerConfig.Provider.Equals("Both", StringComparison.OrdinalIgnoreCase))
+            if (isKafka || isBoth)
             {
                 busConfigurator.AddRider(rider =>
                 {
@@ -64,7 +82,7 @@ public static class MassTransitExtensions
                 });
             }
 
-            if (!brokerConfig.Provider.Equals("Kafka", StringComparison.OrdinalIgnoreCase))
+            if (!isKafka)
             {
                 busConfigurator.UsingRabbitMq((context, configurator) =>
                 {

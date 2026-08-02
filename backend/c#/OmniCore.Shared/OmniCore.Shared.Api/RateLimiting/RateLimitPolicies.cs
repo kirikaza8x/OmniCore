@@ -1,4 +1,4 @@
-namespace Shared.Api.RateLimiting;
+namespace OmniCore.Shared.Api.RateLimiting;
 
 public static class RateLimitPolicies
 {

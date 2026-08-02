@@ -1,6 +1,6 @@
-﻿using Microsoft.AspNetCore.Builder;
+﻿namespace OmniCore.Shared.Api.Extensions;
 
-namespace Shared.Api.Extensions;
+using Microsoft.AspNetCore.Builder;
 
 public static class AuthorizationExtensions
 {
