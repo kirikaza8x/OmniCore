@@ -1,15 +1,15 @@
+namespace OmniCore.Services.Auth.Domain.Entities;
+
 using OmniCore.Services.Auth.Domain.Events;
 using OmniCore.Services.Auth.Domain.ValueObjects;
 using OmniCore.Shared.Domain.Abstractions;
 using OmniCore.Shared.Domain.DDD;
-using OmniCore.Shared.Domain.ValueObjects; // Using Shared EmailAddress!
-
-namespace OmniCore.Services.Auth.Domain.Entities;
+using OmniCore.Shared.Domain.ValueObjects;
 
 public class Account : AggregateRoot<AccountId>, IAuditableEntity, ISoftDeletable
 {
-    /// <summary>Shared EmailAddress value object.</summary>
-    public EmailAddress Email { get; private set; } = null!;
+    public Username Username { get; private set; } = null!;
+    public EmailAddress? Email { get; private set; }
     public PasswordHash? PasswordHash { get; private set; }
     public bool IsEmailConfirmed { get; private set; }
     public bool IsActive { get; private set; }
@@ -25,14 +25,14 @@ public class Account : AggregateRoot<AccountId>, IAuditableEntity, ISoftDeletabl
     public ICollection<SecurityToken> SecurityTokens { get; private set; } = new List<SecurityToken>();
     public ICollection<MfaMethod> MfaMethods { get; private set; } = new List<MfaMethod>();
     public ICollection<MfaRecoveryCode> MfaRecoveryCodes { get; private set; } = new List<MfaRecoveryCode>();
-    public ICollection<UserSession> UserSessions { get; private set; } = new List<UserSession>();
     public ICollection<SecurityAuditLog> SecurityAuditLogs { get; private set; } = new List<SecurityAuditLog>();
     public ICollection<AccountRole> AccountRoles { get; private set; } = new List<AccountRole>();
 
     private Account() { }
 
-    private Account(AccountId id, EmailAddress email, PasswordHash? passwordHash) : base(id)
+    private Account(AccountId id, Username username, EmailAddress? email, PasswordHash? passwordHash) : base(id)
     {
+        Username = username;
         Email = email;
         PasswordHash = passwordHash;
         IsEmailConfirmed = false;
@@ -40,22 +40,33 @@ public class Account : AggregateRoot<AccountId>, IAuditableEntity, ISoftDeletabl
         CreatedAt = DateTime.UtcNow;
         CreatedBy = "System";
 
-        RaiseDomainEvent(new AccountCreatedDomainEvent(Id, Email.Value));
+        RaiseDomainEvent(new AccountCreatedDomainEvent(Id, Username.Value, Email?.Value));
     }
 
-    /// <summary>
-    /// Factory method accepting raw primitive strings and handling Result validation cleanly.
-    /// </summary>
-    public static Result<Account> Create(string rawEmail, string? rawPasswordHash = null)
+    public static Result<Account> Create(
+        string rawUsername, 
+        string? rawEmail = null, 
+        string? rawPasswordHash = null)
     {
-        var emailResult = EmailAddress.Create(rawEmail);
-        if (emailResult.IsFailure)
+        var usernameResult = Username.Create(rawUsername);
+        if (usernameResult.IsFailure)
         {
-            return Result.Failure<Account>(emailResult.Error);
+            return Result.Failure<Account>(usernameResult.Error);
+        }
+
+        EmailAddress? email = null;
+        if (!string.IsNullOrWhiteSpace(rawEmail))
+        {
+            var emailResult = EmailAddress.Create(rawEmail);
+            if (emailResult.IsFailure)
+            {
+                return Result.Failure<Account>(emailResult.Error);
+            }
+            email = emailResult.Value;
         }
 
         PasswordHash? passwordHash = null;
-        if (rawPasswordHash != null)
+        if (!string.IsNullOrWhiteSpace(rawPasswordHash))
         {
             var hashResult = PasswordHash.Create(rawPasswordHash);
             if (hashResult.IsFailure)
@@ -65,11 +76,30 @@ public class Account : AggregateRoot<AccountId>, IAuditableEntity, ISoftDeletabl
             passwordHash = hashResult.Value;
         }
 
-        return new Account(AccountId.New(), emailResult.Value, passwordHash);
+        return new Account(AccountId.New(), usernameResult.Value, email, passwordHash);
+    }
+
+    public Result AttachEmail(string rawEmail)
+    {
+        var emailResult = EmailAddress.Create(rawEmail);
+        if (emailResult.IsFailure)
+        {
+            return Result.Failure(emailResult.Error);
+        }
+
+        Email = emailResult.Value;
+        IsEmailConfirmed = false;
+        ModifiedAt = DateTime.UtcNow;
+        return Result.Success();
     }
 
     public Result ConfirmEmail()
     {
+        if (Email is null)
+        {
+            return Error.Validation("Account.NoEmail", "Cannot confirm email because no email address is attached.");
+        }
+
         if (IsEmailConfirmed)
         {
             return Result.Success();

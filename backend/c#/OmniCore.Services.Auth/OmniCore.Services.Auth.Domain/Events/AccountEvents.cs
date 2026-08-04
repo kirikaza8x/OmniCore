@@ -1,14 +1,18 @@
+namespace OmniCore.Services.Auth.Domain.Events;
+
 using OmniCore.Services.Auth.Domain.ValueObjects;
 using OmniCore.Shared.Domain.DDD;
-
-namespace OmniCore.Services.Auth.Domain.Events;
 
 /// <summary>
 /// Published when a new Account aggregate is successfully registered.
 /// </summary>
 /// <param name="AccountId">The unique ID of the created account.</param>
-/// <param name="Email">The registered email address.</param>
-public record AccountCreatedDomainEvent(AccountId AccountId, string Email) : DomainEvent;
+/// <param name="Username">The registered username handle.</param>
+/// <param name="Email">The registered email address (optional).</param>
+public record AccountCreatedDomainEvent(
+    AccountId AccountId, 
+    string Username, 
+    string? Email) : DomainEvent;
 
 /// <summary>
 /// Published when an account's email verification process completes successfully.

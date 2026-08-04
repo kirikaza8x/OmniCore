@@ -8,7 +8,7 @@ using OmniCore.Shared.Domain.Repositories;
 /// <summary>
 /// Pipeline behavior that automatically flushes tracked changes to the database upon successful command completion.
 /// </summary>
-internal sealed class UnitOfWorkBehavior<TRequest, TResponse>(IUnitOfWork unitOfWork)
+public sealed class UnitOfWorkBehavior<TRequest, TResponse>(IUnitOfWork unitOfWork)
     : IPipelineBehavior<TRequest, TResponse>
     where TRequest : IBaseCommand 
     where TResponse : Result

@@ -2,15 +2,36 @@
 .SYNOPSIS
     Automated service builder for OmniCore microservices.
     Scaffolds Clean Architecture projects, links OmniCore.Shared layers by default,
-    generates markers, and updates the solution file.
+    installs layer-flexible NuGet packages, generates markers, and updates the solution file.
 .PARAMETER ModuleName
     Name of the microservice (e.g., Auth, User, Order, Payment).
 .PARAMETER TargetFramework
     Target framework moniker (default: net9.0).
+.PARAMETER ContractsPackages
+    Array of NuGet package names to install into the Contracts project.
+.PARAMETER DomainPackages
+    Array of NuGet package names to install into the Domain project.
+.PARAMETER AppPackages
+    Array of NuGet package names to install into the Application project.
+.PARAMETER InfraPackages
+    Array of NuGet package names to install into the Infrastructure project.
+.PARAMETER ApiPackages
+    Array of NuGet package names to install into the API project.
 #>
 param(
     [string]$ModuleName,
-    [string]$TargetFramework = "net9.0"
+    [string]$TargetFramework = "net9.0",
+    [string[]]$ContractsPackages = @(),
+    [string[]]$DomainPackages    = @(),
+    [string[]]$AppPackages       = @(),
+    [string[]]$InfraPackages     = @(
+        "Npgsql.EntityFrameworkCore.PostgreSQL",
+        "Microsoft.EntityFrameworkCore.Tools"
+    ),
+    [string[]]$ApiPackages       = @(
+        "Microsoft.EntityFrameworkCore.Design",
+        "Carter"
+    )
 )
 
 # Prompt if parameter is missing
@@ -54,13 +75,13 @@ Write-Host "`n=====================================================" -Foreground
 Write-Host " [+] Building OmniCore Service: $ServiceName" -ForegroundColor White
 Write-Host " > Target Path     : $ServiceRoot" -ForegroundColor DarkGray
 Write-Host " > Target Framework: $TargetFramework" -ForegroundColor DarkGray
-Write-Host " > Solution         : $($SolutionFile.Name)" -ForegroundColor DarkGray
+Write-Host " > Solution        : $($SolutionFile.Name)" -ForegroundColor DarkGray
 Write-Host "=====================================================`n" -ForegroundColor Cyan
 
 # ------------------------------------------------------------------------------
 # 1. Create Folder Hierarchy
 # ------------------------------------------------------------------------------
-Write-Host '[1/5] Creating folder structure...' -ForegroundColor Cyan
+Write-Host '[1/6] Creating folder structure...' -ForegroundColor Cyan
 $ApiDir       = Join-Path $ServiceRoot "$ServiceName.Api"
 $AppDir       = Join-Path $ServiceRoot "$ServiceName.Application"
 $DomainDir    = Join-Path $ServiceRoot "$ServiceName.Domain"
@@ -72,13 +93,13 @@ New-Item -ItemType Directory -Force -Path $ApiDir, $AppDir, $DomainDir, $InfraDi
 # ------------------------------------------------------------------------------
 # 2. Create Projects
 # ------------------------------------------------------------------------------
-Write-Host "[2/5] Initializing $TargetFramework projects..." -ForegroundColor Cyan
+Write-Host "[2/6] Initializing $TargetFramework projects..." -ForegroundColor Cyan
 
 dotnet new web -n "$ServiceName.Api"            -o $ApiDir       -f $TargetFramework --no-https | Out-Null
 dotnet new classlib -n "$ServiceName.Contracts"      -o $ContractsDir -f $TargetFramework            | Out-Null
 dotnet new classlib -n "$ServiceName.Domain"         -o $DomainDir    -f $TargetFramework            | Out-Null
 dotnet new classlib -n "$ServiceName.Application"    -o $AppDir       -f $TargetFramework            | Out-Null
-dotnet new classlib -n "$ServiceName.Infrastructure" -o $InfraDir    -f $TargetFramework            | Out-Null
+dotnet new classlib -n "$ServiceName.Infrastructure" -o $InfraDir     -f $TargetFramework            | Out-Null
 
 # Clean up default Class1.cs files
 Get-ChildItem -Path $ServiceRoot -Filter "Class1.cs" -Recurse | Remove-Item -Force
@@ -86,7 +107,7 @@ Get-ChildItem -Path $ServiceRoot -Filter "Class1.cs" -Recurse | Remove-Item -For
 # ------------------------------------------------------------------------------
 # 3. Wire Up Internal Clean Architecture & Shared Kernel References
 # ------------------------------------------------------------------------------
-Write-Host '[3/5] Wiring Clean Architecture and Shared Kernel project references...' -ForegroundColor Cyan
+Write-Host '[3/6] Wiring Clean Architecture and Shared Kernel project references...' -ForegroundColor Cyan
 
 # Service-Internal Layer Dependencies
 dotnet add (Join-Path $AppDir "$ServiceName.Application.csproj") reference (Join-Path $DomainDir "$ServiceName.Domain.csproj")       | Out-Null
@@ -120,9 +141,33 @@ if (Test-Path $SharedApiProj) {
 }
 
 # ------------------------------------------------------------------------------
-# 4. Generate AssemblyReference Markers & Program.cs
+# 4. Install Configured NuGet Packages Across All Layers Flexibly
 # ------------------------------------------------------------------------------
-Write-Host '[4/5] Writing AssemblyReference markers and starter host...' -ForegroundColor Cyan
+Write-Host '[4/6] Installing layer NuGet packages...' -ForegroundColor Cyan
+
+$LayerPackageMap = [ordered]@{
+    "Contracts"      = @{ Path = $ContractsDir; Packages = $ContractsPackages }
+    "Domain"         = @{ Path = $DomainDir;    Packages = $DomainPackages }
+    "Application"    = @{ Path = $AppDir;       Packages = $AppPackages }
+    "Infrastructure" = @{ Path = $InfraDir;     Packages = $InfraPackages }
+    "Api"            = @{ Path = $ApiDir;       Packages = $ApiPackages }
+}
+
+foreach ($layer in $LayerPackageMap.Keys) {
+    $dir = $LayerPackageMap[$layer].Path
+    $pkgs = $LayerPackageMap[$layer].Packages
+    $projFile = Join-Path $dir "$ServiceName.$layer.csproj"
+
+    foreach ($pkg in $pkgs) {
+        Write-Host "  > Installing $pkg -> $($ServiceName).$layer" -ForegroundColor DarkGray
+        dotnet add $projFile package $pkg | Out-Null
+    }
+}
+
+# ------------------------------------------------------------------------------
+# 5. Generate AssemblyReference Markers & Program.cs
+# ------------------------------------------------------------------------------
+Write-Host '[5/6] Writing AssemblyReference markers and starter host...' -ForegroundColor Cyan
 
 # Contracts AssemblyReference.cs
 Set-Content -Path (Join-Path $ContractsDir "AssemblyReference.cs") -Value @(
@@ -207,9 +252,9 @@ Set-Content -Path (Join-Path $ApiDir "Program.cs") -Value @(
 )
 
 # ------------------------------------------------------------------------------
-# 5. Add Projects to Solution
+# 6. Add Projects to Solution
 # ------------------------------------------------------------------------------
-Write-Host '[5/5] Registering projects in solution file...' -ForegroundColor Cyan
+Write-Host '[6/6] Registering projects in solution file...' -ForegroundColor Cyan
 
 dotnet sln "$SolutionPath" add (Join-Path $ContractsDir "$ServiceName.Contracts.csproj") | Out-Null
 dotnet sln "$SolutionPath" add (Join-Path $DomainDir "$ServiceName.Domain.csproj")       | Out-Null

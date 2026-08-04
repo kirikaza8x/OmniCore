@@ -1,13 +1,10 @@
+namespace OmniCore.Services.Auth.Domain.Entities;
+
 using OmniCore.Services.Auth.Domain.ValueObjects;
 using OmniCore.Shared.Domain.Abstractions;
 using OmniCore.Shared.Domain.DDD;
 
-namespace OmniCore.Services.Auth.Domain.Entities;
-
-/// <summary>
-/// Tracks active device logins for active session management.
-/// </summary>
-public class UserSession : Entity<UserSessionId>
+public class UserSession : AggregateRoot<UserSessionId>
 {
     public AccountId AccountId { get; private set; } = null!;
     public RefreshTokenId? RefreshTokenId { get; private set; }
@@ -18,7 +15,6 @@ public class UserSession : Entity<UserSessionId>
     public bool IsRevoked { get; private set; }
     public DateTime CreatedAtUtc { get; private set; }
 
-    public Account Account { get; private set; } = null!;
     public RefreshToken? RefreshToken { get; private set; }
 
     private UserSession() { }
@@ -41,10 +37,6 @@ public class UserSession : Entity<UserSessionId>
         CreatedAtUtc = DateTime.UtcNow;
     }
 
-    /// <summary>
-    /// Factory method creating a session from raw HTTP context inputs.
-    /// </summary>
-    /// <returns>A <see cref="Result{UserSession}"/> containing the user session or validation errors.</returns>
     public static Result<UserSession> Create(
         AccountId accountId, 
         RefreshTokenId? refreshTokenId, 
@@ -73,9 +65,6 @@ public class UserSession : Entity<UserSessionId>
             userAgentResult.Value);
     }
 
-    /// <summary>
-    /// Factory overload accepting already constructed Value Objects directly.
-    /// </summary>
     public static UserSession Create(
         AccountId accountId, 
         RefreshTokenId? refreshTokenId, 
@@ -92,9 +81,7 @@ public class UserSession : Entity<UserSessionId>
             userAgent);
     }
 
-    /// <summary>Updates activity timestamp on subsequent API calls.</summary>
     public void Touch() => LastActiveAtUtc = DateTime.UtcNow;
 
-    /// <summary>Terminates session remotely.</summary>
     public void Revoke() => IsRevoked = true;
 }

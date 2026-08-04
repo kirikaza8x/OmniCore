@@ -5,6 +5,10 @@
     <ProjectReference Include="..\..\OmniCore.Shared\OmniCore.Shared.Infrastructure\OmniCore.Shared.Infrastructure.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="BCrypt.Net-Next" Version="4.2.0" />
+  </ItemGroup>
+
   <PropertyGroup>
     <TargetFramework>net9.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
