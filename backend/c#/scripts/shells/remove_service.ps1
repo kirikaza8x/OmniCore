@@ -9,25 +9,65 @@ param(
     [string]$ModuleName
 )
 
-# Prompt if parameter is missing
-if ([string]::IsNullOrWhiteSpace($ModuleName)) { 
-    $ModuleName = Read-Host "Enter Service/Module Name to remove (e.g., Auth, Dummy)" 
-}
-
-if ([string]::IsNullOrWhiteSpace($ModuleName)) {
-    Write-Host "[X] Service name cannot be empty. Aborting." -ForegroundColor Red
-    exit 1
-}
-
-# Normalize service name
-$ModuleName = (Get-Culture).TextInfo.ToTitleCase($ModuleName.ToLower())
+$ErrorActionPreference = "Stop"
 
 # Resolve backend root path relative to script location
 $ScriptDir  = $PSScriptRoot
 $BackendDir = (Resolve-Path (Join-Path $ScriptDir "../..")).Path
 
+# ── Service Auto-Detection ────────────────────────────────────────────────────
+# Force @() array evaluation so single-folder detection works cleanly
+$ServiceFolders = @(Get-ChildItem -Path $BackendDir -Directory -Filter "OmniCore.Services.*")
+
+if ($ServiceFolders.Count -eq 0) {
+    Write-Host "[X] No OmniCore service folders found in $BackendDir." -ForegroundColor Red
+    exit 1
+}
+
+# Extract module names (e.g., "OmniCore.Services.Auth" -> "Auth")
+$modules = @($ServiceFolders | ForEach-Object { $_.Name.Replace("OmniCore.Services.", "") } | Sort-Object -Unique)
+
+# Prompt selection if parameter was not provided
+if (-not $ModuleName) {
+    Write-Host "`nAvailable OmniCore Services:" -ForegroundColor Cyan
+    $i = 1
+    foreach ($m in $modules) {
+        Write-Host "  [$i] $m"
+        $i++
+    }
+
+    $pick = Read-Host "`nSelect service number to remove (or type name directly)"
+
+    if ([string]::IsNullOrWhiteSpace($pick)) {
+        Write-Host "[X] Selection cannot be empty. Aborting." -ForegroundColor Red
+        exit 1
+    }
+
+    # Evaluate index choice vs direct name string
+    if ($pick -match '^\d+$') {
+        $index = [int]$pick - 1
+        if ($index -ge 0 -and $index -lt $modules.Count) {
+            $ModuleName = $modules[$index]
+        } else {
+            Write-Host "[X] Invalid selection number '$pick'. Aborting." -ForegroundColor Red
+            exit 1
+        }
+    } else {
+        $ModuleName = $pick
+    }
+}
+
+# Normalize service name
+$ModuleName = (Get-Culture).TextInfo.ToTitleCase($ModuleName.ToLower())
 $ServiceName = "OmniCore.Services.$ModuleName"
 $ServiceRoot = Join-Path $BackendDir $ServiceName
+
+# Check if target directory exists
+if (-not (Test-Path $ServiceRoot)) {
+    Write-Host "`n[X] Service directory not found: $ServiceRoot" -ForegroundColor Red
+    Write-Host "Nothing to remove." -ForegroundColor Yellow
+    exit 1
+}
 
 # Auto-detect Solution File (.slnx or .sln)
 $SolutionFile = Get-ChildItem -Path $BackendDir -Filter "OmniCore.sln*" | Select-Object -First 1
@@ -38,14 +78,7 @@ if (-not $SolutionFile) {
 }
 $SolutionPath = $SolutionFile.FullName
 
-# Check if target directory exists
-if (-not (Test-Path $ServiceRoot)) {
-    Write-Host "`n[X] Service directory not found: $ServiceRoot" -ForegroundColor Red
-    Write-Host "Nothing to remove." -ForegroundColor Yellow
-    exit 1
-}
-
-# Confirmation Prompt
+# ── Confirmation Prompt ───────────────────────────────────────────────────────
 Write-Host "`n=====================================================" -ForegroundColor Red
 Write-Host " [!] WARNING: DESTROYING SERVICE: $ServiceName" -ForegroundColor White
 Write-Host " > Target Path : $ServiceRoot" -ForegroundColor DarkGray
