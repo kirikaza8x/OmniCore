@@ -1,0 +1,26 @@
+services:
+  swagger-ui:
+    image: swaggerapi/swagger-ui:latest
+    container_name: omnicore-swagger-ui
+    restart: always
+    profiles:
+      - dev
+      - swagger
+    environment:
+      BASE_URL: /swagger
+      URLS: ${SWAGGER_URLS}
+    networks:
+      - omnicore-network
+
+  gateway:
+    image: nginx:alpine
+    container_name: omnicore-gateway
+    restart: always
+    ports:
+      - "${GATEWAY_PORT:-8080}:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - swagger-ui
+    networks:
+      - omnicore-network

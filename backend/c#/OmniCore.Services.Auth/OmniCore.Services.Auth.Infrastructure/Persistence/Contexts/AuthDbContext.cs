@@ -1,5 +1,8 @@
+using MassTransit;
 using Microsoft.EntityFrameworkCore;
 using OmniCore.Services.Auth.Domain.Entities;
+using OmniCore.Shared.Infrastructure.Inbox;
+using OmniCore.Shared.Infrastructure.Outbox;
 
 namespace OmniCore.Services.Auth.Infrastructure.Persistence.Contexts;
 
@@ -18,6 +21,8 @@ public class AuthDbContext : DbContext
     public DbSet<SecurityAuditLog> SecurityAuditLogs => Set<SecurityAuditLog>();
     public DbSet<SecurityToken> SecurityTokens => Set<SecurityToken>();
     public DbSet<UserSession> UserSessions => Set<UserSession>();
+    public DbSet<OutboxMessage> OutboxMessages { get; set; } = null!;
+    public DbSet<InboxMessage> InboxMessages { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -28,5 +33,12 @@ public class AuthDbContext : DbContext
 
         // Applies all IEntityTypeConfiguration classes in the Infrastructure assembly
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(AuthDbContext).Assembly);
+        modelBuilder.AddTransactionalOutboxEntities();
+        // modelBuilder.Entity<AccountRole>().HasQueryFilter(x => !x.Account.IsDeleted);
+        // modelBuilder.Entity<ExternalLogin>().HasQueryFilter(x => !x.Account.IsDeleted);
+        // modelBuilder.Entity<MfaMethod>().HasQueryFilter(x => !x.Account.IsDeleted);
+        // modelBuilder.Entity<MfaRecoveryCode>().HasQueryFilter(x => !x.Account.IsDeleted);
+        // modelBuilder.Entity<RefreshToken>().HasQueryFilter(x => !x.Account.IsDeleted);
+        // modelBuilder.Entity<SecurityToken>().HasQueryFilter(x => !x.Account.IsDeleted);
     }
 }

@@ -26,26 +26,45 @@ public static class MassTransitExtensions
         ArgumentNullException.ThrowIfNull(services);
         ArgumentNullException.ThrowIfNull(configuration);
 
+        // =========================================================================
+        // [CUSTOM IMPLEMENTATION] Framework Configuration & Event Bus Wrappers
+        // =========================================================================
         services.AddConfig<MessageBrokerConfig>();
         services.AddScoped<IEventBus, EventBus>();
 
+        // [CUSTOM IMPLEMENTATION] Register domain event handlers (IIntegrationEventHandler<T>) via Scrutor
         RegisterIntegrationEventHandlers(services, assemblies);
 
         var brokerConfig = configuration.GetSection("MessageBroker").Get<MessageBrokerConfig>() 
-                           ?? new MessageBrokerConfig();
+                            ?? new MessageBrokerConfig();
 
+        // =========================================================================
+        // [MASSTRANSIT BUILT-IN] Core Service Registration
+        // =========================================================================
         services.AddMassTransit(busConfigurator =>
         {
+            // [MASSTRANSIT BUILT-IN] Formats queue & exchange names using kebab-case
             busConfigurator.SetKebabCaseEndpointNameFormatter();
 
-            // 1. Generic Transactional Outbox Configuration
+            // ---------------------------------------------------------------------
+            // 1. Transactional Outbox Setup (DISABLED BUILT-IN -> USING CUSTOM QUARTZ)
+            // ---------------------------------------------------------------------
+            // [CUSTOM IMPLEMENTATION]
+            // MassTransit's built-in EF Core outbox is disabled here.
+            // Outbox processing is handled by your custom Quartz background jobs
+            // (`ProcessOutboxJob`) reading from custom `OutboxMessage` tables.
+            // When calling IPublishEndpoint directly inside `ProcessOutboxJob`,
+            // MassTransit sends the payload straight to the underlying transport (RabbitMQ/Kafka).
+
+            /*
+            // [MASSTRANSIT BUILT-IN] Outbox Configuration (Disabled for now)
             if (brokerConfig.EnableOutbox)
             {
                 busConfigurator.AddEntityFrameworkOutbox<TDbContext>(outbox =>
                 {
                     outbox.UseBusOutbox();
 
-                    switch (brokerConfig.OutboxDbProvider.ToLowerInvariant())
+                    switch (brokerConfig.OutboxDbProvider?.ToLowerInvariant())
                     {
                         case "postgres":
                         case "postgresql":
@@ -56,22 +75,30 @@ public static class MassTransitExtensions
                             outbox.UseSqlServer();
                             break;
                         default:
-                            // Fallback to in-memory/custom outbox handling
                             break;
                     }
                 });
             }
+            */
 
-            // 2. Register MassTransit Consumers & Integration Event Adapters
+            // ---------------------------------------------------------------------
+            // 2. Consumer Registrations
+            // ---------------------------------------------------------------------
+            // [MASSTRANSIT BUILT-IN] Register standard MassTransit IConsumer<T> classes
             busConfigurator.AddConsumers(assemblies);
+
+            // [CUSTOM IMPLEMENTATION] Adapter registering IntegrationEventConsumer<T> wrappers for IIntegrationEventHandler<T>
             RegisterIntegrationEventConsumers(busConfigurator, assemblies);
 
-            // 3. Configure Message Broker Transport (RabbitMQ / Kafka)
+            // ---------------------------------------------------------------------
+            // 3. [MASSTRANSIT BUILT-IN] Message Broker Transport Configuration
+            // ---------------------------------------------------------------------
             bool isKafka = brokerConfig.Provider.Equals("Kafka", StringComparison.OrdinalIgnoreCase);
             bool isBoth = brokerConfig.Provider.Equals("Both", StringComparison.OrdinalIgnoreCase);
 
             if (isKafka || isBoth)
             {
+                // [MASSTRANSIT BUILT-IN] Kafka Rider integration
                 busConfigurator.AddRider(rider =>
                 {
                     rider.AddConsumers(assemblies);
@@ -84,19 +111,32 @@ public static class MassTransitExtensions
 
             if (!isKafka)
             {
+                // [MASSTRANSIT BUILT-IN] RabbitMQ Transport Setup
                 busConfigurator.UsingRabbitMq((context, configurator) =>
                 {
-                    configurator.Host(new Uri(brokerConfig.Host), host =>
+                    if (Uri.TryCreate(brokerConfig.Host, UriKind.Absolute, out var parsedUri))
                     {
-                        host.Username(brokerConfig.Username);
-                        host.Password(brokerConfig.Password);
-                    });
+                        configurator.Host(parsedUri, host =>
+                        {
+                            host.Username(brokerConfig.Username);
+                            host.Password(brokerConfig.Password);
+                        });
+                    }
+                    else
+                    {
+                        configurator.Host(brokerConfig.Host, "/", host =>
+                        {
+                            host.Username(brokerConfig.Username);
+                            host.Password(brokerConfig.Password);
+                        });
+                    }
 
                     configurator.ConfigureEndpoints(context);
                 });
             }
             else
             {
+                // [MASSTRANSIT BUILT-IN] In-Memory Transport (fallback for pure Kafka setups)
                 busConfigurator.UsingInMemory((context, configurator) => configurator.ConfigureEndpoints(context));
             }
         });
@@ -104,6 +144,10 @@ public static class MassTransitExtensions
         return services;
     }
 
+    /// <summary>
+    /// [CUSTOM IMPLEMENTATION]
+    /// Scans assemblies and registers your custom <see cref="IIntegrationEventHandler{T}"/> types into .NET Core DI.
+    /// </summary>
     private static void RegisterIntegrationEventHandlers(IServiceCollection services, Assembly[] assemblies)
     {
         services.Scan(scan => scan
@@ -113,6 +157,10 @@ public static class MassTransitExtensions
             .WithScopedLifetime());
     }
 
+    /// <summary>
+    /// [CUSTOM IMPLEMENTATION]
+    /// Dynamically binds MassTransit consumers to your custom <see cref="IIntegrationEventHandler{T}"/> pattern.
+    /// </summary>
     private static void RegisterIntegrationEventConsumers(IRegistrationConfigurator config, Assembly[] assemblies)
     {
         var eventTypes = assemblies

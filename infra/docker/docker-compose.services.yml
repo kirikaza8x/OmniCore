@@ -1,0 +1,46 @@
+services:
+  auth-api:
+    build:
+      context: ../../
+      dockerfile: backend/c#/OmniCore.Services.Auth/OmniCore.Services.Auth.Api/Dockerfile
+    container_name: omnicore-auth-api
+    restart: always
+    ports:
+      - "${AUTH_SERVICE_PORT}:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT}
+      - EnableSwagger=${ENABLE_SWAGGER}
+      - Database__ConnectionString=Host=postgres;Port=5432;Database=${AUTH_DB_NAME};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
+      - MessageBroker__Host=rabbitmq
+      - MessageBroker__Username=${RABBITMQ_DEFAULT_USER}
+      - MessageBroker__Password=${RABBITMQ_DEFAULT_PASS}
+      - MessageBroker__KafkaBootstrapServers=kafka:29092
+      - Redis__Host=redis
+      - Redis__Port=6379
+      - Storage__Endpoint=http://minio:9000
+      - Storage__AccessKey=${MINIO_ROOT_USER}
+      - Storage__SecretKey=${MINIO_ROOT_PASSWORD}
+      - Storage__BucketName=${MINIO_BUCKET_NAME}
+      - Storage__PublicUrl=http://localhost:9000
+      - Jwt__Secret=${JWT_SECRET}
+      - Jwt__Issuer=${JWT_ISSUER}
+      - Jwt__Audience=${JWT_AUDIENCE}
+      - GoogleAuth__ServerClientId=${GOOGLE_AUTH_SERVER_CLIENT_ID}
+      - GoogleAuth__ClientId=${GOOGLE_AUTH_CLIENT_ID}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    networks:
+      - omnicore-network

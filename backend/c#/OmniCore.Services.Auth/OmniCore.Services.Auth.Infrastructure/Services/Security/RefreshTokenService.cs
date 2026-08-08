@@ -17,7 +17,7 @@ public sealed class RefreshTokenService(
         var token = Convert.ToBase64String(RandomNumberGenerator.GetBytes(64));
 
         var result = RefreshToken.Create(
-            accountId: AccountId.New(),
+            accountId: new AccountId(userId), 
             token: token,
             duration: TimeSpan.FromDays(RefreshTokenExpiryDays)
         );

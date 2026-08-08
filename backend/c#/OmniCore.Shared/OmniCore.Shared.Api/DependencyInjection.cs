@@ -1,30 +1,35 @@
-﻿using System.Reflection;
+﻿namespace OmniCore.Shared.Api.Extensions;
+
+using System.Reflection;
 using System.Security.Claims;
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using OmniCore.Shared.Api.Extensions;
+using Microsoft.Extensions.Hosting;
+using OmniCore.Shared.Api.Exceptions;
 using OmniCore.Shared.Infrastructure.Configs;
 using OmniCore.Shared.Infrastructure.Hubs;
 
-namespace OmniCore.Shared.Api;
-
-public class SharedApiAssemblyReference
-{
-}
-
-public static class IApiConfiguration
+public static class ApiExtensions
 {
     public static IServiceCollection AddApi(
         this IServiceCollection services,
         Assembly[] moduleAssemblies,
-        IConfiguration configuration)
+        IConfiguration configuration,
+        string apiTitle = "OmniCore API")
     {
         services.AddCarterWithAssemblies(moduleAssemblies);
         services.AddAuthentication();
         services.AddAuthorization();
+        services.AddSignalR();
+        
+        // Registers Swagger DI services
+        services.AddSwaggerDocumentation(title: apiTitle); 
+
+        services.AddProblemDetails();
+        services.AddExceptionHandler<GlobalExceptionHandler>();
 
         ConfigureRateLimiting(services, configuration);
 
@@ -47,7 +52,6 @@ public static class IApiConfiguration
                           .AllowAnyHeader()
                           .AllowCredentials();
                 }
-                // Scenario B: Specific Origins are provided in Config
                 else if (corsConfig.AllowedOrigins.Any())
                 {
                     policy.WithOrigins(corsConfig.AllowedOrigins)
@@ -55,13 +59,11 @@ public static class IApiConfiguration
                           .AllowAnyHeader()
                           .AllowCredentials();
                 }
-                // Scenario C: No Config found - Default to standard wildcard (No Credentials)
                 else
                 {
                     policy.AllowAnyOrigin()
                           .AllowAnyMethod()
                           .AllowAnyHeader();
-                    // Note: SignalR might need 'skipNegotiation' in the frontend for this case
                 }
             });
         });
@@ -69,9 +71,29 @@ public static class IApiConfiguration
         return services;
     }
 
-    public static WebApplication UseApi(this WebApplication app)
+    public static WebApplication UseApi(
+        this WebApplication app, 
+        string apiTitle = "OmniCore API",
+        bool? enableSwagger = null) 
     {
+        app.UseExceptionHandler(); 
+
+        app.UseCors();
+        app.UseRateLimiter();
+        app.UseAuthentication();
+        app.UseAuthorization();
+        
+        // Resolves from argument, or automatically falls back to appsettings/env config
+        var isSwaggerEnabled = enableSwagger 
+            ?? app.Configuration.GetValue<bool>("EnableSwagger", app.Environment.IsDevelopment());
+
+        if (isSwaggerEnabled)
+        {
+            app.UseSwaggerDocumentation(title: apiTitle); 
+        }
+
         app.MapHub<LogHub>("api/logHub");
+
         return app;
     }
 

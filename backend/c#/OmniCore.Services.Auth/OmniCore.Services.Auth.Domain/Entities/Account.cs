@@ -14,6 +14,11 @@ public class Account : AggregateRoot<AccountId>, IAuditableEntity, ISoftDeletabl
     public bool IsEmailConfirmed { get; private set; }
     public bool IsActive { get; private set; }
 
+    // ISoftDeletable Implementation
+    public bool IsDeleted { get; private set; }
+    public DateTime? DeletedAtUtc { get; private set; }
+
+    // IAuditableEntity Implementation
     public DateTime? CreatedAt { get; private set; }
     public string? CreatedBy { get; private set; }
     public DateTime? ModifiedAt { get; private set; }
@@ -37,6 +42,7 @@ public class Account : AggregateRoot<AccountId>, IAuditableEntity, ISoftDeletabl
         PasswordHash = passwordHash;
         IsEmailConfirmed = false;
         IsActive = true;
+        IsDeleted = false;
         CreatedAt = DateTime.UtcNow;
         CreatedBy = "System";
 
@@ -131,5 +137,16 @@ public class Account : AggregateRoot<AccountId>, IAuditableEntity, ISoftDeletabl
         IsActive = false;
         ModifiedAt = DateTime.UtcNow;
         ModifiedBy = reasonBy;
+    }
+
+    public void SoftDelete(string deletedBy = "System")
+    {
+        if (IsDeleted) return;
+
+        IsDeleted = true;
+        IsActive = false;
+        DeletedAtUtc = DateTime.UtcNow;
+        ModifiedAt = DateTime.UtcNow;
+        ModifiedBy = deletedBy;
     }
 }

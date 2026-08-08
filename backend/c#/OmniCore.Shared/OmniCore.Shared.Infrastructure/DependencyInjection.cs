@@ -7,6 +7,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OmniCore.Shared.Application.Abstractions.Caching;
+using OmniCore.Shared.Application.Abstractions.EventBus;
 using OmniCore.Shared.Application.Abstractions.Time;
 using OmniCore.Shared.Infrastructure.Configs;
 using OmniCore.Shared.Infrastructure.Extensions;
@@ -59,14 +60,21 @@ public static class DependencyInjection
         services.AddOptions();
         services.RegisterAllConfigurations(allAssemblies);
 
-        // 2. Automatic EF Core Interceptors Discovery across ALL provided assemblies via Scrutor
+        // 2. Automatic IDomainEventDispatcher Discovery across ALL provided assemblies via Scrutor
+        services.Scan(scan => scan
+            .FromAssemblies(allAssemblies)
+            .AddClasses(classes => classes.AssignableTo<IDomainEventDispatcher>())
+            .AsImplementedInterfaces()
+            .WithScopedLifetime());
+
+        // 3. Automatic EF Core Interceptors Discovery across ALL provided assemblies via Scrutor
         services.Scan(scan => scan
             .FromAssemblies(allAssemblies)
             .AddClasses(classes => classes.AssignableTo<ISaveChangesInterceptor>())
             .AsImplementedInterfaces()
             .WithScopedLifetime());
 
-        // 3. HTTP Context & Global JSON Options
+        // 4. HTTP Context & Global JSON Options
         services.ConfigureHttpJsonOptions(options =>
         {
             options.SerializerOptions.Converters.Add(new JsonStringEnumConverter());
@@ -78,20 +86,21 @@ public static class DependencyInjection
                 options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
             });
 
-        // 4. Core System Services
+        // 5. Core System Services
         services.AddSingleton<IDateTimeProvider, DateTimeProvider>();
 
-        // 5. Modular Extensions Invocation
+        // 6. Modular Extensions Invocation
         services.AddCurrentUserService();
         services.AddStorageService();
 
-        // 6. Distributed Caching Engine
+        // 7. Distributed Caching Engine
         ConfigureCaching(services, configuration);
 
-        // 7. SignalR Setup
+        // 8. SignalR Setup
         services.AddSignalR();
 
-        // 8. Quartz Job Scheduler
+        // 9. Quartz Job Scheduler (AddQuartz must be registered BEFORE AddQuartzHostedService)
+        services.AddQuartz();
         services.AddQuartzHostedService(options =>
         {
             options.WaitForJobsToComplete = true;

@@ -5,7 +5,7 @@ using OmniCore.Shared.Infrastructure.Configs;
 
 public class JwtConfig : ConfigBase
 {
-    public override string SectionName => "JwtConfigs";
+    public override string SectionName => "Jwt";
 
     [Required, MinLength(32, ErrorMessage = "JWT Secret must be at least 32 characters.")]
     public string Secret { get; init; } = default!;

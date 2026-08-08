@@ -1,28 +1,26 @@
-using Carter;
-using OmniCore.Shared.Api;
 using OmniCore.Services.Auth.Api;
 using OmniCore.Services.Auth.Application;
+using OmniCore.Services.Auth.Infrastructure;
+using OmniCore.Shared.Api.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Register Shared API Kernel (Carter, Auth, Rate Limiting, CORS)
-builder.Services.AddApi(
-    new[]
-    {
-        ApiAssemblyReference.Assembly,
-        ApplicationAssemblyReference.Assembly
-    },
-    builder.Configuration
-);
-
+// -------------------------------------------------------------
+// Register All Layers
+// -------------------------------------------------------------
+builder.Services
+    .AddAuthApplication()
+    .AddAuthInfrastructure(builder.Configuration)
+    .AddAuthApi(builder.Configuration);
+builder.Services.AddHealthChecks();
 var app = builder.Build();
 
-app.UseCors();
-app.UseRateLimiter();
-app.UseAuthentication();
-app.UseAuthorization();
-
-app.UseApi();
+// -------------------------------------------------------------
+// Middleware Pipeline
+// -------------------------------------------------------------
+// Automatically checks 'EnableSwagger' env/config or falls back to IsDevelopment()
+app.UseApi(apiTitle: "OmniCore Auth API"); 
+app.MapHealthChecks("/health"); 
 app.MapCarter();
 
 app.Run();

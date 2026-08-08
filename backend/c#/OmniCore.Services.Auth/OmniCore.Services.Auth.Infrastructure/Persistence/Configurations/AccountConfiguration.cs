@@ -55,11 +55,18 @@ public class AccountConfiguration : IEntityTypeConfiguration<Account>
             .HasColumnName("is_active")
             .HasDefaultValue(true);
 
+        // Soft Delete Mapping
+        builder.Property(a => a.IsDeleted)
+            .HasColumnName("is_deleted")
+            .HasDefaultValue(false);
+
+        builder.Property(a => a.DeletedAtUtc)
+            .HasColumnName("deleted_at_utc");
+
+        // Audit Mapping
         builder.Property(a => a.CreatedAt).HasColumnName("created_at");
         builder.Property(a => a.CreatedBy).HasColumnName("created_by").HasMaxLength(100);
         builder.Property(a => a.ModifiedAt).HasColumnName("modified_at");
         builder.Property(a => a.ModifiedBy).HasColumnName("modified_by").HasMaxLength(100);
-
-        builder.HasQueryFilter(a => a.IsActive);
     }
 }

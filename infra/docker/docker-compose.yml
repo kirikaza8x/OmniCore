@@ -1,4 +1,11 @@
 # Master Orchestration File
 include:
+  - path: ./docker-compose.database.yml
   - path: ./docker-compose.infra.yml
   - path: ./docker-compose.services.yml
+  - path: ./docker-compose.gateway.yml
+
+networks:
+  omnicore-network:
+    name: omnicore-network
+    driver: bridge
