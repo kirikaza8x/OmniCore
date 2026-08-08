@@ -8,8 +8,8 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using OmniCore.Services.Auth.Application.Abstractions.Security;
-using OmniCore.Services.Auth.Infrastructure.Configs;
 using OmniCore.Shared.Application.Abstractions.Time;
+using OmniCore.Shared.Infrastructure.Configs.Security;
 
 public sealed class JwtTokenService(
     IOptions<JwtConfig> options,

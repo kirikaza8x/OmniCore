@@ -47,7 +47,7 @@ public static class DependencyInjection
         services.AddScoped<IUnitOfWork, UnitOfWorkBase<AuthDbContext>>();
 
         // 4. Service-Specific Messaging, Outbox & Inbox Quartz Jobs
-        services.AddOutboxAndInbox<AuthDbContext>();
+        // services.AddOutboxAndInbox<AuthDbContext>();
         services.AddMassTransitWithBroker<AuthDbContext>(
             configuration, 
             InfrastructureAssemblyReference.Assembly);
@@ -68,7 +68,7 @@ public static class DependencyInjection
                 type.Name.EndsWith("Service")))
             .AsImplementedInterfaces()
             .WithScopedLifetime());
-
+        
         return services;
     }
 }

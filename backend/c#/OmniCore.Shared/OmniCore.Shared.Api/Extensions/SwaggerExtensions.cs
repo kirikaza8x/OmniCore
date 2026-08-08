@@ -33,7 +33,6 @@ public static class SwaggerExtensions
                 Description = "Enter your JWT token."
             });
 
-            // Swashbuckle v10 / OpenApi 2.x Requirement Delegate
             options.AddSecurityRequirement(document => new OpenApiSecurityRequirement
             {
                 [new OpenApiSecuritySchemeReference("Bearer", document)] = []

@@ -6,27 +6,69 @@ services:
     container_name: omnicore-auth-api
     restart: always
     ports:
-      - "${AUTH_SERVICE_PORT}:8080"
+      - "${AUTH_SERVICE_PORT:-5001}:8080"
     environment:
+      # Application Core Settings
       - ASPNETCORE_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT}
+      - ASPNETCORE_HTTP_PORTS=8080
       - EnableSwagger=${ENABLE_SWAGGER}
+      - AllowedHosts=${ALLOWED_HOSTS:-*}
+
+      # Logging Controls (EF Core SQL Filtering & Overrides)
+      - Logging__LogLevel__Default=${LOG_LEVEL_DEFAULT:-Information}
+      - Logging__LogLevel__Microsoft.AspNetCore=${LOG_LEVEL_ASPNETCORE:-Warning}
+      - Logging__LogLevel__Microsoft.EntityFrameworkCore.Database.Command=${EF_CORE_LOG_LEVEL:-Warning}
+
+      # Database Configuration
       - Database__ConnectionString=Host=postgres;Port=5432;Database=${AUTH_DB_NAME};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
+      - Database__MaxRetryCount=${DB_MAX_RETRY_COUNT:-3}
+      - Database__CommandTimeout=${DB_COMMAND_TIMEOUT:-30}
+      - Database__EnableDetailedErrors=${DB_ENABLE_DETAILED_ERRORS:-true}
+      - Database__EnableSensitiveDataLogging=${DB_ENABLE_SENSITIVE_DATA_LOGGING:-true}
+
+      # Message Broker Configuration
+      - MessageBroker__Provider=${MESSAGE_BROKER_PROVIDER:-Both}
       - MessageBroker__Host=rabbitmq
       - MessageBroker__Username=${RABBITMQ_DEFAULT_USER}
       - MessageBroker__Password=${RABBITMQ_DEFAULT_PASS}
       - MessageBroker__KafkaBootstrapServers=kafka:29092
+      - MessageBroker__OutboxDbProvider=${MESSAGE_BROKER_OUTBOX_DB_PROVIDER:-Postgres}
+      - MessageBroker__EnableOutbox=${MESSAGE_BROKER_ENABLE_OUTBOX:-false}
+
+      # Redis & Memory Cache Configuration
       - Redis__Host=redis
       - Redis__Port=6379
+      - Redis__Password=${REDIS_PASSWORD:-}
+      - Redis__InstanceName=${REDIS_INSTANCE_NAME:-OmniCore_}
+      - MemoryCache__CompactionPercentage=${MEMORY_CACHE_COMPACTION_PERCENTAGE:-0.05}
+      - MemoryCache__ExpirationScanFrequencySeconds=${MEMORY_CACHE_EXPIRATION_SCAN_FREQUENCY_SECONDS:-60}
+      - MemoryCache__DefaultExpirationMinutes=${MEMORY_CACHE_DEFAULT_EXPIRATION_MINUTES:-30}
+
+      # Object Storage (MinIO)
       - Storage__Endpoint=http://minio:9000
       - Storage__AccessKey=${MINIO_ROOT_USER}
       - Storage__SecretKey=${MINIO_ROOT_PASSWORD}
       - Storage__BucketName=${MINIO_BUCKET_NAME}
-      - Storage__PublicUrl=http://localhost:9000
+      - Storage__Region=${STORAGE_REGION:-us-east-1}
+      - Storage__UseSSL=${STORAGE_USE_SSL:-false}
+      - Storage__PublicUrl=${STORAGE_PUBLIC_URL:-http://localhost:9000}
+
+      # Security, JWT & OAuth
       - Jwt__Secret=${JWT_SECRET}
       - Jwt__Issuer=${JWT_ISSUER}
       - Jwt__Audience=${JWT_AUDIENCE}
+      - Jwt__ExpiryMinutes=${JWT_EXPIRY_MINUTES:-60}
       - GoogleAuth__ServerClientId=${GOOGLE_AUTH_SERVER_CLIENT_ID}
       - GoogleAuth__ClientId=${GOOGLE_AUTH_CLIENT_ID}
+
+      # CORS Configuration
+      - Cors__AllowAnyOrigin=${CORS_ALLOW_ANY_ORIGIN:-true}
+
+      # Rate Limiting Configuration
+      - RateLimiting__GlobalPolicy=${RATE_LIMITING_GLOBAL_POLICY:-fixed}
+      - RateLimiting__Policies__fixed__PermitLimit=${RATE_LIMITING_PERMIT_LIMIT:-100}
+      - RateLimiting__Policies__fixed__WindowSeconds=${RATE_LIMITING_WINDOW_SECONDS:-60}
+      - RateLimiting__Policies__fixed__QueueLimit=${RATE_LIMITING_QUEUE_LIMIT:-10}
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
       interval: 10s

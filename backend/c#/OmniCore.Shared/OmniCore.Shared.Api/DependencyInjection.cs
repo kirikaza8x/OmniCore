@@ -10,6 +10,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using OmniCore.Shared.Api.Exceptions;
 using OmniCore.Shared.Infrastructure.Configs;
+using OmniCore.Shared.Infrastructure.Configs.Security; 
 using OmniCore.Shared.Infrastructure.Hubs;
 
 public static class ApiExtensions
@@ -21,8 +22,14 @@ public static class ApiExtensions
         string apiTitle = "OmniCore API")
     {
         services.AddCarterWithAssemblies(moduleAssemblies);
-        services.AddAuthentication();
-        services.AddAuthorization();
+        
+        // 1. Bind JwtConfig from appsettings/environment
+        var jwtSectionName = new JwtConfig().SectionName;
+        services.Configure<JwtConfig>(configuration.GetSection(jwtSectionName));
+
+        // 2. Register Shared JWT Authentication & Authorization
+        services.AddJwtAuthentication();
+
         services.AddSignalR();
         
         // Registers Swagger DI services
@@ -80,6 +87,8 @@ public static class ApiExtensions
 
         app.UseCors();
         app.UseRateLimiter();
+        
+        // Executes JWT Authentication & Authorization Middleware
         app.UseAuthentication();
         app.UseAuthorization();
         

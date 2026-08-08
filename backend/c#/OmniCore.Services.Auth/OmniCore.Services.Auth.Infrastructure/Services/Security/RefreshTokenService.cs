@@ -5,7 +5,7 @@ using Microsoft.Extensions.Options;
 using OmniCore.Services.Auth.Application.Abstractions.Security;
 using OmniCore.Services.Auth.Domain.Entities;
 using OmniCore.Services.Auth.Domain.ValueObjects;
-using OmniCore.Services.Auth.Infrastructure.Configs;
+using OmniCore.Shared.Infrastructure.Configs.Security;
 
 public sealed class RefreshTokenService(
     IOptions<JwtConfig> options) : IRefreshTokenService

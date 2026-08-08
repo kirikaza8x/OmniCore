@@ -110,7 +110,7 @@ public static class DependencyInjection
     }
 
     private static IServiceCollection RegisterAllConfigurations(
-        this IServiceCollection services, 
+        this IServiceCollection services,
         Assembly[] assemblies)
     {
         var configTypes = assemblies
@@ -133,19 +133,38 @@ public static class DependencyInjection
 
     private static void ConfigureCaching(IServiceCollection services, IConfiguration configuration)
     {
-        var redisConnectionString = configuration.GetConnectionString("Redis") 
+        services.AddMemoryCache();
+
+        var redisConnectionString = configuration.GetConnectionString("Redis")
             ?? configuration.GetSection("Redis")["ConnectionString"];
+
+        if (string.IsNullOrWhiteSpace(redisConnectionString))
+        {
+            var host = configuration.GetSection("Redis")["Host"];
+            if (!string.IsNullOrWhiteSpace(host))
+            {
+                var port = configuration.GetSection("Redis")["Port"] ?? "6379";
+                var password = configuration.GetSection("Redis")["Password"];
+                redisConnectionString = string.IsNullOrWhiteSpace(password)
+                    ? $"{host}:{port}"
+                    : $"{host}:{port},password={password}";
+            }
+        }
 
         if (!string.IsNullOrWhiteSpace(redisConnectionString))
         {
-            services.AddStackExchangeRedisCache(options =>
+            var options = ConfigurationOptions.Parse(redisConnectionString);
+            options.AbortOnConnectFail = false; // Prevents startup crash if Redis is offline
+            options.ConnectTimeout = 1000;       // Failover to IMemoryCache within 1 second
+            options.SyncTimeout = 1000;
+
+            services.AddStackExchangeRedisCache(redisOptions =>
             {
-                options.Configuration = redisConnectionString;
-                options.InstanceName = configuration.GetSection("Redis")["InstanceName"] ?? "OmniCore_";
+                redisOptions.ConfigurationOptions = options;
+                redisOptions.InstanceName = configuration.GetSection("Redis")["InstanceName"] ?? "OmniCore_";
             });
 
-            services.AddSingleton<IConnectionMultiplexer>(_ =>
-                ConnectionMultiplexer.Connect(redisConnectionString));
+            services.AddSingleton<IConnectionMultiplexer>(_ => ConnectionMultiplexer.Connect(options));
         }
         else
         {
