@@ -4,6 +4,7 @@ using OmniCore.Services.Auth.Application.Abstractions.Security;
 using OmniCore.Services.Auth.Application.Features.Auth.DTOs;
 using OmniCore.Services.Auth.Application.Features.Auth.Mappings;
 using OmniCore.Services.Auth.Domain.Repositories;
+using OmniCore.Services.Auth.Domain.ValueObjects;
 using OmniCore.Shared.Application.Abstractions.Caching;
 using OmniCore.Shared.Application.Abstractions.Messaging;
 using OmniCore.Shared.Domain.Abstractions;
@@ -14,7 +15,6 @@ public record LoginCommand(
 
 public sealed class LoginCommandHandler(
     IAccountRepository accountRepository,
-    IRefreshTokenRepository refreshTokenRepository,
     IPasswordHasher passwordHasher,
     IJwtTokenService jwtTokenService,
     IRefreshTokenService refreshTokenService,
@@ -69,21 +69,39 @@ public sealed class LoginCommandHandler(
                 Error.Unauthorized("Auth.InvalidPassword", "The password provided is incorrect."));
         }
 
-        // 5. Generate Access Token from cached DTO
+        // 5. Load full Account aggregate to append Refresh Token & inspect roles
+        var accountId = new AccountId(accountDto.Id);
+        var account = await accountRepository.GetByIdAsync(accountId, cancellationToken);
+        if (account is null || !account.IsActive)
+        {
+            return Result.Failure<AuthResponse>(
+                Error.Unauthorized("Auth.AccountInactive", "Your account is no longer active."));
+        }
+
+        // 6. Generate Refresh Token via Aggregate Root
+        var (refreshTokenString, duration) = refreshTokenService.GenerateRefreshToken();
+        var refreshTokenResult = account.AddRefreshToken(refreshTokenString, duration);
+        if (refreshTokenResult.IsFailure)
+        {
+            return Result.Failure<AuthResponse>(refreshTokenResult.Error);
+        }
+
+        // 7. Extract Role Names
+        var roles = account.AccountRoles
+            .Select(ar => ar.Role?.Name ?? string.Empty)
+            .Where(r => !string.IsNullOrWhiteSpace(r));
+
+        // 8. Generate JWT Access Token
         var accessToken = jwtTokenService.GenerateToken(
             accountDto.Id,
             accountDto.Email,
             accountDto.Username,
-            accountDto.Roles
+            roles
         );
-
-        // 6. Generate Refresh Token
-        var refreshToken = refreshTokenService.GenerateToken(accountDto.Id);
-        await refreshTokenRepository.AddAsync(refreshToken, cancellationToken);
 
         return Result.Success(new AuthResponse(
             AccessToken: accessToken,
-            RefreshToken: refreshToken.Token,
+            RefreshToken: refreshTokenString,
             ExpiresInMinutes: jwtTokenService.ExpiryMinutes
         ));
     }

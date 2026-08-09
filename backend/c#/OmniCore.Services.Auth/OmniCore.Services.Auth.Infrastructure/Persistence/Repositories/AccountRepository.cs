@@ -11,6 +11,20 @@ using OmniCore.Shared.Infrastructure.Data.Repositories;
 public class AccountRepository(AuthDbContext dbContext)
     : RepositoryBase<Account, AccountId>(dbContext), IAccountRepository
 {
+    /// <summary>
+    /// Overridden to eagerly load RefreshTokens, AccountRoles, and Roles for aggregate domain actions and claims generation.
+    /// </summary>
+    public override async Task<Account?> GetByIdAsync(
+        AccountId id, 
+        CancellationToken cancellationToken = default)
+    {
+        return await DbSet
+            .Include(a => a.RefreshTokens)
+            .Include(a => a.AccountRoles)
+                .ThenInclude(ar => ar.Role)
+            .FirstOrDefaultAsync(a => a.Id == id, cancellationToken);
+    }
+
     public async Task<Account?> GetByUsernameAsync(
         string username,
         CancellationToken cancellationToken = default)
@@ -22,8 +36,9 @@ public class AccountRepository(AuthDbContext dbContext)
         }
 
         return await DbSet
+            .Include(a => a.RefreshTokens)
             .Include(a => a.AccountRoles)
-            .ThenInclude(ar => ar.Role)
+                .ThenInclude(ar => ar.Role)
             .FirstOrDefaultAsync(a => a.Username == usernameResult.Value, cancellationToken);
     }
 
@@ -38,8 +53,9 @@ public class AccountRepository(AuthDbContext dbContext)
         }
 
         return await DbSet
+            .Include(a => a.RefreshTokens)
             .Include(a => a.AccountRoles)
-            .ThenInclude(ar => ar.Role)
+                .ThenInclude(ar => ar.Role)
             .FirstOrDefaultAsync(a => a.Email == emailResult.Value, cancellationToken);
     }
 
@@ -59,12 +75,29 @@ public class AccountRepository(AuthDbContext dbContext)
         }
 
         return await DbSet
+            .Include(a => a.RefreshTokens)
             .Include(a => a.AccountRoles)
-            .ThenInclude(ar => ar.Role)
+                .ThenInclude(ar => ar.Role)
             .FirstOrDefaultAsync(
                 a => (usernameVo != null && a.Username == usernameVo)
                   || (emailVo != null && a.Email == emailVo),
                 cancellationToken);
+    }
+
+    public async Task<Account?> GetByRefreshTokenAsync(
+        string refreshToken,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(refreshToken))
+        {
+            return null;
+        }
+
+        return await DbSet
+            .Include(a => a.RefreshTokens)
+            .Include(a => a.AccountRoles)
+                .ThenInclude(ar => ar.Role)
+            .FirstOrDefaultAsync(a => a.RefreshTokens.Any(rt => rt.Token == refreshToken), cancellationToken);
     }
 
     public async Task<bool> IsUsernameUniqueAsync(
@@ -74,7 +107,7 @@ public class AccountRepository(AuthDbContext dbContext)
         var usernameResult = Username.Create(username);
         if (usernameResult.IsFailure)
         {
-            return true; // An invalid username cannot exist in DB
+            return true;
         }
 
         return !await DbSet.AnyAsync(a => a.Username == usernameResult.Value, cancellationToken);
@@ -87,7 +120,7 @@ public class AccountRepository(AuthDbContext dbContext)
         var emailResult = EmailAddress.Create(email);
         if (emailResult.IsFailure)
         {
-            return true; // An invalid email cannot exist in DB
+            return true;
         }
 
         return !await DbSet.AnyAsync(a => a.Email == emailResult.Value, cancellationToken);

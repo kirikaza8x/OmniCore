@@ -3,13 +3,9 @@
 using OmniCore.Shared.Domain.DDD;
 using OmniCore.Shared.Domain.Specifications;
 
-public interface IRepository<TEntity, TId> 
+public interface IRepository<TEntity, TId> : IReadRepository<TEntity, TId>, IBulkRepository<TEntity, TId>
     where TEntity : AggregateRoot<TId>
 {
-    Task<TEntity?> GetByIdAsync(TId id, CancellationToken cancellationToken = default);
-    Task<TEntity?> FirstOrDefaultAsync(ISpecification<TEntity> spec, CancellationToken cancellationToken = default);
-    Task<bool> ExistsAsync(TId id, CancellationToken cancellationToken = default);
-
     void Add(TEntity entity);
     void AddRange(IEnumerable<TEntity> entities);
     void Update(TEntity entity);

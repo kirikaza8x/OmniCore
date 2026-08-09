@@ -12,11 +12,14 @@ public interface IAccountRepository : IRepository<Account, AccountId>
     /// <summary>Finds an account by matching username OR email address.</summary>
     Task<Account?> GetByIdentifierAsync(string identifier, CancellationToken cancellationToken = default);
 
+    /// <summary>Finds an account associated with the given refresh token string.</summary>
+    Task<Account?> GetByRefreshTokenAsync(string refreshToken, CancellationToken cancellationToken = default);
+
     Task<bool> IsUsernameUniqueAsync(string username, CancellationToken cancellationToken = default);
     Task<bool> IsEmailUniqueAsync(string email, CancellationToken cancellationToken = default);
 
     Task<(bool IsEmailTaken, bool IsUsernameTaken)> CheckUniquenessAsync(
-    string email, 
-    string username, 
-    CancellationToken cancellationToken = default);
+        string email, 
+        string username, 
+        CancellationToken cancellationToken = default);
 }

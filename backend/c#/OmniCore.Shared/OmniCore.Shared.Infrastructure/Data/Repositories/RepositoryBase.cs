@@ -9,8 +9,6 @@ using OmniCore.Shared.Infrastructure.Specifications;
 /// <summary>
 /// Generic repository base implementation providing query, command, and bulk data operations.
 /// </summary>
-/// <typeparam name="TEntity">The Aggregate Root entity type.</typeparam>
-/// <typeparam name="TId">The unique identifier type for the entity.</typeparam>
 public partial class RepositoryBase<TEntity, TId>(DbContext context) 
     : IRepository<TEntity, TId>, IReadRepository<TEntity, TId>, IBulkRepository<TEntity, TId>
     where TEntity : AggregateRoot<TId>

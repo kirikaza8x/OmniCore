@@ -3,8 +3,6 @@ namespace OmniCore.Services.Auth.Infrastructure.Services.Security;
 using System.Security.Cryptography;
 using Microsoft.Extensions.Options;
 using OmniCore.Services.Auth.Application.Abstractions.Security;
-using OmniCore.Services.Auth.Domain.Entities;
-using OmniCore.Services.Auth.Domain.ValueObjects;
 using OmniCore.Shared.Infrastructure.Configs.Security;
 
 public sealed class RefreshTokenService(
@@ -12,26 +10,11 @@ public sealed class RefreshTokenService(
 {
     public int RefreshTokenExpiryDays => options.Value.RefreshTokenExpiryDays;
 
-    public RefreshToken GenerateToken(Guid userId)
+    public (string Token, TimeSpan Duration) GenerateRefreshToken()
     {
         var token = Convert.ToBase64String(RandomNumberGenerator.GetBytes(64));
+        var duration = TimeSpan.FromDays(RefreshTokenExpiryDays);
 
-        var result = RefreshToken.Create(
-            accountId: new AccountId(userId), 
-            token: token,
-            duration: TimeSpan.FromDays(RefreshTokenExpiryDays)
-        );
-
-        return result.Value;
-    }
-
-    public bool ValidateToken(RefreshToken token)
-    {
-        return token is not null && token.IsActive;
-    }
-
-    public void RevokeToken(RefreshToken token)
-    {
-        token?.Revoke();
+        return (token, duration);
     }
 }

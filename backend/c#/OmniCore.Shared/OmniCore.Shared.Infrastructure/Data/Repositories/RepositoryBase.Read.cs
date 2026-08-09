@@ -22,10 +22,12 @@ public partial class RepositoryBase<TEntity, TId>
     /// Returns the first entity matching the specification criteria, or null if no match is found.
     /// </summary>
     public virtual async Task<TEntity?> FirstOrDefaultAsync(
-        ISpecification<TEntity> spec, 
+        ISpecification<TEntity>? spec = null, 
         CancellationToken cancellationToken = default)
     {
-        return await ApplySpecification(spec).FirstOrDefaultAsync(cancellationToken);
+        return spec is null
+            ? await DbSet.FirstOrDefaultAsync(cancellationToken)
+            : await ApplySpecification(spec).FirstOrDefaultAsync(cancellationToken);
     }
 
     /// <summary>
@@ -37,13 +39,15 @@ public partial class RepositoryBase<TEntity, TId>
     }
 
     /// <summary>
-    /// Lists all entities matching the specified specification rules.
+    /// Lists all entities matching the specified specification rules, or all entities if spec is null.
     /// </summary>
     public virtual async Task<IReadOnlyList<TEntity>> ListAsync(
-        ISpecification<TEntity> spec, 
+        ISpecification<TEntity>? spec = null, 
         CancellationToken cancellationToken = default)
     {
-        return await ApplySpecification(spec).ToListAsync(cancellationToken);
+        return spec is null
+            ? await DbSet.ToListAsync(cancellationToken)
+            : await ApplySpecification(spec).ToListAsync(cancellationToken);
     }
 
     /// <summary>
@@ -96,12 +100,14 @@ public partial class RepositoryBase<TEntity, TId>
     }
 
     /// <summary>
-    /// Checks if any records match the specification conditions.
+    /// Checks if any records match the specification conditions, or if any exist at all if spec is null.
     /// </summary>
     public virtual async Task<bool> AnyAsync(
-        ISpecification<TEntity> spec, 
+        ISpecification<TEntity>? spec = null, 
         CancellationToken cancellationToken = default)
     {
-        return await ApplySpecification(spec).AnyAsync(cancellationToken);
+        return spec is null
+            ? await DbSet.AnyAsync(cancellationToken)
+            : await ApplySpecification(spec).AnyAsync(cancellationToken);
     }
 }

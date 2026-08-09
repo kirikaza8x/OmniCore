@@ -10,7 +10,6 @@ public record RefreshTokenCommand(
     string RefreshToken) : ICommand<AuthResponse>;
 
 public sealed class RefreshTokenCommandHandler(
-    IRefreshTokenRepository refreshTokenRepository,
     IAccountRepository accountRepository,
     IJwtTokenService jwtTokenService,
     IRefreshTokenService refreshTokenService) : ICommandHandler<RefreshTokenCommand, AuthResponse>
@@ -19,29 +18,25 @@ public sealed class RefreshTokenCommandHandler(
         RefreshTokenCommand request, 
         CancellationToken cancellationToken)
     {
-        // 1. Retrieve Refresh Token Entity
-        var existingToken = await refreshTokenRepository.GetByTokenAsync(request.RefreshToken, cancellationToken);
-        if (existingToken is null || !refreshTokenService.ValidateToken(existingToken))
+        // 1. Retrieve Account aggregate containing the active refresh token
+        var account = await accountRepository.GetByRefreshTokenAsync(request.RefreshToken, cancellationToken);
+        if (account is null || !account.IsActive)
         {
             return Result.Failure<AuthResponse>(
                 Error.Unauthorized("Auth.InvalidRefreshToken", "Refresh token is invalid, expired, or revoked."));
         }
 
-        // 2. Get Associated Account
-        var account = await accountRepository.GetByIdAsync(existingToken.AccountId, cancellationToken);
-        if (account is null || !account.IsActive)
+        // 2. Generate new cryptographic refresh token details
+        var (newRefreshTokenString, duration) = refreshTokenService.GenerateRefreshToken();
+
+        // 3. Rotate Refresh Token via Aggregate Root (revokes existing, issues new)
+        var rotateResult = account.RotateRefreshToken(request.RefreshToken, newRefreshTokenString, duration);
+        if (rotateResult.IsFailure)
         {
-            return Result.Failure<AuthResponse>(
-                Error.NotFound("Account.NotFound", "Associated account was not found or is inactive."));
+            return Result.Failure<AuthResponse>(rotateResult.Error);
         }
 
-        // 3. Rotate Refresh Token (Create new, revoke existing)
-        var newRefreshToken = refreshTokenService.GenerateToken(account.Id.Value);
-        existingToken.Revoke(replacedByToken: newRefreshToken.Token);
-
-        await refreshTokenRepository.AddAsync(newRefreshToken, cancellationToken);
-
-        // 4. Extract Roles & Generate New JWT Access Token (Unwrapping Value Objects)
+        // 4. Extract Roles & Generate New JWT Access Token
         var roles = account.AccountRoles
             .Select(ar => ar.Role?.Name ?? string.Empty)
             .Where(r => !string.IsNullOrWhiteSpace(r));
@@ -53,10 +48,9 @@ public sealed class RefreshTokenCommandHandler(
             roles
         );
 
-        // UoW Behavior auto-commits on Result.Success
         return Result.Success(new AuthResponse(
             AccessToken: newAccessToken,
-            RefreshToken: newRefreshToken.Token,
+            RefreshToken: newRefreshTokenString,
             ExpiresInMinutes: jwtTokenService.ExpiryMinutes
         ));
     }
