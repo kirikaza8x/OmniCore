@@ -12,4 +12,6 @@ public sealed class AuthRoutes : BaseRouteModule
     public string Login => "login";
     public string RefreshToken => "refresh-token";
     public string Logout => "logout";
+
+    public string Me => "me";
 }

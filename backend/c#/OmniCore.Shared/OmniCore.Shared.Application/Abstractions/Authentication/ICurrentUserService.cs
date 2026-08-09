@@ -1,6 +1,6 @@
 namespace OmniCore.Shared.Application.Abstractions.Authentication;
 
-public interface ICurrentUser
+public interface ICurrentUserService
 {
     Guid? UserId { get; }
     string? Email { get; }

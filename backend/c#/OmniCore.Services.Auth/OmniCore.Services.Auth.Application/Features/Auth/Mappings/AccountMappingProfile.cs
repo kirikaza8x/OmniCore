@@ -1,4 +1,4 @@
-namespace OmniCore.Services.Auth.Application.Mappings;
+namespace OmniCore.Services.Auth.Application.Features.Auth.Mappings;
 
 using OmniCore.Services.Auth.Application.Features.Auth.DTOs;
 using OmniCore.Services.Auth.Domain.Entities;
@@ -19,4 +19,23 @@ public static class AccountMappingExtensions
                 .ToList()
         );
     }
+
+    public static AccountResponse ToResponse(this AccountDto dto) => new(
+        dto.Id,
+        dto.Email,
+        dto.Username,
+        dto.IsActive,
+        dto.Roles
+    );
+
+    public static AccountResponse ToResponse(this Account account) => new(
+        account.Id.Value,
+        account.Email?.Value,
+        account.Username.Value,
+        account.IsActive,
+        account.AccountRoles
+            .Select(ar => ar.Role?.Name ?? string.Empty)
+            .Where(r => !string.IsNullOrWhiteSpace(r))
+            .ToList()
+    );
 }

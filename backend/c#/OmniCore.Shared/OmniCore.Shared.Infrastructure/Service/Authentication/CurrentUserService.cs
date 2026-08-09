@@ -9,7 +9,7 @@ using OmniCore.Shared.Infrastructure.Middleware;
 /// <summary>
 /// Service providing access to the currently authenticated user's contextual information, claims, and device data.
 /// </summary>
-public sealed class CurrentUserService : ICurrentUser
+public sealed class CurrentUserService : ICurrentUserService
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IDeviceDetectionService _deviceDetectionService;

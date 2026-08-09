@@ -9,11 +9,11 @@ using OmniCore.Shared.Domain.DDD;
 
 public sealed class AuditableEntityInterceptor : SaveChangesInterceptor
 {
-    private readonly ICurrentUser _currentUser;
+    private readonly ICurrentUserService _currentUser;
     private readonly IDateTimeProvider _dateTimeProvider;
 
     public AuditableEntityInterceptor(
-        ICurrentUser currentUser,
+        ICurrentUserService currentUser,
         IDateTimeProvider dateTimeProvider)
     {
         _currentUser = currentUser;

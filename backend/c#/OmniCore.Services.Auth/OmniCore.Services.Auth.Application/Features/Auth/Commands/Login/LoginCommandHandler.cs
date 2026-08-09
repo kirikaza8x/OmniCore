@@ -2,7 +2,7 @@ namespace OmniCore.Services.Auth.Application.Features.Auth.Commands.Login;
 
 using OmniCore.Services.Auth.Application.Abstractions.Security;
 using OmniCore.Services.Auth.Application.Features.Auth.DTOs;
-using OmniCore.Services.Auth.Application.Mappings;
+using OmniCore.Services.Auth.Application.Features.Auth.Mappings;
 using OmniCore.Services.Auth.Domain.Repositories;
 using OmniCore.Shared.Application.Abstractions.Caching;
 using OmniCore.Shared.Application.Abstractions.Messaging;

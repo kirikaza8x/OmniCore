@@ -9,7 +9,7 @@ using OmniCore.Shared.Infrastructure.Services.Authentication;
 public static class AuthenticationServiceExtensions
 {
     /// <summary>
-    /// Registers <see cref="IHttpContextAccessor"/>, <see cref="IDeviceDetectionService"/>, and <see cref="ICurrentUser"/> into DI.
+    /// Registers <see cref="IHttpContextAccessor"/>, <see cref="IDeviceDetectionService"/>, and <see cref="ICurrentUserService"/> into DI.
     /// </summary>
     /// <param name="services">The service collection.</param>
     /// <returns>The updated <see cref="IServiceCollection"/>.</returns>
@@ -19,7 +19,7 @@ public static class AuthenticationServiceExtensions
 
         services.AddHttpContextAccessor();
         services.AddSingleton<IDeviceDetectionService, DeviceDetectionService>();
-        services.AddScoped<ICurrentUser, CurrentUserService>();
+        services.AddScoped<ICurrentUserService, CurrentUserService>();
 
         return services;
     }
