@@ -7,7 +7,8 @@ public static class RoleMappingExtensions
 {
     public static RoleResponse ToResponse(this Role role) => new(
         role.Id.Value,
-        role.Name
+        role.Name,
+        role.Description
     );
 
     public static List<RoleResponse> ToResponseList(this IEnumerable<Role> roles) =>

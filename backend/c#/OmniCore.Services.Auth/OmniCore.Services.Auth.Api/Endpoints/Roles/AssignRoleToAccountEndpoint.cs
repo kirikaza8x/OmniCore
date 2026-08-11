@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Routing;
 using OmniCore.Services.Auth.Api.Routing;
 using OmniCore.Services.Auth.Application.Features.Roles.Commands.AssignRoleToAccount;
 using OmniCore.Services.Auth.Application.Features.Roles.DTOs;
+using OmniCore.Shared.Api.Extensions;
 
 public sealed class AssignRoleToAccountEndpoint : ICarterModule
 {
@@ -27,11 +28,12 @@ public sealed class AssignRoleToAccountEndpoint : ICarterModule
                var result = await sender.Send(command, cancellationToken);
                return result.ToOk("Role assigned to account successfully");
            })
-           .WithName("AssignRoleToAccount")
-           .RequireAuthorization()
-           .Produces<ApiResult<string>>(StatusCodes.Status200OK)
-           .ProducesProblem(StatusCodes.Status400BadRequest)
-           .ProducesProblem(StatusCodes.Status401Unauthorized)
-           .ProducesProblem(StatusCodes.Status404NotFound);
+            .WithName("AssignRoleToAccount")
+            .RequireAuthorization()
+            .RequireRoles("Admin", "SuperAdmin")
+            .Produces<ApiResult<string>>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status404NotFound);
     }
 }

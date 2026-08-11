@@ -23,3 +23,17 @@ public record EmailConfirmedDomainEvent(AccountId AccountId) : DomainEvent;
 /// Published whenever an account changes or resets its password credential.
 /// </summary>
 public record PasswordChangedDomainEvent(AccountId AccountId) : DomainEvent;
+
+/// <summary>
+/// Published when a role is assigned to an account.
+/// </summary>
+public record AccountRoleAssignedDomainEvent(
+    AccountId AccountId, 
+    RoleId RoleId) : DomainEvent;
+
+/// <summary>
+/// Published when a role is removed from an account.
+/// </summary>
+public record AccountRoleRemovedDomainEvent(
+    AccountId AccountId, 
+    RoleId RoleId) : DomainEvent;

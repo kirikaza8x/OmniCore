@@ -6,6 +6,10 @@ using OmniCore.Shared.Domain.Repositories;
 
 public interface IAccountRepository : IRepository<Account, AccountId>
 {
+    /// <summary>
+    /// Retrieves an account entity currently tracked in EF Core local memory (unsaved) by ID.
+    /// </summary>
+    Account? GetLocalById(AccountId accountId);
     Task<Account?> GetByUsernameAsync(string username, CancellationToken cancellationToken = default);
     Task<Account?> GetByEmailAsync(string email, CancellationToken cancellationToken = default);
     

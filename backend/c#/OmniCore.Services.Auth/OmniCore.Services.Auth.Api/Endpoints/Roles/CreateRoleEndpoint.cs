@@ -20,19 +20,20 @@ public sealed class CreateRoleEndpoint : ICarterModule
         app.MapGroup(Routes.GroupPrefix)
            .WithTags(Routes.Tag)
            .MapPost(Routes.Create, async (
-               [FromBody] CreateRoleCommand command,
+               [FromBody] CreateRoleRequest request,
                ISender sender,
                CancellationToken cancellationToken) =>
-           {
-               var result = await sender.Send(command, cancellationToken);
-               return result.ToCreated("Role created successfully");
-           })
-           .WithName("CreateRole")
-           .RequireAuthorization()
-           .RequireRoles("Admin")
-           .Produces<ApiResult<RoleResponse>>(StatusCodes.Status201Created)
-           .ProducesProblem(StatusCodes.Status400BadRequest)
-           .ProducesProblem(StatusCodes.Status401Unauthorized)
-           .ProducesProblem(StatusCodes.Status409Conflict);
+            {
+                var command = new CreateRoleCommand(request.Name, request.Description);
+                var result = await sender.Send(command, cancellationToken);
+                return result.ToCreated("Role created successfully");
+            })
+            .WithName("CreateRole")
+            .RequireAuthorization()
+            .RequireRoles("Admin", "SuperAdmin")
+            .Produces<ApiResult<RoleResponse>>(StatusCodes.Status201Created)
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status409Conflict);
     }
 }

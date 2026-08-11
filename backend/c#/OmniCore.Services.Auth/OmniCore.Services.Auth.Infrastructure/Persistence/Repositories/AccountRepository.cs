@@ -15,7 +15,7 @@ public class AccountRepository(AuthDbContext dbContext)
     /// Overridden to eagerly load RefreshTokens, AccountRoles, and Roles for aggregate domain actions and claims generation.
     /// </summary>
     public override async Task<Account?> GetByIdAsync(
-        AccountId id, 
+        AccountId id,
         CancellationToken cancellationToken = default)
     {
         return await DbSet
@@ -157,5 +157,10 @@ public class AccountRepository(AuthDbContext dbContext)
         bool isEmailTaken = existing.Any(x => x.IsEmail);
 
         return (isEmailTaken, isUsernameTaken);
+    }
+
+    public Account? GetLocalById(AccountId accountId)
+    {
+        return dbContext.Accounts.Local.FirstOrDefault(a => a.Id == accountId);
     }
 }

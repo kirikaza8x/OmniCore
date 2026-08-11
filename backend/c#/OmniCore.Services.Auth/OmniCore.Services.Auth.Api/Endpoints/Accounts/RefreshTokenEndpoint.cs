@@ -1,9 +1,9 @@
-using OmniCore.Services.Auth.Application.Features.Auth.Commands.Register;
+using OmniCore.Services.Auth.Application.Features.Auth.Commands.RefreshToken;
 using OmniCore.Services.Auth.Application.Features.Auth.DTOs;
 
-namespace OmniCore.Services.Auth.Api.Endpoints;
+namespace OmniCore.Services.Auth.Api.Endpoints.Accounts;
 
-public sealed class RegisterEndpoint : ICarterModule
+public sealed class RefreshTokenEndpoint : ICarterModule
 {
     private static readonly AuthRoutes Routes = new();
 
@@ -11,17 +11,16 @@ public sealed class RegisterEndpoint : ICarterModule
     {
         app.MapGroup(Routes.GroupPrefix)
            .WithTags(Routes.Tag)
-           .MapPost(Routes.Register, async (
-               [FromBody] RegisterCommand command,
+           .MapPost(Routes.RefreshToken, async (
+               [FromBody] RefreshTokenCommand command,
                ISender sender,
                CancellationToken cancellationToken) =>
            {
                var result = await sender.Send(command, cancellationToken);
-               return result.ToOk("User registered successfully");
+               return result.ToOk("Token refreshed successfully");
            })
-           .WithName("Register")
+           .WithName("RefreshToken")
            .Produces<ApiResult<AuthResponse>>(StatusCodes.Status200OK)
-           .ProducesProblem(StatusCodes.Status400BadRequest)
-           .ProducesProblem(StatusCodes.Status409Conflict);
+           .ProducesProblem(StatusCodes.Status400BadRequest);
     }
 }

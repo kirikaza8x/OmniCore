@@ -14,13 +14,10 @@ public record RegisterCommand(
 
 public sealed class RegisterCommandHandler(
     IAccountRepository accountRepository,
-    IRoleRepository roleRepository,
     IPasswordHasher passwordHasher,
     IJwtTokenService jwtTokenService,
     IRefreshTokenService refreshTokenService) : ICommandHandler<RegisterCommand, AuthResponse>
 {
-    private const string DefaultRoleName = "User";
-
     public async Task<Result<AuthResponse>> Handle(
         RegisterCommand request,
         CancellationToken cancellationToken)
@@ -46,7 +43,7 @@ public sealed class RegisterCommandHandler(
         // 2. Hash Password
         var passwordHash = passwordHasher.HashPassword(request.Password);
 
-        // 3. Create Account Aggregate Root
+        // 3. Create Account Aggregate Root (Raises AccountCreatedDomainEvent)
         var accountResult = Account.Create(
             rawUsername: request.Username,
             rawEmail: request.Email,
@@ -60,21 +57,7 @@ public sealed class RegisterCommandHandler(
 
         var account = accountResult.Value;
 
-        // 4. Assign Default Role
-        var defaultRole = await roleRepository.GetByNameAsync(DefaultRoleName, cancellationToken);
-        if (defaultRole is null)
-        {
-            return Result.Failure<AuthResponse>(
-                Error.NotFound("Role.DefaultRoleNotFound", $"Default role '{DefaultRoleName}' was not found."));
-        }
-
-        var assignRoleResult = account.AssignRole(defaultRole.Id);
-        if (assignRoleResult.IsFailure)
-        {
-            return Result.Failure<AuthResponse>(assignRoleResult.Error);
-        }
-
-        // 5. Attach Refresh Token to Aggregate Root
+        // 4. Attach Refresh Token to Aggregate Root
         var (refreshTokenString, duration) = refreshTokenService.GenerateRefreshToken();
         var refreshTokenResult = account.AddRefreshToken(refreshTokenString, duration);
         if (refreshTokenResult.IsFailure)
@@ -82,18 +65,15 @@ public sealed class RegisterCommandHandler(
             return Result.Failure<AuthResponse>(refreshTokenResult.Error);
         }
 
-        // 6. Save Account Entity & graph via Repository
+        // 5. Persist Account (Dispatches AccountCreatedDomainEvent -> assigns default "User" role)
         accountRepository.Add(account);
 
-        // 7. Extract Roles for JWT Generation
-        var roles = new[] { defaultRole.Name };
-
-        // 8. Generate Access Token containing role claims
+        // 6. Generate Access Token containing default "User" role
         var accessToken = jwtTokenService.GenerateToken(
             account.Id.Value,
             account.Email?.Value,
             account.Username.Value,
-            roles
+            roles: ["User"]
         );
 
         return Result.Success(new AuthResponse(

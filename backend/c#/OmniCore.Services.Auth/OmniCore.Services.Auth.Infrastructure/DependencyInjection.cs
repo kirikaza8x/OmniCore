@@ -1,6 +1,8 @@
 namespace OmniCore.Services.Auth.Infrastructure;
 
+using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -14,12 +16,12 @@ using OmniCore.Shared.Infrastructure.Extensions;
 public static class DependencyInjection
 {
     public static IServiceCollection AddAuthInfrastructure(
-        this IServiceCollection services, 
+        this IServiceCollection services,
         IConfiguration configuration)
     {
         // 1. Invoke General Shared Infrastructure (Auto-scans and binds DatabaseConfig to IOptions)
         services.AddSharedInfrastructure(
-            configuration, 
+            configuration,
             [InfrastructureAssemblyReference.Assembly]);
 
         // 2. Service-Specific DbContext Setup using validated IOptions<DatabaseConfig>
@@ -41,6 +43,9 @@ public static class DependencyInjection
 
             if (dbConfig.EnableDetailedErrors) options.EnableDetailedErrors();
             if (dbConfig.EnableSensitiveDataLogging) options.EnableSensitiveDataLogging();
+
+            var interceptors = sp.GetServices<ISaveChangesInterceptor>();
+            options.AddInterceptors(interceptors);
         });
 
         // 3. Register Shared UnitOfWork tied to AuthDbContext
@@ -49,26 +54,40 @@ public static class DependencyInjection
         // 4. Service-Specific Messaging, Outbox & Inbox Quartz Jobs
         // services.AddOutboxAndInbox<AuthDbContext>();
         services.AddMassTransitWithBroker<AuthDbContext>(
-            configuration, 
+            configuration,
             InfrastructureAssemblyReference.Assembly);
 
         // 5. Service-Specific Repositories & Domain Services Registration via Scrutor
         services.Scan(scan => scan
             .FromAssemblies(InfrastructureAssemblyReference.Assembly)
-            
+
             // Register Repositories (e.g., AccountRepository -> IAccountRepository)
             .AddClasses(classes => classes.Where(type => type.Name.EndsWith("Repository")))
             .AsImplementedInterfaces()
             .WithScopedLifetime()
-            
+
             // Register Auth Domain/Infra Services (e.g., PasswordHasher, JwtTokenGenerator)
-            .AddClasses(classes => classes.Where(type => 
-                type.Name.EndsWith("Hasher") || 
+            .AddClasses(classes => classes.Where(type =>
+                type.Name.EndsWith("Hasher") ||
                 type.Name.EndsWith("Generator") ||
                 type.Name.EndsWith("Service")))
             .AsImplementedInterfaces()
             .WithScopedLifetime());
-        
+
+        // 6. Register Data Seeders
+        services.AddDataSeeders(InfrastructureAssemblyReference.Assembly);
+
         return services;
+    }
+
+    /// <summary>
+    /// Initializes Auth Infrastructure middleware & startup operations (EF Migrations and Data Seeding).
+    /// </summary>
+    public static async Task<IApplicationBuilder> UseAuthInfrastructureAsync(
+        this IApplicationBuilder app,
+        bool seedData = true)
+    {
+        await app.ApplyMigrationsAsync<AuthDbContext>(seedData);
+        return app;
     }
 }

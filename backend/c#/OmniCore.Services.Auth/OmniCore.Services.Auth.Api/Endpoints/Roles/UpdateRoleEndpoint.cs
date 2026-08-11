@@ -24,7 +24,7 @@ public sealed class UpdateRoleEndpoint : ICarterModule
                ISender sender,
                CancellationToken cancellationToken) =>
            {
-               var command = new UpdateRoleCommand(id, request.Name);
+               var command = new UpdateRoleCommand(id, request.Name, request.Description);
                var result = await sender.Send(command, cancellationToken);
                return result.ToOk("Role updated successfully");
            })

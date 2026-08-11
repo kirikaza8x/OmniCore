@@ -37,7 +37,7 @@ public sealed class UpdateRoleCommandHandler(
             }
         }
 
-        var updateResult = role.UpdateName(request.NewName);
+        var updateResult = role.Update(request.NewName, request.Description);
         if (updateResult.IsFailure)
         {
             return Result.Failure<RoleResponse>(updateResult.Error);

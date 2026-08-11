@@ -1,7 +1,7 @@
 using OmniCore.Services.Auth.Application.Features.Auth.Commands.Login;
 using OmniCore.Services.Auth.Application.Features.Auth.DTOs;
 
-namespace OmniCore.Services.Auth.Api.Endpoints;
+namespace OmniCore.Services.Auth.Api.Endpoints.Accounts;
 
 
 

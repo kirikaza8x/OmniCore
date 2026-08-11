@@ -25,7 +25,7 @@ public sealed class CreateRoleCommandHandler(
                 Error.Conflict("Role.NameAlreadyExists", $"Role with name '{request.Name}' already exists."));
         }
 
-        var roleResult = Role.Create(request.Name);
+        var roleResult = Role.Create(request.Name, request.Description);
         if (roleResult.IsFailure)
         {
             return Result.Failure<RoleResponse>(roleResult.Error);

@@ -1,4 +1,4 @@
-namespace OmniCore.Services.Auth.Api.Endpoints;
+namespace OmniCore.Services.Auth.Api.Endpoints.Accounts;
 
 using OmniCore.Services.Auth.Application.Features.Auth.Commands.Logout;
 

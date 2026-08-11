@@ -22,5 +22,6 @@ var app = builder.Build();
 app.UseApi(apiTitle: "OmniCore Auth API"); 
 app.MapHealthChecks("/health"); 
 app.MapCarter();
+await app.UseAuthInfrastructureAsync();
 
 app.Run();

@@ -1,3 +1,3 @@
 namespace OmniCore.Services.Auth.Application.Features.Roles.DTOs;
 
-public record RoleResponse(Guid Id, string Name);
+public record RoleResponse(Guid Id, string Name, string? Description);

@@ -1,9 +1,9 @@
+namespace OmniCore.Services.Auth.Infrastructure.Persistence.Configurations;
+
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using OmniCore.Services.Auth.Domain.Entities;
 using OmniCore.Services.Auth.Domain.ValueObjects;
-
-namespace OmniCore.Services.Auth.Infrastructure.Persistence.Configurations;
 
 public class RoleConfiguration : IEntityTypeConfiguration<Role>
 {
@@ -21,6 +21,11 @@ public class RoleConfiguration : IEntityTypeConfiguration<Role>
             .HasColumnName("name")
             .HasMaxLength(50)
             .IsRequired();
+
+        builder.Property(r => r.Description)
+            .HasColumnName("description")
+            .HasMaxLength(250)
+            .IsRequired(false);
 
         builder.HasIndex(r => r.Name).IsUnique();
     }

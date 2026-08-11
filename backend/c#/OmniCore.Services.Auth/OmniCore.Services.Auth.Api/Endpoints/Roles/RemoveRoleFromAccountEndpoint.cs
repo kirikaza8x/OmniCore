@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Routing;
 using OmniCore.Services.Auth.Api.Routing;
 using OmniCore.Services.Auth.Application.Features.Roles.Commands.RemoveRoleFromAccount;
 using OmniCore.Services.Auth.Application.Features.Roles.DTOs;
+using OmniCore.Shared.Api.Extensions;
 
 public sealed class RemoveRoleFromAccountEndpoint : ICarterModule
 {
@@ -27,11 +28,12 @@ public sealed class RemoveRoleFromAccountEndpoint : ICarterModule
                var result = await sender.Send(command, cancellationToken);
                return result.ToOk("Role removed from account successfully");
            })
-           .WithName("RemoveRoleFromAccount")
-           .RequireAuthorization()
-           .Produces<ApiResult<string>>(StatusCodes.Status200OK)
-           .ProducesProblem(StatusCodes.Status400BadRequest)
-           .ProducesProblem(StatusCodes.Status401Unauthorized)
-           .ProducesProblem(StatusCodes.Status404NotFound);
+            .WithName("RemoveRoleFromAccount")
+            .RequireAuthorization()
+            .RequireRoles("Admin", "SuperAdmin")
+            .Produces<ApiResult<string>>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status404NotFound);
     }
 }

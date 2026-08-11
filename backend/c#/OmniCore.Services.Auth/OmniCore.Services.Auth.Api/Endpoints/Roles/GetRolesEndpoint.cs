@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Routing;
 using OmniCore.Services.Auth.Api.Routing;
 using OmniCore.Services.Auth.Application.Features.Roles.DTOs;
 using OmniCore.Services.Auth.Application.Features.Roles.Queries.GetRoles;
+using OmniCore.Shared.Api.Extensions;
 
 public sealed class GetRolesEndpoint : ICarterModule
 {
@@ -24,10 +25,11 @@ public sealed class GetRolesEndpoint : ICarterModule
                var result = await sender.Send(new GetRolesQuery(), cancellationToken);
                return result.ToOk("Roles retrieved successfully");
            })
-           .WithName("GetRoles")
-           .RequireAuthorization()
-           .Produces<ApiResult<IReadOnlyList<RoleResponse>>>(StatusCodes.Status200OK)
-           .ProducesProblem(StatusCodes.Status401Unauthorized)
-           .ProducesProblem(StatusCodes.Status403Forbidden);
+            .WithName("GetRoles")
+            .RequireAuthorization()
+            .RequireRoles("Admin", "SuperAdmin")
+            .Produces<ApiResult<IReadOnlyList<RoleResponse>>>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status403Forbidden);
     }
 }

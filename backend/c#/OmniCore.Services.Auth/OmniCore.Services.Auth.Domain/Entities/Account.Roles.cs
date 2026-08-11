@@ -1,5 +1,6 @@
 namespace OmniCore.Services.Auth.Domain.Entities;
 
+using OmniCore.Services.Auth.Domain.Events;
 using OmniCore.Services.Auth.Domain.ValueObjects;
 using OmniCore.Shared.Domain.Abstractions;
 
@@ -26,6 +27,10 @@ public partial class Account
 
         _accountRoles.Add(accountRoleResult.Value);
         ModifiedAt = DateTime.UtcNow;
+
+        // Uses RaiseDomainEvent from AggregateRoot<TId>
+        RaiseDomainEvent(new AccountRoleAssignedDomainEvent(Id, roleId));
+
         return Result.Success();
     }
 
@@ -46,6 +51,10 @@ public partial class Account
 
         _accountRoles.Remove(accountRole);
         ModifiedAt = DateTime.UtcNow;
+
+        // Uses RaiseDomainEvent from AggregateRoot<TId>
+        RaiseDomainEvent(new AccountRoleRemovedDomainEvent(Id, roleId));
+
         return Result.Success();
     }
 }

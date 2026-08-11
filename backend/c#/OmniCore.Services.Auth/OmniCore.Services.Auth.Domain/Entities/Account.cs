@@ -48,10 +48,10 @@ public partial class Account : AggregateRoot<AccountId>, IAuditableEntity, ISoft
         Email = email;
         PasswordHash = passwordHash;
         IsEmailConfirmed = false;
-        IsActive = true;
-        IsDeleted = false;
-        CreatedAt = DateTime.UtcNow;
-        CreatedBy = "System";
+        // IsActive = true;
+        // IsDeleted = false;
+        // CreatedAt = DateTime.UtcNow;
+        // CreatedBy = "System";
 
         RaiseDomainEvent(new AccountCreatedDomainEvent(Id, Username.Value, Email?.Value));
     }
@@ -114,7 +114,7 @@ public partial class Account : AggregateRoot<AccountId>, IAuditableEntity, ISoft
 
         Email = emailResult.Value;
         IsEmailConfirmed = false;
-        ModifiedAt = DateTime.UtcNow;
+        // ModifiedAt = DateTime.UtcNow;
         return Result.Success();
     }
 
@@ -135,7 +135,7 @@ public partial class Account : AggregateRoot<AccountId>, IAuditableEntity, ISoft
         }
 
         IsEmailConfirmed = true;
-        ModifiedAt = DateTime.UtcNow;
+        // ModifiedAt = DateTime.UtcNow;
         RaiseDomainEvent(new EmailConfirmedDomainEvent(Id));
         return Result.Success();
     }
@@ -155,8 +155,8 @@ public partial class Account : AggregateRoot<AccountId>, IAuditableEntity, ISoft
         }
 
         PasswordHash = hashResult.Value;
-        ModifiedAt = DateTime.UtcNow;
-        ModifiedBy = updatedBy;
+        // ModifiedAt = DateTime.UtcNow;
+        // ModifiedBy = updatedBy;
 
         RevokeAllRefreshTokens();
 
@@ -171,8 +171,8 @@ public partial class Account : AggregateRoot<AccountId>, IAuditableEntity, ISoft
     public void Deactivate(string reasonBy = "System")
     {
         IsActive = false;
-        ModifiedAt = DateTime.UtcNow;
-        ModifiedBy = reasonBy;
+        // ModifiedAt = DateTime.UtcNow;
+        // ModifiedBy = reasonBy;
         RevokeAllRefreshTokens();
     }
 
@@ -187,8 +187,8 @@ public partial class Account : AggregateRoot<AccountId>, IAuditableEntity, ISoft
         IsDeleted = true;
         IsActive = false;
         DeletedAtUtc = DateTime.UtcNow;
-        ModifiedAt = DateTime.UtcNow;
-        ModifiedBy = deletedBy;
+        // ModifiedAt = DateTime.UtcNow;
+        // ModifiedBy = deletedBy;
         RevokeAllRefreshTokens();
     }
 }
