@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using OmniCore.Shared.Application.Abstractions.EventBus;
+using OmniCore.Shared.Contracts.Events;
 using Quartz;
 
 [DisallowConcurrentExecution]

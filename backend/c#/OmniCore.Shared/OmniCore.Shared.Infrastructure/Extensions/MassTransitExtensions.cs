@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using OmniCore.Shared.Application.Abstractions.EventBus;
+using OmniCore.Shared.Contracts.Events;
 using OmniCore.Shared.Infrastructure.Configs.MessageBroker;
 using OmniCore.Shared.Infrastructure.EventBus;
 

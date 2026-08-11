@@ -1,4 +1,6 @@
-﻿namespace OmniCore.Shared.Application.Abstractions.EventBus;
+﻿using OmniCore.Shared.Contracts.Events;
+
+namespace OmniCore.Shared.Application.Abstractions.EventBus;
 
 public interface IEventBus
 {

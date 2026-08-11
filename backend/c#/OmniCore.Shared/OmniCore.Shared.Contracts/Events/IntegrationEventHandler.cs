@@ -1,4 +1,4 @@
-﻿namespace OmniCore.Shared.Application.Abstractions.EventBus;
+﻿namespace OmniCore.Shared.Contracts.Events;
 
 public abstract class IntegrationEventHandler<TIntegrationEvent> : IIntegrationEventHandler<TIntegrationEvent>
     where TIntegrationEvent : IIntegrationEvent

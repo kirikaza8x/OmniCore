@@ -2,6 +2,7 @@
 
 using MassTransit;
 using OmniCore.Shared.Application.Abstractions.EventBus;
+using OmniCore.Shared.Contracts.Events;
 
 public sealed class EventBus(IPublishEndpoint publishEndpoint) : IEventBus
 {

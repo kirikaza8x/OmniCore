@@ -17,6 +17,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\OmniCore.Shared.Domain\OmniCore.Shared.Domain.csproj" />
+    <ProjectReference Include="..\OmniCore.Shared.Contracts\OmniCore.Shared.Contracts.csproj" />
   </ItemGroup>
 
 

@@ -6,8 +6,4 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\..\OmniCore.Shared\OmniCore.Shared.Contracts\OmniCore.Shared.Contracts.csproj" />
-  </ItemGroup>
-
 </Project>

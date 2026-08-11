@@ -4,7 +4,7 @@ using System.Text.Json;
 using MassTransit;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using OmniCore.Shared.Application.Abstractions.EventBus;
+using OmniCore.Shared.Contracts.Events;
 using OmniCore.Shared.Infrastructure.Inbox;
 
 /// <summary>

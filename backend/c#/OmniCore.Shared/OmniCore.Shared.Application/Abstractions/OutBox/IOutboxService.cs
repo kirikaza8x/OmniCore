@@ -1,6 +1,6 @@
 namespace OmniCore.Shared.Application.Abstractions.Outbox;
 
-using OmniCore.Shared.Application.Abstractions.EventBus;
+using OmniCore.Shared.Contracts.Events;
 
 public interface IOutboxService
 {
