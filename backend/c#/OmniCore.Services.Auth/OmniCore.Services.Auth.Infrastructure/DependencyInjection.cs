@@ -51,8 +51,7 @@ public static class DependencyInjection
         // 3. Register Shared UnitOfWork tied to AuthDbContext
         services.AddScoped<IUnitOfWork, UnitOfWorkBase<AuthDbContext>>();
 
-        // 4. Service-Specific Messaging, Outbox & Inbox Quartz Jobs
-        // services.AddOutboxAndInbox<AuthDbContext>();
+        // 4. Service-Specific Messaging, Outbox & MassTransit Broker
         services.AddMassTransitWithBroker<AuthDbContext>(
             configuration,
             InfrastructureAssemblyReference.Assembly);

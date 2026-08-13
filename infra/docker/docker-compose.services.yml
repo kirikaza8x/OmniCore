@@ -33,7 +33,7 @@ services:
       - MessageBroker__Password=${RABBITMQ_DEFAULT_PASS}
       - MessageBroker__KafkaBootstrapServers=kafka:29092
       - MessageBroker__OutboxDbProvider=${MESSAGE_BROKER_OUTBOX_DB_PROVIDER:-Postgres}
-      - MessageBroker__EnableOutbox=${MESSAGE_BROKER_ENABLE_OUTBOX:-false}
+      - MessageBroker__EnableOutbox=${MESSAGE_BROKER_ENABLE_OUTBOX:-true}
 
       # Redis & Memory Cache Configuration
       - Redis__Host=redis

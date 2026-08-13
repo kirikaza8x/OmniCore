@@ -1,7 +1,8 @@
-// namespace OmniCore.Services.Auth.Contracts.Events;
+namespace OmniCore.Services.Auth.Contracts.Events;
 
-// using OmniCore.Shared.Application.Abstractions.EventBus;
+using OmniCore.Shared.Contracts.Events;
 
-// public record AccountRegisteredIntegrationEvent(
-//     Guid AccountId,
-//     string Email) : IntegrationEvent;
+public record AccountRegisteredIntegrationEvent(
+    Guid AccountId,
+    string Username,
+    string? Email) : IntegrationEvent; 
