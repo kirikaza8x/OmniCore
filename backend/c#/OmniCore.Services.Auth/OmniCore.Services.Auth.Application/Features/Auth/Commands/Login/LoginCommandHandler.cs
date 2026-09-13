@@ -15,7 +15,7 @@ public record LoginCommand(
 
 public sealed class LoginCommandHandler(
     IAccountRepository accountRepository,
-    IPasswordHasher passwordHasher,
+    IPasswordHasherService passwordHasher,
     IJwtTokenService jwtTokenService,
     IRefreshTokenService refreshTokenService,
     ICacheService cacheService) : ICommandHandler<LoginCommand, AuthResponse>

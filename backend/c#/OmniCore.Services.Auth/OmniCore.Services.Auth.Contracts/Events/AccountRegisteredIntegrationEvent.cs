@@ -5,4 +5,6 @@ using OmniCore.Shared.Contracts.Events;
 public record AccountRegisteredIntegrationEvent(
     Guid AccountId,
     string Username,
-    string? Email) : IntegrationEvent; 
+    string Email,
+    string FirstName,
+    string LastName) : IntegrationEvent;

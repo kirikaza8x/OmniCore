@@ -14,7 +14,7 @@ public record RegisterCommand(
 
 public sealed class RegisterCommandHandler(
     IAccountRepository accountRepository,
-    IPasswordHasher passwordHasher,
+    IPasswordHasherService passwordHasher,
     IJwtTokenService jwtTokenService,
     IRefreshTokenService refreshTokenService) : ICommandHandler<RegisterCommand, AuthResponse>
 {

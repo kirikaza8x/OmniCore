@@ -6,6 +6,13 @@
     <Project Path="OmniCore.Services.Auth/OmniCore.Services.Auth.Domain/OmniCore.Services.Auth.Domain.csproj" />
     <Project Path="OmniCore.Services.Auth/OmniCore.Services.Auth.Infrastructure/OmniCore.Services.Auth.Infrastructure.csproj" />
   </Folder>
+  <Folder Name="/OmniCore.Services.User/">
+    <Project Path="OmniCore.Services.User/OmniCore.Services.User.Api/OmniCore.Services.User.Api.csproj" />
+    <Project Path="OmniCore.Services.User/OmniCore.Services.User.Application/OmniCore.Services.User.Application.csproj" />
+    <Project Path="OmniCore.Services.User/OmniCore.Services.User.Contracts/OmniCore.Services.User.Contracts.csproj" />
+    <Project Path="OmniCore.Services.User/OmniCore.Services.User.Domain/OmniCore.Services.User.Domain.csproj" />
+    <Project Path="OmniCore.Services.User/OmniCore.Services.User.Infrastructure/OmniCore.Services.User.Infrastructure.csproj" />
+  </Folder>
   <Folder Name="/OmniCore.Shared/">
     <Project Path="OmniCore.Shared/OmniCore.Shared.Api/OmniCore.Shared.Api.csproj" />
     <Project Path="OmniCore.Shared/OmniCore.Shared.Application/OmniCore.Shared.Application.csproj" />

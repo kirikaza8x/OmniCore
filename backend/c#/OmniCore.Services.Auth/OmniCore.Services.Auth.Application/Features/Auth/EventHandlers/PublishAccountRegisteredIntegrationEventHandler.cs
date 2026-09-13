@@ -22,7 +22,9 @@ public sealed class PublishAccountRegisteredIntegrationEventHandler(
         var integrationEvent = new AccountRegisteredIntegrationEvent(
             domainEvent.AccountId.Value,
             domainEvent.Username, 
-            domainEvent.Email);
+            domainEvent.Email,
+            domainEvent.FirstName ?? domainEvent.Username,
+            domainEvent.LastName ?? string.Empty);
 
         await eventBus.PublishAsync(integrationEvent, cancellationToken);
     }

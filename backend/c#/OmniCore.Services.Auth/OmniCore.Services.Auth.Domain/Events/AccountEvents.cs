@@ -8,11 +8,15 @@ using OmniCore.Shared.Domain.DDD;
 /// </summary>
 /// <param name="AccountId">The unique ID of the created account.</param>
 /// <param name="Username">The registered username handle.</param>
-/// <param name="Email">The registered email address (optional).</param>
+/// <param name="Email">The registered email address.</param>
+/// <param name="FirstName">The user's first name (optional).</param>
+/// <param name="LastName">The user's last name (optional).</param>
 public record AccountCreatedDomainEvent(
     AccountId AccountId, 
     string Username, 
-    string? Email) : DomainEvent;
+    string Email,
+    string? FirstName = null,
+    string? LastName = null) : DomainEvent;
 
 /// <summary>
 /// Published when an account's email verification process completes successfully.

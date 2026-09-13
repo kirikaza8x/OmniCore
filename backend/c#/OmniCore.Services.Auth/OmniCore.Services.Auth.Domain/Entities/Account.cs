@@ -42,18 +42,25 @@ public partial class Account : AggregateRoot<AccountId>, IAuditableEntity, ISoft
 
     private Account() { }
 
-    private Account(AccountId id, Username username, EmailAddress? email, PasswordHash? passwordHash) : base(id)
+    private Account(
+        AccountId id, 
+        Username username, 
+        EmailAddress? email, 
+        PasswordHash? passwordHash,
+        string? firstName = null,
+        string? lastName = null) : base(id)
     {
         Username = username;
         Email = email;
         PasswordHash = passwordHash;
         IsEmailConfirmed = false;
-        // IsActive = true;
-        // IsDeleted = false;
-        // CreatedAt = DateTime.UtcNow;
-        // CreatedBy = "System";
 
-        RaiseDomainEvent(new AccountCreatedDomainEvent(Id, Username.Value, Email?.Value));
+        RaiseDomainEvent(new AccountCreatedDomainEvent(
+            Id, 
+            Username.Value, 
+            Email?.Value ?? string.Empty, 
+            firstName, 
+            lastName));
     }
 
     /// <summary>
@@ -62,11 +69,15 @@ public partial class Account : AggregateRoot<AccountId>, IAuditableEntity, ISoft
     /// <param name="rawUsername">The raw username string.</param>
     /// <param name="rawEmail">The optional raw email string.</param>
     /// <param name="rawPasswordHash">The optional hashed password string.</param>
+    /// <param name="firstName">The optional profile first name passed to down-stream integration events.</param>
+    /// <param name="lastName">The optional profile last name passed to down-stream integration events.</param>
     /// <returns>A result containing the created <see cref="Account"/> or a domain validation error.</returns>
     public static Result<Account> Create(
         string rawUsername,
         string? rawEmail = null,
-        string? rawPasswordHash = null)
+        string? rawPasswordHash = null,
+        string? firstName = null,
+        string? lastName = null)
     {
         var usernameResult = Username.Create(rawUsername);
         if (usernameResult.IsFailure)
@@ -96,7 +107,13 @@ public partial class Account : AggregateRoot<AccountId>, IAuditableEntity, ISoft
             passwordHash = hashResult.Value;
         }
 
-        return new Account(AccountId.New(), usernameResult.Value, email, passwordHash);
+        return new Account(
+            AccountId.New(), 
+            usernameResult.Value, 
+            email, 
+            passwordHash, 
+            firstName, 
+            lastName);
     }
 
     /// <summary>
@@ -114,7 +131,6 @@ public partial class Account : AggregateRoot<AccountId>, IAuditableEntity, ISoft
 
         Email = emailResult.Value;
         IsEmailConfirmed = false;
-        // ModifiedAt = DateTime.UtcNow;
         return Result.Success();
     }
 
@@ -135,7 +151,6 @@ public partial class Account : AggregateRoot<AccountId>, IAuditableEntity, ISoft
         }
 
         IsEmailConfirmed = true;
-        // ModifiedAt = DateTime.UtcNow;
         RaiseDomainEvent(new EmailConfirmedDomainEvent(Id));
         return Result.Success();
     }
@@ -155,8 +170,6 @@ public partial class Account : AggregateRoot<AccountId>, IAuditableEntity, ISoft
         }
 
         PasswordHash = hashResult.Value;
-        // ModifiedAt = DateTime.UtcNow;
-        // ModifiedBy = updatedBy;
 
         RevokeAllRefreshTokens();
 
@@ -171,8 +184,6 @@ public partial class Account : AggregateRoot<AccountId>, IAuditableEntity, ISoft
     public void Deactivate(string reasonBy = "System")
     {
         IsActive = false;
-        // ModifiedAt = DateTime.UtcNow;
-        // ModifiedBy = reasonBy;
         RevokeAllRefreshTokens();
     }
 
@@ -187,8 +198,6 @@ public partial class Account : AggregateRoot<AccountId>, IAuditableEntity, ISoft
         IsDeleted = true;
         IsActive = false;
         DeletedAtUtc = DateTime.UtcNow;
-        // ModifiedAt = DateTime.UtcNow;
-        // ModifiedBy = deletedBy;
         RevokeAllRefreshTokens();
     }
 }
