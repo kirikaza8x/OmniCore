@@ -1,3 +1,4 @@
+// Features/Auth/Queries/GetCurrentUser/GetCurrentUserQuery.cs
 namespace OmniCore.Services.Auth.Application.Features.Auth.Queries.GetCurrentUser;
 
 using OmniCore.Services.Auth.Application.Features.Auth.DTOs;
