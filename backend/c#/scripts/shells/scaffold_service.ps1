@@ -2,7 +2,7 @@
 .SYNOPSIS
     Automated service builder for OmniCore microservices.
     Scaffolds Clean Architecture projects, links OmniCore.Shared layers by default,
-    installs layer-flexible NuGet packages, generates markers, and updates the solution file.
+    installs layer-flexible NuGet packages, generates markers, DependencyInjection classes, and updates the solution file.
 .PARAMETER ModuleName
     Name of the microservice (e.g., Auth, User, Order, Payment).
 .PARAMETER TargetFramework
@@ -79,16 +79,46 @@ Write-Host " > Solution        : $($SolutionFile.Name)" -ForegroundColor DarkGra
 Write-Host "=====================================================`n" -ForegroundColor Cyan
 
 # ------------------------------------------------------------------------------
-# 1. Create Folder Hierarchy
+# 1. Create Folder Hierarchy (Including Full Architecture Subdirectories)
 # ------------------------------------------------------------------------------
-Write-Host '[1/6] Creating folder structure...' -ForegroundColor Cyan
+Write-Host '[1/6] Creating folder structure and architecture subdirectories...' -ForegroundColor Cyan
 $ApiDir       = Join-Path $ServiceRoot "$ServiceName.Api"
 $AppDir       = Join-Path $ServiceRoot "$ServiceName.Application"
 $DomainDir    = Join-Path $ServiceRoot "$ServiceName.Domain"
 $InfraDir     = Join-Path $ServiceRoot "$ServiceName.Infrastructure"
 $ContractsDir = Join-Path $ServiceRoot "$ServiceName.Contracts"
 
+# Root project folders
 New-Item -ItemType Directory -Force -Path $ApiDir, $AppDir, $DomainDir, $InfraDir, $ContractsDir | Out-Null
+
+# Subfolder structure matching Auth microservice
+$SubFolders = @(
+    # Domain Subfolders
+    (Join-Path $DomainDir "Entities"),
+    (Join-Path $DomainDir "Enums"),
+    (Join-Path $DomainDir "Events"),
+    (Join-Path $DomainDir "Repositories"),
+    (Join-Path $DomainDir "Specifications"),
+    (Join-Path $DomainDir "ValueObjects"),
+
+    # Contracts Subfolders
+    (Join-Path $ContractsDir "Events"),
+
+    # Application Subfolders
+    (Join-Path $AppDir "Abstractions"),
+    (Join-Path $AppDir "Features"),
+
+    # Infrastructure Subfolders
+    (Join-Path $InfraDir "Configs"),
+    (Join-Path $InfraDir "Persistence"),
+    (Join-Path $InfraDir "Services"),
+
+    # API Subfolders
+    (Join-Path $ApiDir "Endpoints"),
+    (Join-Path $ApiDir "Routing")
+)
+
+New-Item -ItemType Directory -Force -Path $SubFolders | Out-Null
 
 # ------------------------------------------------------------------------------
 # 2. Create Projects
@@ -165,9 +195,9 @@ foreach ($layer in $LayerPackageMap.Keys) {
 }
 
 # ------------------------------------------------------------------------------
-# 5. Generate AssemblyReference Markers & Program.cs
+# 5. Generate AssemblyReference Markers, DependencyInjection & Program.cs
 # ------------------------------------------------------------------------------
-Write-Host '[5/6] Writing AssemblyReference markers and starter host...' -ForegroundColor Cyan
+Write-Host '[5/6] Writing AssemblyReference markers, DI extensions, and Program.cs...' -ForegroundColor Cyan
 
 # Contracts AssemblyReference.cs
 Set-Content -Path (Join-Path $ContractsDir "AssemblyReference.cs") -Value @(
@@ -189,7 +219,7 @@ Set-Content -Path (Join-Path $DomainDir "AssemblyReference.cs") -Value @(
     "}"
 )
 
-# Application AssemblyReference.cs
+# Application AssemblyReference.cs & DependencyInjection.cs
 Set-Content -Path (Join-Path $AppDir "AssemblyReference.cs") -Value @(
     "namespace ${ServiceName}.Application;",
     "",
@@ -199,7 +229,21 @@ Set-Content -Path (Join-Path $AppDir "AssemblyReference.cs") -Value @(
     "}"
 )
 
-# Infrastructure AssemblyReference.cs
+Set-Content -Path (Join-Path $AppDir "DependencyInjection.cs") -Value @(
+    "using Microsoft.Extensions.DependencyInjection;",
+    "",
+    "namespace ${ServiceName}.Application;",
+    "",
+    "public static class DependencyInjection",
+    "{",
+    "    public static IServiceCollection AddApplicationServices(this IServiceCollection services)",
+    "    {",
+    "        return services;",
+    "    }",
+    "}"
+)
+
+# Infrastructure AssemblyReference.cs & DependencyInjection.cs
 Set-Content -Path (Join-Path $InfraDir "AssemblyReference.cs") -Value @(
     "namespace ${ServiceName}.Infrastructure;",
     "",
@@ -209,7 +253,22 @@ Set-Content -Path (Join-Path $InfraDir "AssemblyReference.cs") -Value @(
     "}"
 )
 
-# Api AssemblyReference.cs
+Set-Content -Path (Join-Path $InfraDir "DependencyInjection.cs") -Value @(
+    "using Microsoft.Extensions.Configuration;",
+    "using Microsoft.Extensions.DependencyInjection;",
+    "",
+    "namespace ${ServiceName}.Infrastructure;",
+    "",
+    "public static class DependencyInjection",
+    "{",
+    "    public static IServiceCollection AddInfrastructureServices(this IServiceCollection services, IConfiguration configuration)",
+    "    {",
+    "        return services;",
+    "    }",
+    "}"
+)
+
+# Api AssemblyReference.cs & DependencyInjection.cs
 Set-Content -Path (Join-Path $ApiDir "AssemblyReference.cs") -Value @(
     "namespace ${ServiceName}.Api;",
     "",
@@ -219,14 +278,35 @@ Set-Content -Path (Join-Path $ApiDir "AssemblyReference.cs") -Value @(
     "}"
 )
 
+Set-Content -Path (Join-Path $ApiDir "DependencyInjection.cs") -Value @(
+    "using Microsoft.Extensions.Configuration;",
+    "using Microsoft.Extensions.DependencyInjection;",
+    "",
+    "namespace ${ServiceName}.Api;",
+    "",
+    "public static class DependencyInjection",
+    "{",
+    "    public static IServiceCollection AddApiServices(this IServiceCollection services, IConfiguration configuration)",
+    "    {",
+    "        return services;",
+    "    }",
+    "}"
+)
+
 # Starter Program.cs configured with OmniCore.Shared.Api
 Set-Content -Path (Join-Path $ApiDir "Program.cs") -Value @(
     "using Carter;",
     "using OmniCore.Shared.Api;",
     "using ${ServiceName}.Api;",
     "using ${ServiceName}.Application;",
+    "using ${ServiceName}.Infrastructure;",
     "",
     "var builder = WebApplication.CreateBuilder(args);",
+    "",
+    "builder.Services",
+    "    .AddApplicationServices()",
+    "    .AddInfrastructureServices(builder.Configuration)",
+    "    .AddApiServices(builder.Configuration);",
     "",
     "// Register Shared API Kernel (Carter, Auth, Rate Limiting, CORS)",
     "builder.Services.AddApi(",

@@ -1,0 +1,15 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\OmniCore.Services.User.Domain\OmniCore.Services.User.Domain.csproj" />
+    <ProjectReference Include="..\OmniCore.Services.User.Contracts\OmniCore.Services.User.Contracts.csproj" />
+    <ProjectReference Include="..\..\OmniCore.Shared\OmniCore.Shared.Application\OmniCore.Shared.Application.csproj" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+</Project>

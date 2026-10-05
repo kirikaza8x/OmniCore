@@ -67,8 +67,6 @@ public static class DependencyInjection
 
             // Register Auth Domain/Infra Services (e.g., PasswordHasher, JwtTokenGenerator)
             .AddClasses(classes => classes.Where(type =>
-                type.Name.EndsWith("Hasher") ||
-                type.Name.EndsWith("Generator") ||
                 type.Name.EndsWith("Service")))
             .AsImplementedInterfaces()
             .WithScopedLifetime());
