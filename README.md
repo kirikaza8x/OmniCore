@@ -4,35 +4,23 @@ OmniCore is a multi-language, modular platform repository built around a shared 
 
 ## Repository structure
 
-- `backend/`
-  - `c#/OmniCore.Shared/`
-    - `OmniCore.Shared.Api/` - ASP.NET Core API project using Carter and EF Core
-    - `OmniCore.Shared.Application/` - application layer with MediatR, AutoMapper, FluentValidation, and logging
-    - `OmniCore.Shared.Domain/` - domain abstractions and core business models
-    - `OmniCore.Shared.Infrastructure/` - infrastructure layer with Entity Framework Core, MassTransit, RabbitMQ, Redis, S3, Quartz, SignalR, and other platform services
-  - `backend/python/OmniCore.MLService/` - machine learning service placeholder
-  - `backend/rust/OmniCore.StreamProcessor/` - stream processing service placeholder
-  - `backend/c++/`, `backend/go/`, `backend/java/` - language service directories available for future expansion
+```
+backend/c#/
+  OmniCore.slnx                      solution (open this in Visual Studio / Rider)
+  OmniCore.Shared/                   shared building blocks, referenced by every service
+    .Domain  .Application  .Infrastructure  .Api  .Contracts
+  OmniCore.Services.Auth/            accounts, roles, JWT issuing, Google sign-in   (Api / Application / Domain / Infrastructure / Contracts)
+  OmniCore.Services.User/            user profiles, settings, tenant profiles       (same five layers)
+  scripts/shells/                    scaffold_service.ps1, add-migration.ps1, remove_service.ps1, run.ps1
+infra/docker/                        docker-compose.{database,infra,services,gateway}.yml, nginx/, scripts/init-dbs.sql
+```
 
-- `frontend/`
-  - `frontend/web/` - web frontend placeholder
-  - `frontend/mobile/` - mobile frontend placeholder
+Planned but **not in the repo yet** (git does not track empty folders): `frontend/`, `shared/`, `tests/`, language
+folders for Python / Rust / Go / Java / C++. See [docs/roadmap.md](docs/roadmap.md).
 
-- `infra/`
-  - `infra/docker/` - docker assets and container configuration
-  - `infra/k8s/` - Kubernetes deployment manifests and cluster definitions
-  - `infra/terraform/` - infrastructure-as-code definitions
-
-- `shared/`
-  - `shared/config/` - shared configuration files and templates
-  - `shared/contracts/` - API contracts and shared interfaces
-  - `shared/models/` - shared data models
-  - `shared/utils/` - utilities used by multiple services
-
-- `docs/` - documentation folder (currently empty)
-- `tests/`
-  - `tests/e2e/` - end-to-end tests placeholder
-  - `tests/integration/` - integration tests placeholder
+More detail: [docs/architecture.md](docs/architecture.md) (layers, services, gateway, messaging) and
+[docs/roadmap.md](docs/roadmap.md) (findings from a repo check, plan, and how other-language services such as
+`owl_editor` would plug in).
 
 ## Key technologies
 
@@ -62,29 +50,14 @@ The main C# solution is located at `backend/c#/OmniCore.slnx` and includes the f
 
 ## Getting started
 
-1. Open `backend/c#/OmniCore.slnx` in Visual Studio or Rider.
-2. Restore NuGet packages.
-3. Build the solution.
-4. Configure required infrastructure services:
-   - database (PostgreSQL)
-   - message broker (RabbitMQ)
-   - cache (Redis)
-   - object storage (S3-compatible service)
-5. Run the API project from the solution.
+Everything runs in Docker (PostgreSQL, RabbitMQ, Kafka, Redis, MinIO, the services and an nginx gateway):
 
-## Notes
+```
+cd infra/docker
+cp .env.example .env        # then change the passwords and JWT_SECRET - the example values are for local use only
+docker compose up -d --build
+```
 
-- Several folders currently serve as placeholders for future work such as `frontend/web`, `frontend/mobile`, `backend/python/OmniCore.MLService`, and `backend/rust/OmniCore.StreamProcessor`.
-- The solution is designed with a layered architecture separating API, application, domain, and infrastructure concerns.
-- `infra/` contains tooling and deployment configurations for containerized and cloud-native delivery.
-
-## Recommended next steps
-
-- Add README or documentation files under `docs/` for service-specific setup and architecture diagrams.
-- Populate frontend and service directories with code and build scripts.
-- Add automated tests to `tests/e2e/` and `tests/integration/`.
-- Define environment configuration and deployment guides for `infra/`.
-
-## Contact
-
-This README was generated based on the current workspace structure of the OmniCore repository.
+The gateway listens on `GATEWAY_PORT` (default 8080); Swagger UI is at `/swagger` when the `dev` profile is on.
+Or open `backend/c#/OmniCore.slnx` in Visual Studio / Rider and run a service's `.Api` project against the infra
+containers. Add a service with `backend/c#/scripts/shells/scaffold_service.ps1`.
