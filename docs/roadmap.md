@@ -21,13 +21,17 @@ Written after a read-through of the repo (no build, no tests run - there are no 
 5. **Contracts:** publish OpenAPI per service (already via Swagger) and AsyncAPI/JSON schemas for integration events into `shared/contracts/`, versioned, so non-.NET services can generate clients.
 6. **Pick one broker** for the first release (RabbitMQ is enough for service-to-service events), keep Kafka for a real streaming need such as the `StreamProcessor` idea.
 
-## Where `owl_editor` could fit (Python service)
-`owl_editor` (Otherworld Legends save/hotfix toolkit, Python) already has clean layers: `core` is pure logic, `services` does I/O,
-only `app` prompts. That makes a service wrapper small. Suggested shape, not started:
+## Where `owl_editor` fits (Python service)
+`owl_editor` (Otherworld Legends save/hotfix toolkit) now ships an optional HTTP service, `owl_api/` in that repo
+(FastAPI, file-in / file-out async jobs: hotfix decrypt/encrypt, PlayerPrefs decrypt/encode; see its `docs/api.md`).
+It deliberately uses a **flat Python service layer** (routers -> `JobService` -> storage / toolkit adapter) instead of this
+repo's five C# layers; what has to match is the contract:
 
-- **`OmniCore.OwlTools`** under `backend/python/`: FastAPI (OpenAPI out of the box) over `owl.services` / `owl.core`; the menu/CLI stay as they are.
-- **Jobs, not requests:** decrypting a hotfix, scanning an APK or encoding a save can take seconds to minutes; expose `POST /jobs`, `GET /jobs/{id}`, and publish `OwlJobCompleted` on the broker.
-- **Files in MinIO:** uploads and results go to object storage (the bucket already exists); the service keeps no user data on local disk. Never store game saves or APKs in git.
-- **Auth:** accept OmniCore JWTs (via JWKS once step 4 exists); per-user workspaces keyed by user id.
-- **Needs first:** the `Workspace` in `owl_editor` takes a root path, so a per-job temp workspace already works; the interactive `Pipeline.prepare/finish` prompts would be replaced by explicit request parameters.
-- **Caveats:** `owl_editor` has never been run against the real game; a hosted service that touches game accounts or downloads APKs has terms-of-service and legal exposure the local tool does not. Decide that before building it.
+- **OpenAPI** per service (FastAPI generates it) so the gateway can aggregate specs like it does for Auth.
+- **JWT**: today one shared `X-API-Key`; target is OmniCore JWTs verified through a JWKS (roadmap step 4).
+- **Events**: `JobFinished` through an `on_finished` hook to RabbitMQ once the contracts in `shared/contracts/` exist.
+- **Container + gateway**: Dockerfile and a compose entry under `infra/docker`, a `/api/v1/owl/` route in nginx.
+- **Storage**: results move from local disk to MinIO (the bucket already exists); jobs from memory to a database.
+
+Caveats: the toolkit has never been run against the real game, and hosting other people's saves or APKs has privacy and
+terms-of-service implications. Decide that before exposing it.
