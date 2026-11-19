@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using OmniCore.Services.Auth.Api.Routing;
+using OmniCore.Shared.Api.Extensions;
 using OmniCore.Services.Auth.Application.Features.Roles.Commands.UpdateRole;
 using OmniCore.Services.Auth.Application.Features.Roles.DTOs;
 
@@ -29,7 +30,7 @@ public sealed class UpdateRoleEndpoint : ICarterModule
                return result.ToOk("Role updated successfully");
            })
            .WithName("UpdateRole")
-           .RequireAuthorization()
+           .RequireRoles("Admin", "SuperAdmin")
            .Produces<ApiResult<RoleResponse>>(StatusCodes.Status200OK)
            .ProducesProblem(StatusCodes.Status400BadRequest)
            .ProducesProblem(StatusCodes.Status401Unauthorized)

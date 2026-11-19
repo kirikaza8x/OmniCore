@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using OmniCore.Services.Auth.Api.Routing;
+using OmniCore.Shared.Api.Extensions;
 using OmniCore.Services.Auth.Application.Features.Auth.DTOs;
 using OmniCore.Services.Auth.Application.Features.Auth.Queries.GetAccountById;
 
@@ -27,7 +28,8 @@ public sealed class GetAccountByIdEndpoint : ICarterModule
                return result.ToOk("Account profile retrieved successfully");
            })
            .WithName("GetAccountById")
-           .RequireAuthorization()
+           .RequireRoles("Admin", "SuperAdmin")   // any other caller reads their own profile via /me
+           .ProducesProblem(StatusCodes.Status403Forbidden)
            .Produces<ApiResult<AccountResponse>>(StatusCodes.Status200OK)
            .ProducesProblem(StatusCodes.Status401Unauthorized)
            .ProducesProblem(StatusCodes.Status404NotFound);
