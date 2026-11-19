@@ -99,6 +99,7 @@ public sealed class JwtTokenService(
     {
         return new TokenValidationParameters
         {
+            ValidAlgorithms = new[] { SecurityAlgorithms.HmacSha256 },
             ValidateIssuerSigningKey = true,
             IssuerSigningKey = new SymmetricSecurityKey(_key),
 
