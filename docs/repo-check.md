@@ -38,3 +38,33 @@ change that still needs `dotnet build` and a smoke test by the owner. Status: **
 | S11 | medium | `appsettings*.json` are git-ignored and absent, yet `AddApi` throws if `RateLimiting` is missing (and `Jwt`, `MessageBroker` are required too). Services only start with the compose environment variables | docs corrected (README); a documented `appsettings.Development.json.example` is a phase 2 item |
 | S12 | low | `UnitOfWorkBehavior` calls `SaveChangesAsync` after every command; `ITransactionalCommand` exists but nothing uses it, so there is no explicit transaction around handlers that save more than once | open, phase 7 |
 | S13 | low | `MinioStorageService` trusts the client's `ContentType` and file name (sanitised only against invalid path characters); the object key gets a GUID prefix, so there is no overwrite or traversal | noted; content-sniffing is in the User review |
+
+## 2b. OmniCore.Services.Auth review
+
+Read: register / login / refresh / logout handlers, `Account` refresh-token logic, `RefreshToken`, the repository,
+JWT / refresh / password / Google services, all endpoints, the event handlers, role seeder, DI, and the account and
+refresh-token EF configurations. **Not reviewed:** the EF migrations against the model, the Role/MFA/ExternalLogin/
+SecurityToken entities beyond their existence, and the other Role handlers. **Nothing was built or run**; every
+"fixed" is a source change that needs `dotnet build` plus a smoke test.
+
+| # | Severity | Finding | Status |
+|---|---|---|---|
+| A1 | high | Refresh-token **reuse detection never persisted**: `RotateRefreshToken` revokes all tokens on a reused one but returns a failure, and `UnitOfWorkBehavior` saves only on success, so the revocation was dropped | **fixed**: the handler saves explicitly on `Auth.TokenReuseDetected` |
+| A2 | high | `PUT` update-role needed only a signed-in user (any account could edit roles); `GetAccountById` let any signed-in user read any account (email, roles). Create/assign/remove/get roles were already admin-only | **fixed**: both require `Admin`/`SuperAdmin`; `/me` is the self endpoint (breaking for non-admin callers of `GET /accounts/{id}`) |
+| A3 | medium | Login cached an account DTO **including the password hash** in Redis for 10 min (stale after a password change; the invalidation handler used a different key, `auth:account:id:`, so it never matched) | **fixed**: login reads the aggregate from the database; the unused invalidation handler stays (cleanup with F-cache work, phase 7) |
+| A4 | medium | Register allowed usernames of 31-50 chars (validator 50, value object and column 30) so they failed late; no max length on password (bcrypt reads 72 bytes, large bodies were hashed) or email | **fixed**: limits 30 / 128 / 256. Login already had `NotEmpty` rules (kept) plus the same maxima |
+| A5 | low | `JwtTokenService.ValidateToken` did not pin the algorithm (used by nothing on the request path today) | **fixed** |
+| A6 | high | **Refresh tokens are stored in plain text** (`refresh_tokens.token`, unique). A database read gives live sessions | open, phase 4: store a SHA-256 of the token, add a migration (existing sessions are invalidated) |
+| A7 | medium | No concurrency control on rotation: two parallel refreshes with the same token both succeed and fork the session (no row version / `xmin`) | open, phase 4 (with A6) |
+| A8 | medium | No brute-force protection: no lockout or failed-attempt counter, and no endpoint-specific rate limit (see S3). bcrypt cost 12 is fine | open, phase 3/4 |
+| A9 | medium | Account enumeration: login answers `NotFound` ("No account found matching ...") vs `Unauthorized` for a bad password; register answers `Conflict` for a taken email | **needs owner decision**: one generic 401 is the usual answer but changes the API contract |
+| A10 | low | `AddRefreshToken` is called with no `maxActiveSessions`, so every login adds a row, and expired or revoked tokens are never purged (Quartz is available) | open, phase 4 |
+| A11 | low | Register uniqueness is check-then-insert: a race hits the unique index and surfaces as a 500 instead of a 409 | open |
+| A12 | medium | Register returns tokens immediately; `IsEmailConfirmed` exists, and `SecurityToken` / `MfaMethod` / `MfaRecoveryCode` entities exist, but there are no confirmation, reset or MFA endpoints | open, product decision |
+| A13 | low | `GooglePayloadValidatorService` and `ExternalLogin` exist but nothing calls them (no Google endpoint), so the README / docs claim of "Google sign-in" was wrong; the validator echoes exception text into its error | docs corrected; open |
+| A14 | low | Register hard-codes `roles: ["User"]` in the token while the role is assigned by a domain-event handler that silently skips when the role is missing | open, phase 7 |
+| A15 | medium | **No way to get the first admin**: `RoleSeeder` seeds roles only, and role endpoints need `Admin` | open, needs owner decision (seed from env, or a one-off CLI) |
+| A16 | low | `RefreshToken` uses `DateTime.UtcNow` directly (not `IDateTimeProvider`), which makes expiry hard to unit-test; `AccountDto` still carries `PasswordHash` | open, phase 1 (with tests) |
+| A17 | low | Access tokens cannot be revoked (logout only revokes one refresh token; 15 min default lifetime); no logout-all | accepted for now |
+| A18 | low | Migrations run at startup in every replica (`UseAuthInfrastructureAsync`); `/health` is a bare liveness check with no database or broker probe | open, phase 2 |
+

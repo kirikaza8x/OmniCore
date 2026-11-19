@@ -20,7 +20,7 @@ flowchart LR
 ## Services
 | Service | Does | Layers |
 |---|---|---|
-| `OmniCore.Services.Auth` | accounts (register, login, logout, refresh token, current user), roles, JWT issuing, Google sign-in | Api / Application / Domain / Infrastructure / Contracts |
+| `OmniCore.Services.Auth` | accounts (register, login, logout, refresh token, current user), roles, JWT issuing (a Google token validator exists but no endpoint uses it yet) | Api / Application / Domain / Infrastructure / Contracts |
 | `OmniCore.Services.User` | user profiles (+ avatar upload), settings, tenant profiles (`UserTenantProfile`) | same five layers |
 | `OmniCore.Shared` | DDD base types, value objects, repository + query contracts, MediatR behaviours, EF Core / MassTransit / Redis / S3 wiring, JWT validation and rate limiting extensions, integration-event contracts | Domain / Application / Infrastructure / Api / Contracts |
 
