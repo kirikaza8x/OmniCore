@@ -31,12 +31,12 @@ The solution (`OmniCore.slnx`) lists the 15 projects; it has no test project.
 ## Request path
 client -> nginx gateway (`infra/docker/nginx/nginx.conf`, prefix routing, one block per service) -> service `.Api`
 (Carter endpoints) -> MediatR command/query (pipeline behaviours) -> domain -> EF Core. Auth issues JWTs signed with
-one shared symmetric key (`Jwt__Secret`, HS256); every other service validates them with the same secret, issuer and
-audience. Today the gateway routes only `/api/v1/auth/` and `/specs/auth.json`.
+one shared symmetric key (`Jwt__Secret`, HS256); every other service validates them (algorithm pinned to HS256) with the
+same secret, issuer and audience. Today the gateway routes only `/api/v1/auth/` and `/specs/auth.json`.
 
 ## Messaging
-Integration events (`Shared.Contracts`) go through MassTransit. `MessageBroker__Provider` is `RabbitMQ` or `Kafka` in
-code (default `RabbitMQ`) but the compose file defaults it to `Both`. The outbox is the **MassTransit EF Core outbox**
+Integration events (`Shared.Contracts`) go through MassTransit. `MessageBroker__Provider` is `RabbitMQ` or `Kafka`
+(default `RabbitMQ`; the value `Both` is **rejected** at startup, and the compose default was changed from `Both`). The outbox is the **MassTransit EF Core outbox**
 (`AddEntityFrameworkOutbox` + `UseBusOutbox`, switched by `MessageBroker__EnableOutbox`, default on); the comment in
 `MessageBrokerConfig` says it only applies to the RabbitMQ provider. The older hand-written outbox/inbox was removed;
 `IOutboxService` remains as an abstraction. Redis is the distributed cache, MinIO is object storage.

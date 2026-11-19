@@ -16,3 +16,25 @@ Findings from the code review of each service are appended below as they are don
 | 8 | **Both brokers on by default in compose** (`MessageBroker__Provider=Both`) while the code default is `RabbitMQ`, and the outbox is documented as RabbitMQ-only | Two systems to run and keep consistent; unclear which events are outbox-protected | 6 |
 | 9 | No published contracts for non-.NET consumers (no OpenAPI export, no event schemas) | Other-language services cannot generate clients | 5 |
 | 10 | Single auth + single user model: `UserTenantProfile` exists in User, `Tenant` exists as a base type in `Shared.Domain`, but there is no tenant concept in Auth, tokens or queries | Blocks several services sharing one identity across tenants | 8 |
+
+## 2a. OmniCore.Shared review
+
+Read-through of `Shared.Api`, `Shared.Application` behaviours, and the messaging / config / storage parts of
+`Shared.Infrastructure`. **Nothing was built or run** (no .NET SDK, no Docker daemon): every "fixed" below is a source
+change that still needs `dotnet build` and a smoke test by the owner. Status: **fixed** / **open** (with the phase).
+
+| # | Severity | Finding | Status |
+|---|---|---|---|
+| S1 | high | Compose defaulted `MessageBroker__Provider` to `Both`, but `MessageBrokerConfig.Validate` only accepts `RabbitMQ` or `Kafka`, so a stack started from `.env.example` fails at startup. `MESSAGE_BROKER_*` were also missing from `.env.example` | **fixed**: default is `RabbitMQ`; both keys added to `.env.example`. "Both" was never a working mode (code treats anything but `Kafka` as RabbitMQ), so F8 is now about dropping Kafka from the default stack (phase 6) |
+| S2 | high | Per-client rate limiting collapses behind the gateway: `UseForwardedHeaders` is only called inside `UseSwaggerDocumentation` (so not when Swagger is off) and trusts only loopback proxies by default, so `RemoteIpAddress` is the nginx container for every anonymous caller. All anonymous callers share one `ip:` partition: one client can exhaust the quota for everyone, and a single IP is not actually limited | open, phase 3 (needs trusted-proxy config, not a blind code change) |
+| S3 | medium | Only the global limiter applies (100/min per user or IP, configured by compose). `RequireRateLimiting` is never used and compose defines a single policy `fixed`, so login and refresh have no stricter limit | open, phase 3/4 |
+| S4 | low | `AddCustomRateLimiting` and `RateLimitPolicies` were dead code with policies from another project (Payment, Order, AiGenerate, an unregistered `Webhook`) | **fixed**: removed |
+| S5 | medium | JWT bearer validation did not pin the algorithm; `JwtConfig` (32-char secret, issuer, audience) was bound with plain `Configure`, so a short secret only failed at the first token | **fixed**: `ValidAlgorithms = HS256`; `AddConfig<JwtConfig>()` validates on start. `RequireHttpsMetadata=false` and `SaveToken=true` left as they are (revisit with JWKS, phase 4) |
+| S6 | medium | `CachingBehavior` is `internal` and never registered in `AddSharedApplication`, so `ICacheableQuery` does nothing (GetRoles, GetRoleById, GetAccountById, GetUserProfileById are all uncached). It also passes no cancellation token to `next()` and the key is whatever the query supplies | open: do not just register it, cached reads need an invalidation review first (phase 7, with Auth/User) |
+| S7 | medium | `MapHub<LogHub>("api/logHub")` was anonymous. Nothing publishes to it today (`AddSignalRLogger` is never called), but compose turns on `EnableSensitiveDataLogging`, so enabling the logger would stream sensitive logs to anyone | **fixed**: `RequireAuthorization()` |
+| S8 | medium | CORS with `Cors__AllowAnyOrigin=true` uses `SetIsOriginAllowed(_ => true)` + `AllowCredentials()`, i.e. any origin with credentials; with no config the fallback is `AllowAnyOrigin` | open, phase 2 (compose default of `true` is F3) |
+| S9 | low | `GlobalExceptionHandler` logs client cancellations as errors and maps everything to 500 (no 409 for concurrency, no 499 for aborted requests) | open |
+| S10 | low | `DispatchDomainEventsInterceptor.SavingChanges` (sync) blocks on async dispatch (`GetAwaiter().GetResult()`). The async path used by the unit of work is fine; domain events do run before the commit, in the same transaction, with a loop guard of 10 | open |
+| S11 | medium | `appsettings*.json` are git-ignored and absent, yet `AddApi` throws if `RateLimiting` is missing (and `Jwt`, `MessageBroker` are required too). Services only start with the compose environment variables | docs corrected (README); a documented `appsettings.Development.json.example` is a phase 2 item |
+| S12 | low | `UnitOfWorkBehavior` calls `SaveChangesAsync` after every command; `ITransactionalCommand` exists but nothing uses it, so there is no explicit transaction around handlers that save more than once | open, phase 7 |
+| S13 | low | `MinioStorageService` trusts the client's `ContentType` and file name (sanitised only against invalid path characters); the object key gets a GUID prefix, so there is no overwrite or traversal | noted; content-sniffing is in the User review |

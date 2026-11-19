@@ -27,10 +27,11 @@ off as they land; the status here is also mirrored in `CLAUDE.md`.
 - [ ] OpenAPI per service; AsyncAPI / JSON schemas for integration events in `shared/contracts/`, versioned
 
 ## Phase 6: messaging simplification (F8)
-- [ ] Pick one broker for the first release (RabbitMQ is enough); keep Kafka for a real streaming need
+- [x] Compose default is `RabbitMQ` (S1: `Both` failed startup validation)
+- [ ] Take Kafka and Kafka UI out of the default stack; keep Kafka for a real streaming need
 
 ## Phase 7: code review of the three code projects
-- [ ] 2a `OmniCore.Shared`
+- [x] 2a `OmniCore.Shared` reviewed (S1-S13 in repo-check; S1, S4, S5, S7 fixed, not built)
 - [ ] 2b `OmniCore.Services.Auth`
 - [ ] 2c `OmniCore.Services.User`
 Findings go to `repo-check.md`; safe fixes are committed one by one; docs and `CLAUDE.md` updated after each.

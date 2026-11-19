@@ -49,7 +49,10 @@ cp .env.example .env        # change the passwords and JWT_SECRET: the example v
 docker compose up -d --build
 ```
 The gateway listens on `GATEWAY_PORT` (default 8080); Swagger UI is at `/swagger` while the `dev` profile is on.
-Or open `backend/c#/OmniCore.slnx` and run a service's `.Api` project against the infra containers.
+Or open `backend/c#/OmniCore.slnx` and run a service's `.Api` project against the infra containers. Note that
+`appsettings*.json` are git-ignored and not in the repo: settings come from environment variables (the keys are in
+`infra/docker/docker-compose.services.yml`), so a `.Api` project run outside Docker needs your own
+`appsettings.Development.json` or those variables set.
 Add a service with `backend/c#/scripts/shells/scaffold_service.ps1`.
 
 **Note:** the `.env.example` at the repository root is **empty**. The real one is `infra/docker/.env.example`.
