@@ -22,5 +22,6 @@
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/OmniCore.Services.Auth.Domain.Tests/OmniCore.Services.Auth.Domain.Tests.csproj" />
+    <Project Path="tests/OmniCore.Services.Auth.IntegrationTests/OmniCore.Services.Auth.IntegrationTests.csproj" />
   </Folder>
 </Solution>

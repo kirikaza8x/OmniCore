@@ -25,3 +25,5 @@ app.MapCarter();
 await app.UseAuthInfrastructureAsync();
 
 app.Run();
+// Lets the integration tests create the app with WebApplicationFactory<Program>.
+public partial class Program { }

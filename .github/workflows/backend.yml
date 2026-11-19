@@ -1,0 +1,62 @@
+name: backend
+
+# Restore, build and test the C# backend on every pull request and push to develop/main.
+# This workflow was written without a .NET SDK or Docker available: it has NOT run yet. The first run on GitHub
+# is the first real check, so expect to fix small things. The integration job is allowed to fail until it has
+# passed once (continue-on-error), the build + unit-test job is the one that should be required.
+
+on:
+  pull_request:
+  push:
+    branches: [develop, main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: backend-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-unit-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: backend/c#
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 9.0.x
+      - run: dotnet restore OmniCore.slnx
+      - run: dotnet build OmniCore.slnx --no-restore -c Release
+      - name: Unit tests
+        run: dotnet test tests/OmniCore.Services.Auth.Domain.Tests --no-build -c Release --logger "trx;LogFileName=unit.trx"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: unit-test-results
+          path: backend/c#/**/TestResults/*.trx
+          if-no-files-found: ignore
+
+  integration-test:
+    # Uses Testcontainers (Postgres + RabbitMQ) on the runner's Docker. Not blocking until it has passed once.
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    continue-on-error: true
+    defaults:
+      run:
+        working-directory: backend/c#
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 9.0.x
+      - run: dotnet test tests/OmniCore.Services.Auth.IntegrationTests -c Release --logger "trx;LogFileName=integration.trx"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: integration-test-results
+          path: backend/c#/**/TestResults/*.trx
+          if-no-files-found: ignore
