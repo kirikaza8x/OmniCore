@@ -7,9 +7,10 @@ off as they land; the status here is also mirrored in `CLAUDE.md`.
 - [x] README, architecture, repo-check, roadmap, owl-editor integration split and checked against the code (F5 of the old list)
 
 ## Phase 1: safety net (F1)
-- [ ] GitHub Actions: restore, build, test on every PR
-- [ ] `tests/` projects in `OmniCore.slnx`, starting with Auth domain unit tests
-- [ ] One integration test (Testcontainers: Postgres + RabbitMQ): register -> login -> refresh
+- [x] GitHub Actions `backend.yml`: restore, build, unit tests on every PR (**written, not run yet**; first hosted run is the first check)
+- [x] `tests/` projects in `OmniCore.slnx`: Auth domain unit tests (**written, not compiled or run**)
+- [x] One integration test (Testcontainers: Postgres + RabbitMQ): register -> login -> refresh -> reuse rejected (**written, not compiled or run**; the CI job is `continue-on-error` until it passes once)
+- [ ] Make both CI jobs pass on GitHub, then make `build-and-unit-test` a required check; add handler tests (login, refresh, register)
 
 ## Phase 2: dev vs prod configuration (F3, F4, F7)
 - [ ] `docker-compose.prod.yml` override (or environment-driven defaults): sensitive logging, detailed errors, open CORS and `AllowedHosts=*` off
@@ -37,5 +38,6 @@ off as they land; the status here is also mirrored in `CLAUDE.md`.
 Findings go to `repo-check.md`; safe fixes are committed one by one; docs and `CLAUDE.md` updated after each.
 
 ## Phase 8: multi-tenancy (F10)
-- [ ] ADR `docs/decisions/0001-multitenancy.md` committed and confirmed by the owner (design first)
+- [x] ADR `docs/decisions/0001-multitenancy.md` written and committed (status: proposed)
+- [ ] Owner confirms or amends the ADR (open questions in section 7)
 - [ ] Implementation order after confirmation: Shared -> Auth -> User -> gateway
