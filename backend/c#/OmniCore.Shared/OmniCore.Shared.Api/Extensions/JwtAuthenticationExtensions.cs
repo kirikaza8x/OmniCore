@@ -28,6 +28,7 @@ public static class JwtAuthenticationExtensions
                 ValidateIssuer = true,
                 ValidateAudience = true,
                 ValidateLifetime = true,
+                ValidAlgorithms = new[] { SecurityAlgorithms.HmacSha256 }, // tokens are signed HS256 only; reject any other alg
                 ClockSkew = TimeSpan.Zero
             };
 

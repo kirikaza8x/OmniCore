@@ -23,9 +23,8 @@ public static class ApiExtensions
     {
         services.AddCarterWithAssemblies(moduleAssemblies);
         
-        // 1. Bind JwtConfig from appsettings/environment
-        var jwtSectionName = new JwtConfig().SectionName;
-        services.Configure<JwtConfig>(configuration.GetSection(jwtSectionName));
+        // 1. Bind JwtConfig from appsettings/environment and validate it at startup (secret length, issuer, audience)
+        services.AddConfig<JwtConfig>();
 
         // 2. Register Shared JWT Authentication & Authorization
         services.AddJwtAuthentication();
@@ -101,7 +100,7 @@ public static class ApiExtensions
             app.UseSwaggerDocumentation(title: apiTitle); 
         }
 
-        app.MapHub<LogHub>("api/logHub");
+        app.MapHub<LogHub>("api/logHub").RequireAuthorization(); // log stream must never be anonymous
 
         return app;
     }
