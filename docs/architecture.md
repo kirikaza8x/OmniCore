@@ -21,7 +21,7 @@ flowchart LR
 | Service | Does | Layers |
 |---|---|---|
 | `OmniCore.Services.Auth` | accounts (register, login, logout, refresh token, current user), roles, JWT issuing (a Google token validator exists but no endpoint uses it yet) | Api / Application / Domain / Infrastructure / Contracts |
-| `OmniCore.Services.User` | user profiles (+ avatar upload), settings, tenant profiles (`UserTenantProfile`) | same five layers |
+| `OmniCore.Services.User` | **design only, not running yet**: domain and handlers for user profiles (+ avatar upload), settings, addresses, tenant profiles (`UserTenantProfile`); no endpoints, DbContext, repository or migrations (see U1 in repo-check) | same five layers, Infrastructure empty |
 | `OmniCore.Shared` | DDD base types, value objects, repository + query contracts, MediatR behaviours, EF Core / MassTransit / Redis / S3 wiring, JWT validation and rate limiting extensions, integration-event contracts | Domain / Application / Infrastructure / Api / Contracts |
 
 Each service owns its PostgreSQL database (`AUTH_DB_NAME`, `USER_DB_NAME`, created by

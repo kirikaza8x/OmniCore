@@ -33,7 +33,7 @@ off as they land; the status here is also mirrored in `CLAUDE.md`.
 ## Phase 7: code review of the three code projects
 - [x] 2a `OmniCore.Shared` reviewed (S1-S13 in repo-check; S1, S4, S5, S7 fixed, not built)
 - [x] 2b `OmniCore.Services.Auth` reviewed (A1-A18 in repo-check; A1-A5 fixed, not built; A9 and A15 need an owner decision)
-- [ ] 2c `OmniCore.Services.User`
+- [x] 2c `OmniCore.Services.User` reviewed (U1-U10 in repo-check; U4 and U10 fixed, not built; U1 and U2 are the real gaps)
 Findings go to `repo-check.md`; safe fixes are committed one by one; docs and `CLAUDE.md` updated after each.
 
 ## Phase 8: multi-tenancy (F10)

@@ -24,7 +24,7 @@ backend/c#/
   OmniCore.slnx                      solution (open in Visual Studio / Rider)
   OmniCore.Shared/                   shared building blocks referenced by every service
     .Domain  .Application  .Infrastructure  .Api  .Contracts
-  OmniCore.Services.Auth/            accounts, roles, JWT issuing, Google sign-in
+  OmniCore.Services.Auth/            accounts, roles, JWT issuing
     .Api  .Application  .Domain  .Infrastructure  .Contracts
   OmniCore.Services.User/            user profiles (+ avatar), settings, tenant profiles
     .Api  .Application  .Domain  .Infrastructure  .Contracts

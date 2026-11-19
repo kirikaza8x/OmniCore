@@ -68,3 +68,21 @@ SecurityToken entities beyond their existence, and the other Role handlers. **No
 | A17 | low | Access tokens cannot be revoked (logout only revokes one refresh token; 15 min default lifetime); no logout-all | accepted for now |
 | A18 | low | Migrations run at startup in every replica (`UseAuthInfrastructureAsync`); `/health` is a bare liveness check with no database or broker probe | open, phase 2 |
 
+## 2c. OmniCore.Services.User review
+
+Read: the whole Domain and Application projects, `Program.cs`, the csproj references and the compose service.
+**Nothing was built or run.** The headline: **User is a design sketch, not a running service yet.**
+
+| # | Severity | Finding | Status |
+|---|---|---|---|
+| U1 | high | `Program.cs` registers none of the layers (no `AddApi`, no application or infrastructure registration), and `Infrastructure` holds only an `AssemblyReference`: no DbContext, no repository implementation (`IUserProfileRepository` has none), no migration, no Carter endpoints. The compose `user-api` container therefore serves nothing; it probably fails at startup, because `UseApi` calls `UseAuthorization`, `UseExceptionHandler` and `MapHub` without the services `AddApi` registers (inferred from the code, not run) | open, phase 2/7: decide whether to finish it or drop it from compose |
+| U2 | high | `CreateTenantProfileCommandHandler` builds a `UserTenantProfile` and returns it as a success but **never attaches or saves it** (the aggregate has no `AddTenantProfile`, `_tenantProfiles` is private and never written): silent data loss | open: left for the multi-tenancy work (ADR 0001), because the model is likely to change |
+| U3 | high | Tenant and user ids come from the **request body** (`CreateTenantProfileCommand.TenantId` / `UserId`, `CreateUserProfileCommand.UserId`, `UploadAvatarCommand.UserId`), not from the token, so a caller could act on another user or tenant once endpoints exist | open: rule for the ADR (ids from `ICurrentUserService` / `ITenantContext` only) |
+| U4 | medium | `UploadAvatarCommandHandler` deleted the old avatar before uploading the new one, so a failed upload left the profile pointing at a missing file | **fixed**: old file is removed after the upload and attach |
+| U5 | medium | Avatar validation trusts the client `ContentType` (5 MB cap, jpeg/png/webp list) and does not check the file signature | open, with S13 |
+| U6 | medium | No consumer exists for `AccountRegisteredIntegrationEvent` (Auth publishes it): nothing creates a `UserProfile` when an account registers, and `UserProfile` copies `Username` and `Email` from Auth with no update path | open, phase 5/7 |
+| U7 | medium | Two aggregate roots overlap: `UserProfile` (global) contains `TenantProfiles`, while `UserTenantProfile` is itself a `TenantAggregateRoot` with a `UserProfile` navigation. The tenant-aware part is not isolated by any filter yet | open: ADR 0001 |
+| U8 | low | `GetUserProfileByIdQuery` is `ICacheableQuery` but `CachingBehavior` is not registered (S6), so it is never cached; the invalidation handler is correct | open (S6) |
+| U9 | low | `Username` value object is duplicated between Auth and User (and email uses the Shared one) | open, phase 7 |
+| U10 | low | Swagger title said "Auth API" | **fixed** |
+
