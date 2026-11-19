@@ -5,6 +5,7 @@ using OmniCore.Services.Auth.Application.Features.Auth.DTOs;
 using OmniCore.Services.Auth.Domain.Repositories;
 using OmniCore.Shared.Application.Abstractions.Messaging;
 using OmniCore.Shared.Domain.Abstractions;
+using OmniCore.Shared.Domain.Repositories;
 
 public record RefreshTokenCommand(
     string RefreshToken) : ICommand<AuthResponse>;
@@ -12,7 +13,8 @@ public record RefreshTokenCommand(
 public sealed class RefreshTokenCommandHandler(
     IAccountRepository accountRepository,
     IJwtTokenService jwtTokenService,
-    IRefreshTokenService refreshTokenService) : ICommandHandler<RefreshTokenCommand, AuthResponse>
+    IRefreshTokenService refreshTokenService,
+    IUnitOfWork unitOfWork) : ICommandHandler<RefreshTokenCommand, AuthResponse>
 {
     public async Task<Result<AuthResponse>> Handle(
         RefreshTokenCommand request, 
@@ -33,6 +35,13 @@ public sealed class RefreshTokenCommandHandler(
         var rotateResult = account.RotateRefreshToken(request.RefreshToken, newRefreshTokenString, duration);
         if (rotateResult.IsFailure)
         {
+            // UnitOfWorkBehavior only saves on success, so the "revoke all sessions" done by the aggregate on a
+            // reused token would be lost. Persist it explicitly before returning the failure.
+            if (rotateResult.Error.Code == "Auth.TokenReuseDetected")
+            {
+                await unitOfWork.SaveChangesAsync(cancellationToken);
+            }
+
             return Result.Failure<AuthResponse>(rotateResult.Error);
         }
 
