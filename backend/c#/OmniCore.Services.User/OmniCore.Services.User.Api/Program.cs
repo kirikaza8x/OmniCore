@@ -13,7 +13,7 @@ var app = builder.Build();
 // Middleware Pipeline
 // -------------------------------------------------------------
 // Automatically checks 'EnableSwagger' env/config or falls back to IsDevelopment()
-app.UseApi(apiTitle: "OmniCore Auth API"); 
+app.UseApi(apiTitle: "OmniCore User API"); 
 app.MapHealthChecks("/health"); 
 
 
