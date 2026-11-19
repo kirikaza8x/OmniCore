@@ -24,18 +24,7 @@ public sealed class UploadAvatarCommandHandler(
             return Result.Failure<string>(UserProfileErrors.NotFound);
         }
 
-        // Delete previous avatar file if exists
-        if (!string.IsNullOrWhiteSpace(profile.AvatarUrl))
-        {
-            try
-            {
-                await storageService.DeleteAsync(profile.AvatarUrl, cancellationToken);
-            }
-            catch
-            {
-                // Best-effort cleanup for old image
-            }
-        }
+        var previousAvatarUrl = profile.AvatarUrl;
 
         var uploadResult = await storageService.UploadAsync(
             request.File, 
@@ -49,6 +38,20 @@ public sealed class UploadAvatarCommandHandler(
         }
 
         userProfileRepository.Update(profile);
+
+        // Remove the previous file only after the new one is uploaded and attached; deleting it first left the
+        // profile pointing at a missing file whenever the upload failed.
+        if (!string.IsNullOrWhiteSpace(previousAvatarUrl) && previousAvatarUrl != uploadResult.PublicUrl)
+        {
+            try
+            {
+                await storageService.DeleteAsync(previousAvatarUrl, cancellationToken);
+            }
+            catch
+            {
+                // Best-effort cleanup for old image
+            }
+        }
 
         return Result.Success(uploadResult.PublicUrl);
     }
