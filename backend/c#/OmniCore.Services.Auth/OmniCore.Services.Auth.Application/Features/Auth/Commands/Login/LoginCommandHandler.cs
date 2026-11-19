@@ -2,10 +2,7 @@ namespace OmniCore.Services.Auth.Application.Features.Auth.Commands.Login;
 
 using OmniCore.Services.Auth.Application.Abstractions.Security;
 using OmniCore.Services.Auth.Application.Features.Auth.DTOs;
-using OmniCore.Services.Auth.Application.Features.Auth.Mappings;
 using OmniCore.Services.Auth.Domain.Repositories;
-using OmniCore.Services.Auth.Domain.ValueObjects;
-using OmniCore.Shared.Application.Abstractions.Caching;
 using OmniCore.Shared.Application.Abstractions.Messaging;
 using OmniCore.Shared.Domain.Abstractions;
 
@@ -17,65 +14,43 @@ public sealed class LoginCommandHandler(
     IAccountRepository accountRepository,
     IPasswordHasherService passwordHasher,
     IJwtTokenService jwtTokenService,
-    IRefreshTokenService refreshTokenService,
-    ICacheService cacheService) : ICommandHandler<LoginCommand, AuthResponse>
+    IRefreshTokenService refreshTokenService) : ICommandHandler<LoginCommand, AuthResponse>
 {
-    private static readonly TimeSpan AccountCacheTtl = TimeSpan.FromMinutes(10);
-
     public async Task<Result<AuthResponse>> Handle(
-        LoginCommand request, 
+        LoginCommand request,
         CancellationToken cancellationToken)
     {
-        // 1. Normalize identifier & construct cache key
-        var normalizedIdentifier = request.Identifier.Trim().ToLowerInvariant();
-        var cacheKey = $"auth:account:{normalizedIdentifier}";
+        // 1. Load the Account aggregate (refresh tokens + roles included) straight from the database.
+        //    The account used to be cached in Redis as a DTO that included the password hash for 10 minutes;
+        //    a password hash does not belong in a shared cache and the entry went stale after a password change.
+        var account = await accountRepository.GetByIdentifierAsync(request.Identifier.Trim(), cancellationToken);
 
-        // 2. Fetch Account DTO via Cache (Redis -> Memory Fallback -> DB)
-        var accountDto = await cacheService.GetOrCreateAsync(
-            cacheKey,
-            async ct =>
-            {
-                var account = await accountRepository.GetByIdentifierAsync(request.Identifier, ct);
-                return account?.ToDto();
-            },
-            absoluteExpiration: AccountCacheTtl,
-            cancellationToken: cancellationToken);
-
-        // 2a. Account Existence Check
-        if (accountDto is null)
+        // 2. Account Existence Check
+        if (account is null)
         {
             return Result.Failure<AuthResponse>(
                 Error.NotFound("Auth.AccountNotFound", $"No account found matching '{request.Identifier}'."));
         }
 
-        // 2b. Account Active State Check
-        if (!accountDto.IsActive)
+        // 3. Account Active State Check
+        if (!account.IsActive)
         {
             return Result.Failure<AuthResponse>(
                 Error.Unauthorized("Auth.AccountInactive", "Your account has been deactivated. Please contact support."));
         }
 
-        // 3. Password Presence Check
-        if (string.IsNullOrWhiteSpace(accountDto.PasswordHash))
+        // 4. Password Presence Check
+        if (string.IsNullOrWhiteSpace(account.PasswordHash?.Value))
         {
             return Result.Failure<AuthResponse>(
                 Error.Unauthorized("Auth.PasswordNotConfigured", "Account does not have a local password set. Try logging in via your external provider."));
         }
 
-        // 4. Password Verification Check
-        if (!passwordHasher.VerifyPassword(request.Password, accountDto.PasswordHash))
+        // 5. Password Verification Check
+        if (!passwordHasher.VerifyPassword(request.Password, account.PasswordHash!.Value))
         {
             return Result.Failure<AuthResponse>(
                 Error.Unauthorized("Auth.InvalidPassword", "The password provided is incorrect."));
-        }
-
-        // 5. Load full Account aggregate to append Refresh Token & inspect roles
-        var accountId = new AccountId(accountDto.Id);
-        var account = await accountRepository.GetByIdAsync(accountId, cancellationToken);
-        if (account is null || !account.IsActive)
-        {
-            return Result.Failure<AuthResponse>(
-                Error.Unauthorized("Auth.AccountInactive", "Your account is no longer active."));
         }
 
         // 6. Generate Refresh Token via Aggregate Root
@@ -93,9 +68,9 @@ public sealed class LoginCommandHandler(
 
         // 8. Generate JWT Access Token
         var accessToken = jwtTokenService.GenerateToken(
-            accountDto.Id,
-            accountDto.Email,
-            accountDto.Username,
+            account.Id.Value,
+            account.Email?.Value,
+            account.Username.Value,
             roles
         );
 
