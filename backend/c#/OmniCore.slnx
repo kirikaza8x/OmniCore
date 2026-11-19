@@ -20,4 +20,7 @@
     <Project Path="OmniCore.Shared/OmniCore.Shared.Domain/OmniCore.Shared.Domain.csproj" />
     <Project Path="OmniCore.Shared/OmniCore.Shared.Infrastructure/OmniCore.Shared.Infrastructure.csproj" />
   </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/OmniCore.Services.Auth.Domain.Tests/OmniCore.Services.Auth.Domain.Tests.csproj" />
+  </Folder>
 </Solution>
