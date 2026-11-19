@@ -27,7 +27,7 @@ services:
       - Database__EnableSensitiveDataLogging=${DB_ENABLE_SENSITIVE_DATA_LOGGING:-true}
 
       # Message Broker Configuration
-      - MessageBroker__Provider=${MESSAGE_BROKER_PROVIDER:-Both}
+      - MessageBroker__Provider=${MESSAGE_BROKER_PROVIDER:-RabbitMQ}
       - MessageBroker__Host=rabbitmq
       - MessageBroker__Username=${RABBITMQ_DEFAULT_USER}
       - MessageBroker__Password=${RABBITMQ_DEFAULT_PASS}
@@ -115,7 +115,7 @@ services:
       - Database__EnableSensitiveDataLogging=${DB_ENABLE_SENSITIVE_DATA_LOGGING:-true}
 
       # Message Broker Configuration
-      - MessageBroker__Provider=${MESSAGE_BROKER_PROVIDER:-Both}
+      - MessageBroker__Provider=${MESSAGE_BROKER_PROVIDER:-RabbitMQ}
       - MessageBroker__Host=rabbitmq
       - MessageBroker__Username=${RABBITMQ_DEFAULT_USER}
       - MessageBroker__Password=${RABBITMQ_DEFAULT_PASS}
