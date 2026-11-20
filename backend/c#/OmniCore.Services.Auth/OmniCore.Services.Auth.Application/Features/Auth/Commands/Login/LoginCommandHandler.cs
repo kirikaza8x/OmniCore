@@ -55,7 +55,7 @@ public sealed class LoginCommandHandler(
 
         // 6. Generate Refresh Token via Aggregate Root
         var (refreshTokenString, duration) = refreshTokenService.GenerateRefreshToken();
-        var refreshTokenResult = account.AddRefreshToken(refreshTokenString, duration);
+        var refreshTokenResult = account.AddRefreshToken(refreshTokenString, duration, refreshTokenService.MaxActiveSessions);
         if (refreshTokenResult.IsFailure)
         {
             return Result.Failure<AuthResponse>(refreshTokenResult.Error);

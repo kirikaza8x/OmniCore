@@ -59,7 +59,7 @@ public sealed class RegisterCommandHandler(
 
         // 4. Attach Refresh Token to Aggregate Root
         var (refreshTokenString, duration) = refreshTokenService.GenerateRefreshToken();
-        var refreshTokenResult = account.AddRefreshToken(refreshTokenString, duration);
+        var refreshTokenResult = account.AddRefreshToken(refreshTokenString, duration, refreshTokenService.MaxActiveSessions);
         if (refreshTokenResult.IsFailure)
         {
             return Result.Failure<AuthResponse>(refreshTokenResult.Error);

@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using Quartz;
 using OmniCore.Services.Auth.Infrastructure.Persistence.Contexts;
 using OmniCore.Shared.Domain.Repositories;
 using OmniCore.Shared.Infrastructure;
@@ -70,6 +71,23 @@ public static class DependencyInjection
                 type.Name.EndsWith("Service")))
             .AsImplementedInterfaces()
             .WithScopedLifetime());
+
+        // 5b. Scheduled purge of dead refresh tokens (ADR 0003, A10). AddQuartz is called by AddSharedInfrastructure;
+        // a second AddQuartz call only adds this configuration.
+        services.AddQuartz(q =>
+        {
+            var cleanup = configuration.GetSection("RefreshTokenCleanup");
+            if (!bool.TryParse(cleanup["Enabled"], out var enabled)) enabled = true;
+            if (!int.TryParse(cleanup["IntervalHours"], out var hours) || hours < 1) hours = 6;
+            if (!enabled) return;
+
+            q.AddJob<Jobs.PurgeRefreshTokensJob>(Jobs.PurgeRefreshTokensJob.Key);
+            q.AddTrigger(t => t
+                .ForJob(Jobs.PurgeRefreshTokensJob.Key)
+                .WithIdentity("purge-refresh-tokens-trigger", "auth")
+                .StartAt(DateBuilder.FutureDate(2, IntervalUnit.Minute))
+                .WithSimpleSchedule(s => s.WithIntervalInHours(hours).RepeatForever()));
+        });
 
         // 6. Register Data Seeders
         services.AddDataSeeders(InfrastructureAssemblyReference.Assembly);

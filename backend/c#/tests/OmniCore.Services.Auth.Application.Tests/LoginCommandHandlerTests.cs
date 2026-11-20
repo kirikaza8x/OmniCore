@@ -74,6 +74,25 @@ public class LoginCommandHandlerTests
     }
 
     [Fact]
+    public async Task Login_AppliesTheConfiguredSessionCap_RevokingTheOldestToken()
+    {
+        // ADR 0003 step 3 (A10): the cap from the token service reaches the aggregate.
+        _refresh.MaxActiveSessions.Returns(2);
+        var account = TestSupport.NewAccount();
+        account.AddRefreshToken("old-1", TimeSpan.FromDays(7));
+        account.AddRefreshToken("old-2", TimeSpan.FromDays(7));
+        Finds(account);
+        _hasher.VerifyPassword(TestSupport.Password, Arg.Any<string>()).Returns(true);
+
+        var result = await Handler().Handle(new LoginCommand("alice_01", TestSupport.Password), default);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(2, account.RefreshTokens.Count(t => t.IsActive));
+        Assert.True(account.RefreshTokens.Single(t => t.Matches("old-1")).IsRevoked);
+        Assert.True(account.RefreshTokens.Single(t => t.Matches("refresh-1")).IsActive);
+    }
+
+    [Fact]
     public async Task Identifier_IsTrimmedBeforeTheLookup()
     {
         Finds(null);

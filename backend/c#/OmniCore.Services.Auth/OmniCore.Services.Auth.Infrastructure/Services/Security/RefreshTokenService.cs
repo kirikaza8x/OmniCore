@@ -10,6 +10,8 @@ public sealed class RefreshTokenService(
 {
     public int RefreshTokenExpiryDays => options.Value.RefreshTokenExpiryDays;
 
+    public int? MaxActiveSessions => options.Value.MaxActiveSessions > 0 ? options.Value.MaxActiveSessions : null;
+
     public (string Token, TimeSpan Duration) GenerateRefreshToken()
     {
         var token = Convert.ToBase64String(RandomNumberGenerator.GetBytes(64));
