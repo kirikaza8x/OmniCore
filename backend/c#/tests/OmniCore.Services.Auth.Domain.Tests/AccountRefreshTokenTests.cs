@@ -23,6 +23,26 @@ public class AccountRefreshTokenTests
         Assert.Contains(account.DomainEvents, e => e is AccountCreatedDomainEvent);
     }
 
+    [Fact]
+    public void Create_ProducesAnActiveAccount()
+    {
+        var account = NewAccount();
+
+        Assert.True(account.IsActive);
+    }
+
+    [Fact]
+    public void Deactivate_MakesTheAccountInactive_AndRevokesItsTokens()
+    {
+        var account = NewAccount();
+        account.AddRefreshToken("token-1", Week);
+
+        account.Deactivate();
+
+        Assert.False(account.IsActive);
+        Assert.All(account.RefreshTokens, t => Assert.False(t.IsActive));
+    }
+
     [Theory]
     [InlineData("")]
     [InlineData("ab")]

@@ -54,6 +54,9 @@ public partial class Account : AggregateRoot<AccountId>, IAuditableEntity, ISoft
         Email = email;
         PasswordHash = passwordHash;
         IsEmailConfirmed = false;
+        // Set explicitly: it used to rely on the column default (HasDefaultValue(true)), so a new account was "inactive"
+        // in memory until it was reloaded from the database.
+        IsActive = true;
 
         RaiseDomainEvent(new AccountCreatedDomainEvent(
             Id, 
