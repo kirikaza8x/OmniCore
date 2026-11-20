@@ -7,8 +7,10 @@ name: backend
 
 on:
   pull_request:
+  workflow_dispatch:
   push:
-    branches: [develop, main]
+    # docs/** and fix/** so a feature branch gets a build without opening a PR first
+    branches: [develop, main, 'docs/**', 'fix/**']
 
 permissions:
   contents: read
@@ -29,10 +31,27 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 9.0.x
-      - run: dotnet restore OmniCore.slnx
-      - run: dotnet build OmniCore.slnx --no-restore -c Release
+      - name: Restore
+        shell: bash
+        run: set -o pipefail; dotnet restore OmniCore.slnx 2>&1 | tee "$RUNNER_TEMP/restore.log"
+      - name: Build
+        shell: bash
+        run: set -o pipefail; dotnet build OmniCore.slnx --no-restore -c Release 2>&1 | tee "$RUNNER_TEMP/build.log"
       - name: Unit tests
-        run: dotnet test tests/OmniCore.Services.Auth.Domain.Tests --no-build -c Release --logger "trx;LogFileName=unit.trx"
+        shell: bash
+        run: set -o pipefail; dotnet test tests/OmniCore.Services.Auth.Domain.Tests --no-build -c Release --logger "trx;LogFileName=unit.trx" 2>&1 | tee "$RUNNER_TEMP/unit.log"
+      # Errors and failures go to the job summary, which is readable on the public run page without downloading logs.
+      - name: Summarise errors
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo "## Build and unit test problems"
+            echo '```'
+            cat "$RUNNER_TEMP"/restore.log "$RUNNER_TEMP"/build.log "$RUNNER_TEMP"/unit.log 2>/dev/null \
+              | grep -E "error |: error|Failed|FAIL|Passed!|Failed!|Build succeeded|Warning\(s\)|Error\(s\)" | sed 's#/home/runner/work/[^/]*/[^/]*/##' | sort -u | head -150
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
