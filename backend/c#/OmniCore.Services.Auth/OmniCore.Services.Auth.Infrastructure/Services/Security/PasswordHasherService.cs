@@ -3,7 +3,7 @@ namespace OmniCore.Services.Auth.Infrastructure.Services.Security;
 using BCrypt.Net;
 using OmniCore.Services.Auth.Application.Abstractions.Security;
 
-public sealed class PasswordHasher : IPasswordHasherService
+public sealed class PasswordHasherService : IPasswordHasherService
 {
     public string HashPassword(string password)
     {
