@@ -17,7 +17,7 @@ off as they land; the status here is also mirrored in `CLAUDE.md`.
 ## Phase 2: dev vs prod configuration (F3, F4, F7)
 - [x] `docker-compose.prod.yml` override: Production, Swagger off, sensitive logging / detailed errors / any-origin CORS off, `ALLOWED_HOSTS` and `CORS_ALLOWED_ORIGIN` required, data-store ports not published; compose defaults for the three dev switches are now safe (`false`), and `.env.example` turns them on for local dev (**validated with `docker compose config` only, never started**)
 - [x] `.env.example` placeholders (`CHANGE_ME`, RabbitMQ user no longer `guest`); empty root `.env.example` removed
-- [x] Pin every image tag (**tags are from memory; the sandbox could not reach Docker Hub, so confirm each exists with the first `docker compose pull`**)
+- [x] Pin every image tag (**checked by the CI job `infra-config`: every tag exists; Postgres, Redis, RabbitMQ and MinIO also start healthy in CI**). `minio/minio` no longer exists on Docker Hub or Quay, so MinIO is pinned to the third-party rebuild `coollabsio/minio`: owner decision, see repo-check F7
 - [ ] Still open from this phase: `appsettings.Development.json.example` (S11), health check with DB/broker probes and migrations not run in every replica (A18), TLS in front of the gateway
 
 ## Phase 3: gateway (F2, F6)

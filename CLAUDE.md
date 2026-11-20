@@ -33,7 +33,7 @@ dotnet restore backend/c#/OmniCore.slnx                      # verified by CI 20
 dotnet build   backend/c#/OmniCore.slnx -c Release           # verified by CI 2026-11-20
 dotnet test    backend/c#/tests/OmniCore.Services.Auth.Domain.Tests          # verified by CI 2026-11-20 (unit)
 dotnet test    backend/c#/tests/OmniCore.Services.Auth.IntegrationTests      # verified by CI 2026-11-20, needs Docker (Testcontainers)
-cd infra/docker && cp .env.example .env && docker compose up -d --build      # UNVERIFIED (never started)
+cd infra/docker && cp .env.example .env && docker compose up -d --build      # full stack UNVERIFIED; data stores smoke-started by CI
 cd infra/docker && docker compose --env-file .env.example config             # verified 2026-11-20 (dev and prod override render)
 pwsh backend/c#/scripts/shells/add-migration.ps1                             # new EF migration (UNVERIFIED)
 pwsh backend/c#/scripts/shells/scaffold_service.ps1                          # new service (UNVERIFIED)
@@ -84,10 +84,11 @@ Reflects branch `docs/readme-and-roadmap`, 2026-11-20, last code/doc commit befo
 - [x] Phase 1: `backend.yml`, Auth domain unit tests and the Testcontainers integration test are **green on GitHub** (2026-11-20). Not yet a required check. Handler tests for register / login / refresh exist (13); 14 domain + 2 integration tests
 - [x] ADR 0001 multi-tenancy written (**proposed, waiting for the owner**)
 - [x] Phase 2 infra, 2026-11-20: `docker-compose.prod.yml`, safe compose defaults, `CHANGE_ME` `.env.example`, root `.env.example`
-      removed, all images pinned. Only checked with `docker compose config`; **never started, image tags unverified**
-      (the sandbox had Docker CLI but no daemon, no Docker Hub and no NuGet, so no .NET build either)
+      removed, all images pinned. CI job `infra-config` verifies every tag exists and smoke-starts postgres, redis, rabbitmq and
+      minio (healthy). The full stack (services, kafka, gateway together) has still **never been started**. `minio/minio` is gone
+      from Docker Hub and Quay: pinned to the third-party `coollabsio/minio` as a stopgap (owner decision)
 - [x] Phase 3 gateway, 2026-11-20: User route + spec, `limit_req` (credential endpoints and general), JSON 429, ADR 0002 (JWTs stay in the services),
       CI job `infra-config` (compose renders, image tags exist, `nginx -t`). Behavior tested with nginx 1.24 and fake backends in the sandbox;
       found and fixed a limit bypass via `/Login/` (case, trailing slash). Not run against the real containers
 - [ ] Next: owner makes `build-and-unit-test` + integration required checks (repo setting), more handler tests (logout, roles), then close ports 5001/5002 in the prod override, phase 4 (asymmetric JWT + JWKS, A6/A7)
-- [ ] Owner decisions pending: ADR 0001 questions, A9 (generic login error), A15 (first admin), keep or drop the User service in compose
+- [ ] Owner decisions pending: MinIO image (F7: keep the coollabsio fork, build from source, or switch store), ADR 0001 questions, A9 (generic login error), A15 (first admin), keep or drop the User service in compose
