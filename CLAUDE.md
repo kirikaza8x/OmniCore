@@ -72,7 +72,7 @@ takes about a minute.
 ## Known issues (full list in docs/repo-check.md)
 `AllowedHosts` still defaults to `*` in the base compose file (the prod override requires it) (F3);
 the in-service rate limiter sees only the nginx address (S2, mitigated by the gateway limits); published service ports 5001/5002 bypass the gateway;
-old plain `token` column still present until the follow-up migration drops it (A6 step 1 done); no session cap/purge yet (A10); HS256 shared secret (step 4 pending); no account lockout (A8, only the gateway IP limit); no first admin account (A15); User service not running (U1); the Auth and Shared fixes
+old plain `token` column still present until the follow-up migration drops it (A6); RS256 is available but the repo defaults and prod override still allow the legacy HS256 `JWT_SECRET` until the owner sets `JWT_PRIVATE_KEY_PEM` (finding 5; cut-over steps in `.env.example`); no account lockout (A8, only the gateway IP limit); no first admin account (A15); User service not running (U1); the Auth and Shared fixes
 below now compile and pass CI, but only the register/login/refresh/reuse path is exercised by a test.
 
 ## Current progress
@@ -91,6 +91,6 @@ Reflects branch `docs/readme-and-roadmap`, 2026-11-20, last code/doc commit befo
 - [x] Phase 3 gateway, 2026-11-20: User route + spec, `limit_req` (credential endpoints and general), JSON 429, ADR 0002 (JWTs stay in the services),
       CI job `infra-config` (compose renders, image tags exist, `nginx -t`). Behavior tested with nginx 1.24 and fake backends in the sandbox;
       found and fixed a limit bypass via `/Login/` (case, trailing slash). Not run against the real containers
-- [x] Phase 4 (ADR 0003, **accepted by delegation**, reasons in `docs/auth-tokens.md`), 2026-11-20: step 1 hashed refresh tokens + backfilling migration, step 2 xmin rotation guard + parallel-refresh test, A11 (409 on unique race): **built and green in CI** (7 integration, 17 domain, 13 application tests). Steps 3 (session cap 10 + Quartz purge 30 d) and 4 (RS256 + JWKS) not started
-- [ ] Next: owner makes `build-and-unit-test` + integration required checks (repo setting), more handler tests (logout, roles), then ADR 0003 steps 3-4, drop the plain token columns, close ports 5001/5002 in the prod override
+- [x] Phase 4 (ADR 0003, **accepted by delegation**, reasons in `docs/auth-tokens.md`), 2026-11-20: all four steps **built and green in CI** (23 integration, 17 domain, 14 application tests): hashed refresh tokens + backfilling migration, xmin rotation guard, session cap 10 + Quartz purge (expired + 30 d), RS256 + `/.well-known/jwks.json` + validators via JWKS (HS256 only while `Jwt__Secret` is set). A11 (409 on unique race). Not run as a real compose stack
+- [ ] Next: owner makes `build-and-unit-test` + integration required checks (repo setting), more handler tests (logout, roles), owner generates `JWT_PRIVATE_KEY_PEM` and does the cut-over, then drop the plain token columns, require the key in the prod override, close ports 5001/5002 in the prod override
 - [ ] Owner decisions pending: MinIO image (F7: keep the coollabsio fork, build from source, or switch store), ADR 0001 questions, A9 (generic login error), A15 (first admin), keep or drop the User service in compose

@@ -1,7 +1,7 @@
 # ADR 0003: Asymmetric JWT signing with JWKS, hashed refresh tokens, safer rotation
 
 - Status: **accepted 2026-11-20, decisions taken by delegation** (the owner said "your call, document the reasons").
-  Steps 1 and 2 are **implemented and green in CI**; steps 3 and 4 are next. The owner can overturn any decision
+  Steps 1-4 are **implemented and green in CI** (2026-11-20); open: the migration dropping the plain `token` columns, requiring the private key in the prod override. The owner can overturn any decision
   below; the reasons are in plain language in [../auth-tokens.md](../auth-tokens.md).
   Decisions taken: RS256 (not ES256), services fetch the public key from Auth's JWKS endpoint, a parallel use of one
   refresh token lets exactly one request win, session cap 10, keep revoked/expired rows 30 days then purge, backfill the
