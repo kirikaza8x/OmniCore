@@ -43,6 +43,13 @@ jobs:
           for p in tests/OmniCore.Services.Auth.Domain.Tests tests/OmniCore.Services.Auth.Application.Tests; do
             dotnet test "$p" --no-build -c Release --logger "trx;LogFileName=$(basename "$p").trx" 2>&1 | tee -a "$RUNNER_TEMP/unit.log"
           done
+      - name: Annotate unit test failures
+        if: always()
+        shell: bash
+        run: |
+          TXT=$( { grep -E -A25 "^\s*Failed |Unhandled|Exception" "$RUNNER_TEMP/unit.log" | sed 's#/home/runner/work/[^/]*/[^/]*/##' | head -90; grep -E "Passed!|Failed!" "$RUNNER_TEMP/unit.log"; } 2>/dev/null || true )
+          TXT="${TXT//'%'/'%25'}"; TXT="${TXT//$'\r'/}"; TXT="${TXT//$'\n'/'%0A'}"
+          echo "::error title=unit-test-output::${TXT:0:6000}"
       # Errors and failures go to the job summary, which is readable on the public run page without downloading logs.
       - name: Summarise errors
         if: always()
