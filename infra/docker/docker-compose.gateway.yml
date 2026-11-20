@@ -1,6 +1,6 @@
 services:
   swagger-ui:
-    image: swaggerapi/swagger-ui:latest
+    image: swaggerapi/swagger-ui:v5.17.14
     container_name: omnicore-swagger-ui
     restart: always
     profiles:
@@ -13,14 +13,17 @@ services:
       - omnicore-network
 
   gateway:
-    image: nginx:alpine
+    image: nginx:1.27-alpine
     container_name: omnicore-gateway
     restart: always
     ports:
       - "${GATEWAY_PORT:-8080}:80"
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    # swagger-ui only runs with the dev/swagger profile; nginx resolves it lazily, so the gateway must not require it.
     depends_on:
-      - swagger-ui
+      swagger-ui:
+        condition: service_started
+        required: false
     networks:
       - omnicore-network

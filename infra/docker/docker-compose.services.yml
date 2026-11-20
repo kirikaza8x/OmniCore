@@ -23,8 +23,8 @@ services:
       - Database__ConnectionString=Host=postgres;Port=5432;Database=${AUTH_DB_NAME};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
       - Database__MaxRetryCount=${DB_MAX_RETRY_COUNT:-3}
       - Database__CommandTimeout=${DB_COMMAND_TIMEOUT:-30}
-      - Database__EnableDetailedErrors=${DB_ENABLE_DETAILED_ERRORS:-true}
-      - Database__EnableSensitiveDataLogging=${DB_ENABLE_SENSITIVE_DATA_LOGGING:-true}
+      - Database__EnableDetailedErrors=${DB_ENABLE_DETAILED_ERRORS:-false}
+      - Database__EnableSensitiveDataLogging=${DB_ENABLE_SENSITIVE_DATA_LOGGING:-false}
 
       # Message Broker Configuration
       - MessageBroker__Provider=${MESSAGE_BROKER_PROVIDER:-RabbitMQ}
@@ -62,7 +62,7 @@ services:
       - GoogleAuth__ClientId=${GOOGLE_AUTH_CLIENT_ID}
 
       # CORS Configuration
-      - Cors__AllowAnyOrigin=${CORS_ALLOW_ANY_ORIGIN:-true}
+      - Cors__AllowAnyOrigin=${CORS_ALLOW_ANY_ORIGIN:-false}
 
       # Rate Limiting Configuration
       - RateLimiting__GlobalPolicy=${RATE_LIMITING_GLOBAL_POLICY:-fixed}
@@ -111,8 +111,8 @@ services:
       - Database__ConnectionString=Host=postgres;Port=5432;Database=${USER_DB_NAME};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
       - Database__MaxRetryCount=${DB_MAX_RETRY_COUNT:-3}
       - Database__CommandTimeout=${DB_COMMAND_TIMEOUT:-30}
-      - Database__EnableDetailedErrors=${DB_ENABLE_DETAILED_ERRORS:-true}
-      - Database__EnableSensitiveDataLogging=${DB_ENABLE_SENSITIVE_DATA_LOGGING:-true}
+      - Database__EnableDetailedErrors=${DB_ENABLE_DETAILED_ERRORS:-false}
+      - Database__EnableSensitiveDataLogging=${DB_ENABLE_SENSITIVE_DATA_LOGGING:-false}
 
       # Message Broker Configuration
       - MessageBroker__Provider=${MESSAGE_BROKER_PROVIDER:-RabbitMQ}
@@ -147,7 +147,7 @@ services:
       - Jwt__Audience=${JWT_AUDIENCE}
 
       # CORS Configuration
-      - Cors__AllowAnyOrigin=${CORS_ALLOW_ANY_ORIGIN:-true}
+      - Cors__AllowAnyOrigin=${CORS_ALLOW_ANY_ORIGIN:-false}
 
       # Rate Limiting Configuration
       - RateLimiting__GlobalPolicy=${RATE_LIMITING_GLOBAL_POLICY:-fixed}

@@ -1,0 +1,45 @@
+# Production override. Use it on top of the base stack:
+#
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml --env-file .env up -d --build
+#
+# What it does (repo-check F3 / S8 / S11):
+#   - forces Production, Swagger off, no sensitive data logging, no detailed DB errors
+#   - turns "any origin" CORS off and requires an explicit allowed origin
+#   - requires AllowedHosts instead of defaulting to "*"
+#   - stops publishing the data stores (Postgres, Redis, RabbitMQ, Kafka, Kafka UI) on the host; services still reach
+#     them over the compose network. Use `docker exec` or an SSH tunnel for admin access.
+#
+# NOT covered here: TLS (terminate it in front of the gateway), MinIO ports (clients download from MinIO through
+# STORAGE_PUBLIC_URL, so they stay published; put them behind your proxy), pinned-image verification.
+# Written without a Docker daemon: validated with `docker compose config` only, never started.
+
+x-prod-env: &prod-env
+  - ASPNETCORE_ENVIRONMENT=Production
+  - EnableSwagger=false
+  - AllowedHosts=${ALLOWED_HOSTS:?set ALLOWED_HOSTS to the public host name(s), e.g. api.example.com}
+  - Database__EnableDetailedErrors=false
+  - Database__EnableSensitiveDataLogging=false
+  - Cors__AllowAnyOrigin=false
+  - Cors__AllowedOrigins__0=${CORS_ALLOWED_ORIGIN:?set CORS_ALLOWED_ORIGIN to the front-end origin, e.g. https://app.example.com}
+
+services:
+  auth-api:
+    environment: *prod-env
+
+  user-api:
+    environment: *prod-env
+
+  postgres:
+    ports: !reset []
+
+  redis:
+    ports: !reset []
+
+  rabbitmq:
+    ports: !reset []
+
+  kafka:
+    ports: !reset []
+
+  kafka-ui:
+    ports: !reset []
