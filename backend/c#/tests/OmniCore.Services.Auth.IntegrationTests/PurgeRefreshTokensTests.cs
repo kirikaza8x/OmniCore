@@ -17,7 +17,10 @@ public sealed class PurgeRefreshTokensTests : IAsyncLifetime
     [Fact]
     public async Task Purge_DeletesOnlyRowsExpiredBeyondTheRetention()
     {
-        var options = new DbContextOptionsBuilder<AuthDbContext>().UseNpgsql(_postgres.GetConnectionString()).Options;
+        var options = new DbContextOptionsBuilder<AuthDbContext>()
+            .UseNpgsql(_postgres.GetConnectionString(), n => n.MigrationsHistoryTable("__EFMigrationsHistory", AuthDbContext.SchemaName))
+            .UseSnakeCaseNamingConvention()   // same model as the service uses; without it Migrate() sees "pending changes"
+            .Options;
         await using var db = new AuthDbContext(options);
         await db.Database.MigrateAsync();
 
