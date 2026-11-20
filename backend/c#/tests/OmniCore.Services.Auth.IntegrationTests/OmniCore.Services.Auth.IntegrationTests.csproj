@@ -18,6 +18,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\..\OmniCore.Services.Auth\OmniCore.Services.Auth.Api\OmniCore.Services.Auth.Api.csproj" />
   </ItemGroup>
 

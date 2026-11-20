@@ -49,7 +49,7 @@ jobs:
             echo "## Build and unit test problems"
             echo '```'
             cat "$RUNNER_TEMP"/restore.log "$RUNNER_TEMP"/build.log "$RUNNER_TEMP"/unit.log 2>/dev/null \
-              | grep -E "error |: error|Failed|FAIL|Passed!|Failed!|Build succeeded|Warning\(s\)|Error\(s\)" | sed 's#/home/runner/work/[^/]*/[^/]*/##' | sort -u | head -150
+              | grep -E "error |: error|Failed|FAIL|Passed!|Failed!|Build succeeded|Warning\(s\)|Error\(s\)" | sed 's#/home/runner/work/[^/]*/[^/]*/##' | sort -u | head -150 || true
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@v4
