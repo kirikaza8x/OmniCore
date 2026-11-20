@@ -72,7 +72,20 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 9.0.x
-      - run: dotnet test tests/OmniCore.Services.Auth.IntegrationTests -c Release --logger "trx;LogFileName=integration.trx"
+      - name: Integration tests
+        shell: bash
+        run: set -o pipefail; dotnet test tests/OmniCore.Services.Auth.IntegrationTests -c Release --logger "trx;LogFileName=integration.trx" 2>&1 | tee "$RUNNER_TEMP/integration.log"
+      - name: Summarise failures
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo "## Integration test output"
+            echo '```'
+            { grep -E -A25 "^\s*Failed |error " "$RUNNER_TEMP/integration.log" | sed 's#/home/runner/work/[^/]*/[^/]*/##' | head -120; } 2>/dev/null || true
+            grep -E "Passed!|Failed!|Total tests" "$RUNNER_TEMP/integration.log" 2>/dev/null || true
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
