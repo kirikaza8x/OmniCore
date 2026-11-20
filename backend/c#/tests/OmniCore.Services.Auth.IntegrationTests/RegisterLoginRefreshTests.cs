@@ -74,6 +74,27 @@ public class RegisterLoginRefreshTests(AuthApiFactory factory) : IClassFixture<A
     }
 
     [Fact]
+    public async Task ParallelRefreshesWithOneToken_NeverBothSucceed()
+    {
+        // ADR 0003 step 2 (A7): before the xmin concurrency token, parallel refreshes could both succeed and fork the session.
+        var client = factory.CreateClient();
+        var user = $"user_{Guid.NewGuid():N}"[..20];
+        const string password = "Sup3r!Secret-test";
+        await client.PostAsJsonAsync($"{Base}/register", new { username = user, email = $"{user}@example.com", password });
+        var login = await client.PostAsJsonAsync($"{Base}/login", new { identifier = user, password });
+        var token = Find(await Body(login), "refreshToken")!;
+
+        var responses = await Task.WhenAll(Enumerable.Range(0, 8).Select(_ =>
+            client.PostAsJsonAsync($"{Base}/refresh-token", new { refreshToken = token })));
+        var codes = responses.Select(r => r.StatusCode).ToList();
+
+        Assert.Equal(1, codes.Count(c => c == HttpStatusCode.OK));
+        // The others lost the race (409) or arrived after it and were treated as a reuse (401); never a 500.
+        Assert.All(codes.Where(c => c != HttpStatusCode.OK), c =>
+            Assert.True(c is HttpStatusCode.Conflict or HttpStatusCode.Unauthorized, $"unexpected {(int)c}"));
+    }
+
+    [Fact]
     public void MigrationSnapshot_MatchesTheModel()
     {
         // The refresh token migration was written by hand; this fails if the snapshot and the model drift apart.

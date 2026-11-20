@@ -3,6 +3,7 @@ namespace OmniCore.Shared.Api.Exceptions;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Npgsql;
 
@@ -32,6 +33,28 @@ public sealed class GlobalExceptionHandler(ILogger<GlobalExceptionHandler> logge
             httpContext.Response.StatusCode = StatusCodes.Status409Conflict;
             httpContext.Response.ContentType = "application/problem+json";
             await httpContext.Response.WriteAsJsonAsync(conflict, cancellationToken);
+            return true;
+        }
+
+        // Another request changed the same row first (optimistic concurrency, for example two parallel refreshes with one
+        // refresh token, A7). The caller should re-read and retry; it is not a server fault.
+        if (exception is DbUpdateConcurrencyException)
+        {
+            logger.LogWarning("Concurrent modification on {Path}.", httpContext.Request.Path);
+
+            var concurrency = new ProblemDetails
+            {
+                Status = StatusCodes.Status409Conflict,
+                Title = "Conflict",
+                Type = "https://tools.ietf.org/html/rfc9110#section-15.5.10",
+                Detail = "The resource was changed by another request. Retry.",
+                Instance = httpContext.Request.Path
+            };
+            concurrency.Extensions["traceId"] = httpContext.TraceIdentifier;
+
+            httpContext.Response.StatusCode = StatusCodes.Status409Conflict;
+            httpContext.Response.ContentType = "application/problem+json";
+            await httpContext.Response.WriteAsJsonAsync(concurrency, cancellationToken);
             return true;
         }
 

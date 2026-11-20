@@ -31,6 +31,16 @@ public class RefreshTokenConfiguration : IEntityTypeConfiguration<RefreshToken>
 
         builder.HasIndex(r => r.TokenHash).IsUnique();
 
+        // Postgres' own row version (system column xmin) as an optimistic concurrency token (ADR 0003 step 2, A7).
+        // Two parallel refreshes with the same token both try to revoke the same row; the second UPDATE finds the row
+        // changed, affects nothing and throws DbUpdateConcurrencyException, so only one of them can ever succeed.
+        // No schema change: xmin exists on every Postgres table.
+        builder.Property<uint>("xmin")
+            .HasColumnName("xmin")
+            .HasColumnType("xid")
+            .ValueGeneratedOnAddOrUpdate()
+            .IsConcurrencyToken();
+
         builder.Property(r => r.ExpiresAtUtc)
             .HasColumnName("expires_at_utc");
 
