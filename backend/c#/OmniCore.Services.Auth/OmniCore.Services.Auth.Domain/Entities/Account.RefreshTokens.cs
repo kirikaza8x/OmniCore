@@ -55,7 +55,7 @@ public partial class Account
         string newToken, 
         TimeSpan newDuration)
     {
-        var existingToken = _refreshTokens.FirstOrDefault(t => t.Token == currentToken);
+        var existingToken = _refreshTokens.FirstOrDefault(t => t.Matches(currentToken));
 
         if (existingToken is null)
         {
@@ -94,7 +94,7 @@ public partial class Account
     /// <returns>A result indicating success or a failure if not found.</returns>
     public Result RevokeRefreshToken(string token)
     {
-        var existingToken = _refreshTokens.FirstOrDefault(t => t.Token == token);
+        var existingToken = _refreshTokens.FirstOrDefault(t => t.Matches(token));
 
         if (existingToken is null)
         {

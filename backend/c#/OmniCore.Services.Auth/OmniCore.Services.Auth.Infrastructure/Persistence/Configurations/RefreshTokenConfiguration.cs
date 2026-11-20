@@ -22,12 +22,14 @@ public class RefreshTokenConfiguration : IEntityTypeConfiguration<RefreshToken>
             .HasColumnName("account_id")
             .IsRequired();
 
-        builder.Property(r => r.Token)
-            .HasColumnName("token")
-            .HasMaxLength(500)
+        // Only the SHA-256 hex digest is stored (64 characters), see ADR 0003. The old plain `token` and
+        // `replaced_by_token` columns still exist in the database until a later migration drops them.
+        builder.Property(r => r.TokenHash)
+            .HasColumnName("token_hash")
+            .HasMaxLength(64)
             .IsRequired();
 
-        builder.HasIndex(r => r.Token).IsUnique();
+        builder.HasIndex(r => r.TokenHash).IsUnique();
 
         builder.Property(r => r.ExpiresAtUtc)
             .HasColumnName("expires_at_utc");
@@ -36,9 +38,9 @@ public class RefreshTokenConfiguration : IEntityTypeConfiguration<RefreshToken>
             .HasColumnName("is_revoked")
             .HasDefaultValue(false);
 
-        builder.Property(r => r.ReplacedByToken)
-            .HasColumnName("replaced_by_token")
-            .HasMaxLength(500);
+        builder.Property(r => r.ReplacedByTokenHash)
+            .HasColumnName("replaced_by_token_hash")
+            .HasMaxLength(64);
 
         builder.Property(r => r.CreatedAtUtc)
             .HasColumnName("created_at_utc");

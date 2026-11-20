@@ -70,7 +70,7 @@ public class LoginCommandHandlerTests
         Assert.Equal("access-token", result.Value.AccessToken);
         Assert.Equal("refresh-1", result.Value.RefreshToken);
         Assert.Single(account.RefreshTokens);
-        Assert.Equal("refresh-1", account.RefreshTokens.Single().Token);
+        Assert.True(account.RefreshTokens.Single().Matches("refresh-1"));
     }
 
     [Fact]

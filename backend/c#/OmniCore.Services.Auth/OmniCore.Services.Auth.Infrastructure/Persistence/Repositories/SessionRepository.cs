@@ -14,11 +14,13 @@ public class SessionRepository(AuthDbContext dbContext)
         string refreshTokenValue, 
         CancellationToken cancellationToken = default)
     {
+        var tokenHash = RefreshToken.HashToken(refreshTokenValue);
+
         return await DbSet
             .Include(s => s.RefreshToken)
             .FirstOrDefaultAsync(
                 s => s.RefreshToken != null && 
-                     s.RefreshToken.Token == refreshTokenValue && 
+                     s.RefreshToken.TokenHash == tokenHash && 
                      !s.IsRevoked, 
                 cancellationToken);
     }

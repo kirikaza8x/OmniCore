@@ -1,6 +1,9 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using OmniCore.Services.Auth.Infrastructure.Persistence.Contexts;
 
 namespace OmniCore.Services.Auth.IntegrationTests;
 
@@ -68,5 +71,33 @@ public class RegisterLoginRefreshTests(AuthApiFactory factory) : IClassFixture<A
         var login = await client.PostAsJsonAsync($"{Base}/login", new { identifier = user, password = "Wr0ng!Password" });
 
         Assert.Equal(HttpStatusCode.Unauthorized, login.StatusCode);
+    }
+
+    [Fact]
+    public void MigrationSnapshot_MatchesTheModel()
+    {
+        // The refresh token migration was written by hand; this fails if the snapshot and the model drift apart.
+        using var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AuthDbContext>();
+
+        Assert.False(db.Database.HasPendingModelChanges());
+    }
+
+    [Fact]
+    public async Task RefreshTokens_AreNotStoredInPlainText()
+    {
+        var client = factory.CreateClient();
+        var user = $"user_{Guid.NewGuid():N}"[..20];
+        await client.PostAsJsonAsync($"{Base}/register", new { username = user, email = $"{user}@example.com", password = "Sup3r!Secret-test" });
+        var login = await client.PostAsJsonAsync($"{Base}/login", new { identifier = user, password = "Sup3r!Secret-test" });
+        var raw = Find(await Body(login), "refreshToken")!;
+
+        using var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AuthDbContext>();
+        var stored = await db.Database.SqlQuery<string>($"SELECT token_hash AS \"Value\" FROM auth.refresh_tokens").ToListAsync();
+        var plainMatches = await db.Database.SqlQuery<int>($"SELECT count(*)::int AS \"Value\" FROM auth.refresh_tokens WHERE token = {raw}").SingleAsync();
+
+        Assert.Contains(OmniCore.Services.Auth.Domain.Entities.RefreshToken.HashToken(raw), stored);
+        Assert.Equal(0, plainMatches);
     }
 }

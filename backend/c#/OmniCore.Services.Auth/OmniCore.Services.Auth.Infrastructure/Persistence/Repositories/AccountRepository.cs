@@ -93,11 +93,14 @@ public class AccountRepository(AuthDbContext dbContext)
             return null;
         }
 
+        // Only hashes are stored, so look the token up by its hash (ADR 0003).
+        var tokenHash = RefreshToken.HashToken(refreshToken);
+
         return await DbSet
             .Include(a => a.RefreshTokens)
             .Include(a => a.AccountRoles)
                 .ThenInclude(ar => ar.Role)
-            .FirstOrDefaultAsync(a => a.RefreshTokens.Any(rt => rt.Token == refreshToken), cancellationToken);
+            .FirstOrDefaultAsync(a => a.RefreshTokens.Any(rt => rt.TokenHash == tokenHash), cancellationToken);
     }
 
     public async Task<bool> IsUsernameUniqueAsync(

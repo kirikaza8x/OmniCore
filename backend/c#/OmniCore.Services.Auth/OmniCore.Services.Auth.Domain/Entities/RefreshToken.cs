@@ -1,3 +1,5 @@
+using System.Security.Cryptography;
+using System.Text;
 using OmniCore.Services.Auth.Domain.ValueObjects;
 using OmniCore.Shared.Domain.Abstractions;
 using OmniCore.Shared.Domain.DDD;
@@ -14,10 +16,12 @@ namespace OmniCore.Services.Auth.Domain.Entities;
 public class RefreshToken : Entity<RefreshTokenId>
 {
     public AccountId AccountId { get; private set; } = null!;
-    public string Token { get; private set; } = string.Empty;
+    /// <summary>SHA-256 (lowercase hex) of the token the client holds. The raw token is never stored (ADR 0003).</summary>
+    public string TokenHash { get; private set; } = string.Empty;
     public DateTime ExpiresAtUtc { get; private set; }
     public bool IsRevoked { get; private set; }
-    public string? ReplacedByToken { get; private set; }
+    /// <summary>Hash of the token that replaced this one when it was rotated, if any.</summary>
+    public string? ReplacedByTokenHash { get; private set; }
     public DateTime CreatedAtUtc { get; private set; }
 
     public Account Account { get; private set; } = null!;
@@ -28,7 +32,7 @@ public class RefreshToken : Entity<RefreshTokenId>
     private RefreshToken(RefreshTokenId id, AccountId accountId, string token, TimeSpan duration) : base(id)
     {
         AccountId = accountId;
-        Token = token;
+        TokenHash = HashToken(token);
         ExpiresAtUtc = DateTime.UtcNow.Add(duration);
         IsRevoked = false;
         CreatedAtUtc = DateTime.UtcNow;
@@ -74,9 +78,22 @@ public class RefreshToken : Entity<RefreshTokenId>
         }
 
         IsRevoked = true;
-        ReplacedByToken = replacedByToken;
+        ReplacedByTokenHash = replacedByToken is null ? null : HashToken(replacedByToken);
         return Result.Success();
     }
+
+    /// <summary>
+    /// Hashes a raw refresh token for storage and lookup. Plain SHA-256, without a salt, is right here: the token is 64
+    /// random bytes, so there is nothing to brute-force or look up in a rainbow table (unlike a password).
+    /// </summary>
+    public static string HashToken(string token) =>
+        Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(token)));
+
+    /// <summary>True when the raw token presented by a client is the one this row was created for.</summary>
+    public bool Matches(string token) =>
+        CryptographicOperations.FixedTimeEquals(
+            Encoding.ASCII.GetBytes(TokenHash),
+            Encoding.ASCII.GetBytes(HashToken(token)));
 
     public bool IsExpired => DateTime.UtcNow >= ExpiresAtUtc;
     public bool IsActive => !IsRevoked && !IsExpired;

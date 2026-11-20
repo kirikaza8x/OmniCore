@@ -84,10 +84,10 @@ public class AccountRefreshTokenTests
         var result = account.RotateRefreshToken("old", "new", Week);
 
         Assert.True(result.IsSuccess);
-        var old = account.RefreshTokens.Single(t => t.Token == "old");
+        var old = account.RefreshTokens.Single(t => t.Matches("old"));
         Assert.True(old.IsRevoked);
-        Assert.Equal("new", old.ReplacedByToken);
-        Assert.True(account.RefreshTokens.Single(t => t.Token == "new").IsActive);
+        Assert.Equal(RefreshToken.HashToken("new"), old.ReplacedByTokenHash);
+        Assert.True(account.RefreshTokens.Single(t => t.Matches("new")).IsActive);
     }
 
     [Fact]
@@ -102,7 +102,7 @@ public class AccountRefreshTokenTests
         Assert.True(result.IsFailure);
         Assert.Equal("Auth.TokenReuseDetected", result.Error.Code);
         Assert.All(account.RefreshTokens, t => Assert.True(t.IsRevoked));
-        Assert.DoesNotContain(account.RefreshTokens, t => t.Token == "attacker");
+        Assert.DoesNotContain(account.RefreshTokens, t => t.Matches("attacker"));
     }
 
     [Fact]
@@ -136,6 +136,6 @@ public class AccountRefreshTokenTests
         account.AddRefreshToken("c", Week, maxActiveSessions: 2);
 
         Assert.Equal(2, account.RefreshTokens.Count(t => t.IsActive));
-        Assert.Contains(account.RefreshTokens, t => t.Token == "c" && t.IsActive);
+        Assert.Contains(account.RefreshTokens, t => t.Matches("c") && t.IsActive);
     }
 }

@@ -60,8 +60,8 @@ public class RefreshTokenCommandHandlerTests
         Assert.True(result.IsSuccess);
         Assert.Equal("new-1", result.Value.RefreshToken);
         Assert.Equal("access-token", result.Value.AccessToken);
-        Assert.False(account.RefreshTokens.Single(t => t.Token == "old-1").IsActive);
-        Assert.True(account.RefreshTokens.Single(t => t.Token == "new-1").IsActive);
+        Assert.False(account.RefreshTokens.Single(t => t.Matches("old-1")).IsActive);
+        Assert.True(account.RefreshTokens.Single(t => t.Matches("new-1")).IsActive);
         await _uow.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 
