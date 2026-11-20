@@ -8,7 +8,8 @@ using OmniCore.Services.Auth.Infrastructure.Persistence.Contexts;
 namespace OmniCore.Services.Auth.IntegrationTests;
 
 // Written without a .NET SDK or Docker: not compiled or run yet.
-public class RegisterLoginRefreshTests(AuthApiFactory factory) : IClassFixture<AuthApiFactory>
+[Collection(AuthApiCollection.Name)]
+public class RegisterLoginRefreshTests(AuthApiFactory factory)
 {
     private const string Base = "/api/v1/auth";
 

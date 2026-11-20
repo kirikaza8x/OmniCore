@@ -11,7 +11,8 @@ using Microsoft.IdentityModel.Tokens;
 namespace OmniCore.Services.Auth.IntegrationTests;
 
 /// <summary>ADR 0003 step 4: access tokens are RS256, the JWKS publishes only public keys, forged tokens are rejected.</summary>
-public class JwtRs256Tests(AuthApiFactory factory) : IClassFixture<AuthApiFactory>
+[Collection(AuthApiCollection.Name)]
+public class JwtRs256Tests(AuthApiFactory factory)
 {
     private const string Base = "/api/v1/auth";
     private const string Issuer = "omnicore-tests";
