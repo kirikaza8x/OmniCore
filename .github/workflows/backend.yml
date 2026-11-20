@@ -98,3 +98,28 @@ jobs:
           name: integration-test-results
           path: backend/c#/**/TestResults/*.trx
           if-no-files-found: ignore
+
+  # Checks that need no .NET: compose renders, the pinned image tags really exist in their registries, and the
+  # gateway config is valid for the image it runs in.
+  infra-config:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compose renders (dev and prod override)
+        shell: bash
+        working-directory: infra/docker
+        run: |
+          docker compose --env-file .env.example config --quiet
+          sed -e 's/^ALLOWED_HOSTS=$/ALLOWED_HOSTS=api.example.com/' -e 's#^CORS_ALLOWED_ORIGIN=$#CORS_ALLOWED_ORIGIN=https://app.example.com#' .env.example > "$RUNNER_TEMP/prod.env"
+          docker compose -f docker-compose.yml -f docker-compose.prod.yml --env-file "$RUNNER_TEMP/prod.env" config --quiet
+      - name: Pinned images exist
+        shell: bash
+        working-directory: infra/docker
+        run: |
+          fail=0
+          for img in $(grep -hE '^\s+image:' docker-compose*.yml | awk '{print $2}' | sort -u); do
+            if docker manifest inspect "$img" > /dev/null 2>&1; then echo "ok   $img"; else echo "::error::image tag not found: $img"; fail=1; fi
+          done
+          exit $fail
+      - name: Gateway config is valid
+        run: docker run --rm -v "$PWD/infra/docker/nginx/nginx.conf:/etc/nginx/nginx.conf:ro" nginx:1.27-alpine nginx -t

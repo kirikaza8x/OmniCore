@@ -12,7 +12,7 @@ C# backend exists today; other languages are planned, not in the repo.
 | `OmniCore.Services.Auth` | Accounts (register, login, logout, refresh-token rotation, current user), roles, JWT issuing. Own database. A Google token validator exists but no endpoint uses it. |
 | `OmniCore.Services.User` | **Design only, not running** (no endpoints, DbContext, repository or migrations): profiles, settings, addresses, tenant profiles. See U1/U2 in repo-check. |
 | `OmniCore.Shared` | Shared library: Domain (DDD base types, `Result`, `Error`), Application (MediatR behaviours), Infrastructure (EF, MassTransit + outbox, Redis, MinIO, config), Api (Carter, JWT bearer, CORS, rate limiting, Swagger), Contracts (integration events). |
-| nginx gateway | `infra/docker/` : routes `/api/v1/auth/` only today. |
+| nginx gateway | `infra/docker/` : routes `/api/v1/auth/` and `/api/v1/users/` (User not running yet), per-IP `limit_req`, no JWT validation (ADR 0002). |
 
 Each service has layers `Api / Application / Domain / Infrastructure / Contracts`. Stack: Carter, MediatR,
 FluentValidation, EF Core + PostgreSQL (snake_case), MassTransit (RabbitMQ; Kafka also supported), Redis, MinIO, Quartz, Serilog.
@@ -70,8 +70,8 @@ takes about a minute.
 
 ## Known issues (full list in docs/repo-check.md)
 `AllowedHosts` still defaults to `*` in the base compose file (the prod override requires it) (F3);
-gateway routes only auth and rate limiting collapses behind it (S2, S3); refresh tokens stored in plain text (A6);
-no brute-force protection (A8); no first admin account (A15); User service not running (U1); the Auth and Shared fixes
+the in-service rate limiter sees only the nginx address (S2, mitigated by the gateway limits); published service ports 5001/5002 bypass the gateway;
+refresh tokens stored in plain text (A6); no account lockout (A8, only the gateway IP limit); no first admin account (A15); User service not running (U1); the Auth and Shared fixes
 below now compile and pass CI, but only the register/login/refresh/reuse path is exercised by a test.
 
 ## Current progress
@@ -86,5 +86,8 @@ Reflects branch `docs/readme-and-roadmap`, 2026-11-20, last code/doc commit befo
 - [x] Phase 2 infra, 2026-11-20: `docker-compose.prod.yml`, safe compose defaults, `CHANGE_ME` `.env.example`, root `.env.example`
       removed, all images pinned. Only checked with `docker compose config`; **never started, image tags unverified**
       (the sandbox had Docker CLI but no daemon, no Docker Hub and no NuGet, so no .NET build either)
-- [ ] Next: owner makes `build-and-unit-test` + integration required checks (repo setting), more handler tests (logout, roles), then phase 3 (gateway: route User, `limit_req`), phase 4 (asymmetric JWT + JWKS, A6/A7)
+- [x] Phase 3 gateway, 2026-11-20: User route + spec, `limit_req` (credential endpoints and general), JSON 429, ADR 0002 (JWTs stay in the services),
+      CI job `infra-config` (compose renders, image tags exist, `nginx -t`). Behavior tested with nginx 1.24 and fake backends in the sandbox;
+      found and fixed a limit bypass via `/Login/` (case, trailing slash). Not run against the real containers
+- [ ] Next: owner makes `build-and-unit-test` + integration required checks (repo setting), more handler tests (logout, roles), then close ports 5001/5002 in the prod override, phase 4 (asymmetric JWT + JWKS, A6/A7)
 - [ ] Owner decisions pending: ADR 0001 questions, A9 (generic login error), A15 (first admin), keep or drop the User service in compose

@@ -21,8 +21,10 @@ off as they land; the status here is also mirrored in `CLAUDE.md`.
 - [ ] Still open from this phase: `appsettings.Development.json.example` (S11), health check with DB/broker probes and migrations not run in every replica (A18), TLS in front of the gateway
 
 ## Phase 3: gateway (F2, F6)
-- [ ] Route the User service and its spec (`/api/v1/users/...`, `/specs/user.json`)
-- [ ] Rate limiting (`limit_req`); decide whether the gateway or each service validates JWTs
+- [x] Route the User service and its spec (`/api/v1/users/...` with a 6 MB body limit, `/specs/user.json`); they answer 502 until the User service runs (U1)
+- [x] Rate limiting in the gateway (`limit_req`: credential endpoints 10/min burst 5, rest of `/api/` 20/s burst 20, JSON 429); JWTs stay validated by each service: [ADR 0002](decisions/0002-gateway-auth-and-rate-limits.md)
+- [x] CI job `infra-config`: compose renders, pinned image tags exist in their registries, `nginx -t` with the real image
+- [ ] Still open from this phase: close the published service ports 5001/5002 in the prod override (they bypass the gateway), real client IP behind a TLS proxy (`set_real_ip_from`), per-account lockout (A8)
 
 ## Phase 4: auth hardening (F5)
 - [ ] Asymmetric signing (RS256/ES256) with a JWKS endpoint, so any language can verify without minting

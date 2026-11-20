@@ -32,7 +32,7 @@ The solution (`OmniCore.slnx`) lists the 15 projects; it has no test project.
 client -> nginx gateway (`infra/docker/nginx/nginx.conf`, prefix routing, one block per service) -> service `.Api`
 (Carter endpoints) -> MediatR command/query (pipeline behaviours) -> domain -> EF Core. Auth issues JWTs signed with
 one shared symmetric key (`Jwt__Secret`, HS256); every other service validates them (algorithm pinned to HS256) with the
-same secret, issuer and audience. Today the gateway routes only `/api/v1/auth/` and `/specs/auth.json`.
+same secret, issuer and audience. The gateway routes `/api/v1/auth/` and `/api/v1/users/` (the User service does not run yet, so that prefix answers 502) with their specs, and applies per-IP rate limits ([ADR 0002](decisions/0002-gateway-auth-and-rate-limits.md)); JWTs are validated by each service.
 
 ## Messaging
 Integration events (`Shared.Contracts`) go through MassTransit. `MessageBroker__Provider` is `RabbitMQ` or `Kafka`
