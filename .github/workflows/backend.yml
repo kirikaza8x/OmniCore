@@ -75,17 +75,14 @@ jobs:
       - name: Integration tests
         shell: bash
         run: set -o pipefail; dotnet test tests/OmniCore.Services.Auth.IntegrationTests -c Release --logger "trx;LogFileName=integration.trx" 2>&1 | tee "$RUNNER_TEMP/integration.log"
-      - name: Summarise failures
+      # Failure text is emitted as an annotation: unlike the job summary, annotations are readable through the public API.
+      - name: Annotate failures
         if: always()
         shell: bash
         run: |
-          {
-            echo "## Integration test output"
-            echo '```'
-            { grep -E -A25 "^\s*Failed |error " "$RUNNER_TEMP/integration.log" | sed 's#/home/runner/work/[^/]*/[^/]*/##' | head -120; } 2>/dev/null || true
-            grep -E "Passed!|Failed!|Total tests" "$RUNNER_TEMP/integration.log" 2>/dev/null || true
-            echo '```'
-          } >> "$GITHUB_STEP_SUMMARY"
+          TXT=$( { grep -E -A30 "^\s*Failed |error |Unhandled|Exception" "$RUNNER_TEMP/integration.log" | sed 's#/home/runner/work/[^/]*/[^/]*/##' | head -80; grep -E "Passed!|Failed!" "$RUNNER_TEMP/integration.log"; } 2>/dev/null || true )
+          TXT="${TXT//'%'/'%25'}"; TXT="${TXT//$'\r'/}"; TXT="${TXT//$'\n'/'%0A'}"
+          echo "::error title=integration-test-output::${TXT:0:6000}"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
