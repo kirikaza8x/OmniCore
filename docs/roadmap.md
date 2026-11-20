@@ -28,6 +28,8 @@ off as they land; the status here is also mirrored in `CLAUDE.md`.
 
 ## Phase 4: auth hardening (F5)
 - [ ] Asymmetric signing (RS256/ES256) with a JWKS endpoint, so any language can verify without minting
+- [ ] Hashed refresh tokens (A6), safe rotation (A7), session cap and purge (A10): all designed in [ADR 0003](decisions/0003-auth-token-hardening.md), **waiting for the owner** (token format and schema change)
+- [x] A11: unique-index race on register answers 409 instead of 500 (built by CI, no test yet)
 
 ## Phase 5: contracts (F9)
 - [ ] OpenAPI per service; AsyncAPI / JSON schemas for integration events in `shared/contracts/`, versioned

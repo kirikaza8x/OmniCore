@@ -65,6 +65,7 @@ takes about a minute.
 - Do not claim tests or builds pass without running them. Mark code written without a build as unbuilt.
 - Do not commit secrets. Example values must be obviously fake (`CHANGE_ME`).
 - Do not start implementing multi-tenancy before the owner confirms ADR 0001.
+- Do not start the token and schema changes in ADR 0003 before the owner answers its questions.
 - Do not re-enable `Provider=Both` for the message broker (it is rejected at startup); do not register `CachingBehavior`
   without reviewing cache invalidation (S6).
 
@@ -90,5 +91,7 @@ Reflects branch `docs/readme-and-roadmap`, 2026-11-20, last code/doc commit befo
 - [x] Phase 3 gateway, 2026-11-20: User route + spec, `limit_req` (credential endpoints and general), JSON 429, ADR 0002 (JWTs stay in the services),
       CI job `infra-config` (compose renders, image tags exist, `nginx -t`). Behavior tested with nginx 1.24 and fake backends in the sandbox;
       found and fixed a limit bypass via `/Login/` (case, trailing slash). Not run against the real containers
+- [x] Phase 4 design, 2026-11-20: ADR 0003 written (**proposed, waiting for the owner**: RS256 + JWKS, hashed refresh tokens with a backfilling migration,
+      xmin rotation guard, session cap + purge). A11 fixed (409 on unique race). Do not start steps 1-4 of ADR 0003 before the owner answers its questions
 - [ ] Next: owner makes `build-and-unit-test` + integration required checks (repo setting), more handler tests (logout, roles), then close ports 5001/5002 in the prod override, phase 4 (asymmetric JWT + JWKS, A6/A7)
-- [ ] Owner decisions pending: MinIO image (F7: keep the coollabsio fork, build from source, or switch store), ADR 0001 questions, A9 (generic login error), A15 (first admin), keep or drop the User service in compose
+- [ ] Owner decisions pending: MinIO image (F7: keep the coollabsio fork, build from source, or switch store), ADR 0001 and ADR 0003 questions, A9 (generic login error), A15 (first admin), keep or drop the User service in compose
