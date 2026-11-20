@@ -74,6 +74,7 @@ SecurityToken entities beyond their existence, and the other Role handlers. **No
 | A17 | low | Access tokens cannot be revoked (logout only revokes one refresh token; 15 min default lifetime); no logout-all | accepted for now |
 | A18 | low | Migrations run at startup in every replica (`UseAuthInfrastructureAsync`); `/health` is a bare liveness check with no database or broker probe | open, phase 2 |
 | A19 | high | `PasswordHasher` did not end in `Service`, so the Scrutor scan in `AddAuthInfrastructure` never registered `IPasswordHasherService`: Register and Login handlers could not be constructed (the app would fail at the first register/login request in Production, at startup with validation on) | **fixed**: class and file renamed `PasswordHasherService`; found by the first CI integration run. Convention to keep: the scan registers only `*Service` and `*Repository` classes |
+| A20 | medium | `Account.IsActive` was never set to `true` in the domain; it relied on the column `HasDefaultValue(true)`, so a new account was inactive in memory until reloaded (any code or test that checks `IsActive` before a save would reject it) | **fixed**: set in the constructor, no schema change; found by the first handler tests |
 
 ## 2c. OmniCore.Services.User review
 

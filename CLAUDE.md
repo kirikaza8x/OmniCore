@@ -79,12 +79,12 @@ Reflects branch `docs/readme-and-roadmap`, 2026-11-20, last code/doc commit befo
 
 - [x] Phase 0 docs refactor (README, architecture, repo-check, roadmap, integrations/owl-editor, decisions)
 - [x] Review 2a Shared, 2b Auth, 2c User (findings S1-S13, A1-A18, U1-U10)
-- [x] Safe fixes committed, **built by CI 2026-11-20** (first CI run also found and fixed a validator syntax error, missing xunit usings and an unregistered password hasher): broker default, JWT algorithm pin + startup validation, LogHub auth, dead rate-limit code,
+- [x] Safe fixes committed, **built by CI 2026-11-20** (CI and the handler tests also found and fixed a validator syntax error, missing xunit usings, an unregistered password hasher (A19) and `IsActive` never set (A20)): broker default, JWT algorithm pin + startup validation, LogHub auth, dead rate-limit code,
       refresh-reuse persistence, admin-only UpdateRole / GetAccountById, no password hash in Redis, input limits, avatar order
-- [x] Phase 1: `backend.yml`, Auth domain unit tests and the Testcontainers integration test are **green on GitHub** (2026-11-20). Not yet a required check; no handler tests yet
+- [x] Phase 1: `backend.yml`, Auth domain unit tests and the Testcontainers integration test are **green on GitHub** (2026-11-20). Not yet a required check. Handler tests for register / login / refresh exist (13); 14 domain + 2 integration tests
 - [x] ADR 0001 multi-tenancy written (**proposed, waiting for the owner**)
 - [x] Phase 2 infra, 2026-11-20: `docker-compose.prod.yml`, safe compose defaults, `CHANGE_ME` `.env.example`, root `.env.example`
       removed, all images pinned. Only checked with `docker compose config`; **never started, image tags unverified**
       (the sandbox had Docker CLI but no daemon, no Docker Hub and no NuGet, so no .NET build either)
-- [ ] Next: make `build-and-unit-test` a required check and add handler tests (login, refresh, register), then phase 3 (gateway: route User, `limit_req`), phase 4 (asymmetric JWT + JWKS, A6/A7)
+- [ ] Next: owner makes `build-and-unit-test` + integration required checks (repo setting), more handler tests (logout, roles), then phase 3 (gateway: route User, `limit_req`), phase 4 (asymmetric JWT + JWKS, A6/A7)
 - [ ] Owner decisions pending: ADR 0001 questions, A9 (generic login error), A15 (first admin), keep or drop the User service in compose

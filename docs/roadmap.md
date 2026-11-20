@@ -11,7 +11,8 @@ off as they land; the status here is also mirrored in `CLAUDE.md`.
 - [x] `tests/` projects in `OmniCore.slnx`: Auth domain unit tests (**compile and pass in CI**)
 - [x] One integration test (Testcontainers: Postgres + RabbitMQ): register -> login -> refresh -> reuse rejected (**passes in CI, 2026-11-20**; found the unregistered password hasher; `continue-on-error` removed)
 - [x] Both CI jobs pass on GitHub
-- [ ] Make `build-and-unit-test` (and integration) a required check in branch protection (repo setting, owner); add handler tests (login, refresh, register)
+- [x] Handler tests for register, login and refresh (`tests/OmniCore.Services.Auth.Application.Tests`, 13 tests, NSubstitute); they found A20
+- [ ] Make `build-and-unit-test` (and integration) a required check in branch protection (repo setting, owner)
 
 ## Phase 2: dev vs prod configuration (F3, F4, F7)
 - [x] `docker-compose.prod.yml` override: Production, Swagger off, sensitive logging / detailed errors / any-origin CORS off, `ALLOWED_HOSTS` and `CORS_ALLOWED_ORIGIN` required, data-store ports not published; compose defaults for the three dev switches are now safe (`false`), and `.env.example` turns them on for local dev (**validated with `docker compose config` only, never started**)
