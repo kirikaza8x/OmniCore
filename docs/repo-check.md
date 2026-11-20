@@ -4,6 +4,12 @@ Written from a read-through of the repo and verified against the code. **Nothing
 review environment), and there are no tests. Each finding names the [roadmap](roadmap.md) phase that fixes it.
 Findings from the code review of each service are appended below as they are done.
 
+**Update 2026-11-20:** the solution now builds and the Auth unit and integration tests pass in GitHub Actions, so the
+"fixed, not built" notes below are now built (compile and CI only: only the register / login / refresh / reuse path is
+tested). Building found three things the read-through missed (A19 below, a syntax error in `RegisterCommandValidator`,
+missing xunit usings in the test projects), which is why review without a build is not enough. Docker-related items
+(F3, F4, F7) are still only checked with `docker compose config`.
+
 | # | Finding | Why it matters | Phase |
 |---|---|---|---|
 | 1 | **No automated tests and no CI**: no `tests/`, no `.github/`, and `OmniCore.slnx` has no test project | A broken build or a regression is only found by hand | 1 |
@@ -67,6 +73,7 @@ SecurityToken entities beyond their existence, and the other Role handlers. **No
 | A16 | low | `RefreshToken` uses `DateTime.UtcNow` directly (not `IDateTimeProvider`), which makes expiry hard to unit-test; `AccountDto` still carries `PasswordHash` | open, phase 1 (with tests) |
 | A17 | low | Access tokens cannot be revoked (logout only revokes one refresh token; 15 min default lifetime); no logout-all | accepted for now |
 | A18 | low | Migrations run at startup in every replica (`UseAuthInfrastructureAsync`); `/health` is a bare liveness check with no database or broker probe | open, phase 2 |
+| A19 | high | `PasswordHasher` did not end in `Service`, so the Scrutor scan in `AddAuthInfrastructure` never registered `IPasswordHasherService`: Register and Login handlers could not be constructed (the app would fail at the first register/login request in Production, at startup with validation on) | **fixed**: class and file renamed `PasswordHasherService`; found by the first CI integration run. Convention to keep: the scan registers only `*Service` and `*Repository` classes |
 
 ## 2c. OmniCore.Services.User review
 

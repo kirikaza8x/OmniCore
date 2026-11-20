@@ -7,10 +7,11 @@ off as they land; the status here is also mirrored in `CLAUDE.md`.
 - [x] README, architecture, repo-check, roadmap, owl-editor integration split and checked against the code (F5 of the old list)
 
 ## Phase 1: safety net (F1)
-- [x] GitHub Actions `backend.yml`: restore, build, unit tests on every PR (**written, not run yet**; first hosted run is the first check)
-- [x] `tests/` projects in `OmniCore.slnx`: Auth domain unit tests (**written, not compiled or run**)
-- [x] One integration test (Testcontainers: Postgres + RabbitMQ): register -> login -> refresh -> reuse rejected (**written, not compiled or run**; the CI job is `continue-on-error` until it passes once)
-- [ ] Make both CI jobs pass on GitHub, then make `build-and-unit-test` a required check; add handler tests (login, refresh, register)
+- [x] GitHub Actions `backend.yml`: restore, build, unit tests on every PR and on `develop`/`main`/`docs/**`/`fix/**` pushes (**green 2026-11-20**)
+- [x] `tests/` projects in `OmniCore.slnx`: Auth domain unit tests (**compile and pass in CI**)
+- [x] One integration test (Testcontainers: Postgres + RabbitMQ): register -> login -> refresh -> reuse rejected (**passes in CI, 2026-11-20**; found the unregistered password hasher; `continue-on-error` removed)
+- [x] Both CI jobs pass on GitHub
+- [ ] Make `build-and-unit-test` (and integration) a required check in branch protection (repo setting, owner); add handler tests (login, refresh, register)
 
 ## Phase 2: dev vs prod configuration (F3, F4, F7)
 - [x] `docker-compose.prod.yml` override: Production, Swagger off, sensitive logging / detailed errors / any-origin CORS off, `ALLOWED_HOSTS` and `CORS_ALLOWED_ORIGIN` required, data-store ports not published; compose defaults for the three dev switches are now safe (`false`), and `.env.example` turns them on for local dev (**validated with `docker compose config` only, never started**)
