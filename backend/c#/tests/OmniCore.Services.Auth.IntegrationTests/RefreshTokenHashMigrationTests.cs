@@ -37,13 +37,13 @@ public sealed class RefreshTokenHashMigrationTests : IAsyncLifetime
         await using (var connection = new NpgsqlConnection(_postgres.GetConnectionString()))
         {
             await connection.OpenAsync();
-            // The accounts the tokens belong to are not needed for this test: skip the foreign key check for the insert.
+            // The accounts the tokens belong to are not needed for this test, so the foreign key is dropped for it
+            // (it would otherwise be re-checked when the migration updates the rows).
             await using var insert = new NpgsqlCommand(@"
-                SET session_replication_role = replica;
+                ALTER TABLE auth.refresh_tokens DROP CONSTRAINT fk_refresh_tokens_accounts_account_id;
                 INSERT INTO auth.refresh_tokens (id, account_id, token, expires_at_utc, is_revoked, replaced_by_token, created_at_utc)
                 VALUES (gen_random_uuid(), gen_random_uuid(), @plain, now() + interval '7 days', true, @replacement, now()),
-                       (gen_random_uuid(), gen_random_uuid(), @replacement, now() + interval '7 days', false, NULL, now());
-                SET session_replication_role = DEFAULT;", connection);
+                       (gen_random_uuid(), gen_random_uuid(), @replacement, now() + interval '7 days', false, NULL, now());", connection);
             insert.Parameters.AddWithValue("plain", plain);
             insert.Parameters.AddWithValue("replacement", replacement);
             await insert.ExecuteNonQueryAsync();
