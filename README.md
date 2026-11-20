@@ -45,9 +45,15 @@ Quartz (scheduling), Serilog, nginx (gateway), Swagger UI. `Shared.Infrastructur
 Everything runs in Docker (PostgreSQL, RabbitMQ, Kafka, Redis, MinIO, the services, an nginx gateway):
 ```
 cd infra/docker
-cp .env.example .env        # change the passwords and JWT_SECRET: the example values are for local use only
+cp .env.example .env        # replace every CHANGE_ME (passwords, JWT_SECRET): the example values are placeholders
 docker compose up -d --build
 ```
+On a server, add the production override (it needs `ALLOWED_HOSTS` and `CORS_ALLOWED_ORIGIN` in `.env`):
+```
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+```
+It forces Production, turns Swagger, sensitive logging, detailed DB errors and any-origin CORS off, and stops publishing
+the data stores on the host. TLS is not handled here; put a TLS-terminating proxy in front of the gateway.
 The gateway listens on `GATEWAY_PORT` (default 8080); Swagger UI is at `/swagger` while the `dev` profile is on.
 Or open `backend/c#/OmniCore.slnx` and run a service's `.Api` project against the infra containers. Note that
 `appsettings*.json` are git-ignored and not in the repo: settings come from environment variables (the keys are in
@@ -55,4 +61,4 @@ Or open `backend/c#/OmniCore.slnx` and run a service's `.Api` project against th
 `appsettings.Development.json` or those variables set.
 Add a service with `backend/c#/scripts/shells/scaffold_service.ps1`.
 
-**Note:** the `.env.example` at the repository root is **empty**. The real one is `infra/docker/.env.example`.
+**Note:** the only `.env.example` is `infra/docker/.env.example` (the empty one at the repository root was removed).

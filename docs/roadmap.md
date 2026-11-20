@@ -13,9 +13,10 @@ off as they land; the status here is also mirrored in `CLAUDE.md`.
 - [ ] Make both CI jobs pass on GitHub, then make `build-and-unit-test` a required check; add handler tests (login, refresh, register)
 
 ## Phase 2: dev vs prod configuration (F3, F4, F7)
-- [ ] `docker-compose.prod.yml` override (or environment-driven defaults): sensitive logging, detailed errors, open CORS and `AllowedHosts=*` off
-- [ ] `.env.example` placeholders (`CHANGE_ME`); fix or remove the empty root `.env.example`
-- [ ] Pin every image tag
+- [x] `docker-compose.prod.yml` override: Production, Swagger off, sensitive logging / detailed errors / any-origin CORS off, `ALLOWED_HOSTS` and `CORS_ALLOWED_ORIGIN` required, data-store ports not published; compose defaults for the three dev switches are now safe (`false`), and `.env.example` turns them on for local dev (**validated with `docker compose config` only, never started**)
+- [x] `.env.example` placeholders (`CHANGE_ME`, RabbitMQ user no longer `guest`); empty root `.env.example` removed
+- [x] Pin every image tag (**tags are from memory; the sandbox could not reach Docker Hub, so confirm each exists with the first `docker compose pull`**)
+- [ ] Still open from this phase: `appsettings.Development.json.example` (S11), health check with DB/broker probes and migrations not run in every replica (A18), TLS in front of the gateway
 
 ## Phase 3: gateway (F2, F6)
 - [ ] Route the User service and its spec (`/api/v1/users/...`, `/specs/user.json`)
