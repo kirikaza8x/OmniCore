@@ -65,14 +65,14 @@ takes about a minute.
 - Do not claim tests or builds pass without running them. Mark code written without a build as unbuilt.
 - Do not commit secrets. Example values must be obviously fake (`CHANGE_ME`).
 - Do not start implementing multi-tenancy before the owner confirms ADR 0001.
-- Do not start the token and schema changes in ADR 0003 before the owner answers its questions.
+- ADR 0003 is accepted (decided by delegation, reasons in `docs/auth-tokens.md`); follow it, and do not change token format or schema outside it without a new ADR.
 - Do not re-enable `Provider=Both` for the message broker (it is rejected at startup); do not register `CachingBehavior`
   without reviewing cache invalidation (S6).
 
 ## Known issues (full list in docs/repo-check.md)
 `AllowedHosts` still defaults to `*` in the base compose file (the prod override requires it) (F3);
 the in-service rate limiter sees only the nginx address (S2, mitigated by the gateway limits); published service ports 5001/5002 bypass the gateway;
-refresh tokens stored in plain text (A6); no account lockout (A8, only the gateway IP limit); no first admin account (A15); User service not running (U1); the Auth and Shared fixes
+old plain `token` column still present until the follow-up migration drops it (A6 step 1 done); no session cap/purge yet (A10); HS256 shared secret (step 4 pending); no account lockout (A8, only the gateway IP limit); no first admin account (A15); User service not running (U1); the Auth and Shared fixes
 below now compile and pass CI, but only the register/login/refresh/reuse path is exercised by a test.
 
 ## Current progress
@@ -91,7 +91,6 @@ Reflects branch `docs/readme-and-roadmap`, 2026-11-20, last code/doc commit befo
 - [x] Phase 3 gateway, 2026-11-20: User route + spec, `limit_req` (credential endpoints and general), JSON 429, ADR 0002 (JWTs stay in the services),
       CI job `infra-config` (compose renders, image tags exist, `nginx -t`). Behavior tested with nginx 1.24 and fake backends in the sandbox;
       found and fixed a limit bypass via `/Login/` (case, trailing slash). Not run against the real containers
-- [x] Phase 4 design, 2026-11-20: ADR 0003 written (**proposed, waiting for the owner**: RS256 + JWKS, hashed refresh tokens with a backfilling migration,
-      xmin rotation guard, session cap + purge). A11 fixed (409 on unique race). Do not start steps 1-4 of ADR 0003 before the owner answers its questions
-- [ ] Next: owner makes `build-and-unit-test` + integration required checks (repo setting), more handler tests (logout, roles), then close ports 5001/5002 in the prod override, phase 4 (asymmetric JWT + JWKS, A6/A7)
-- [ ] Owner decisions pending: MinIO image (F7: keep the coollabsio fork, build from source, or switch store), ADR 0001 and ADR 0003 questions, A9 (generic login error), A15 (first admin), keep or drop the User service in compose
+- [x] Phase 4 (ADR 0003, **accepted by delegation**, reasons in `docs/auth-tokens.md`), 2026-11-20: step 1 hashed refresh tokens + backfilling migration, step 2 xmin rotation guard + parallel-refresh test, A11 (409 on unique race): **built and green in CI** (7 integration, 17 domain, 13 application tests). Steps 3 (session cap 10 + Quartz purge 30 d) and 4 (RS256 + JWKS) not started
+- [ ] Next: owner makes `build-and-unit-test` + integration required checks (repo setting), more handler tests (logout, roles), then ADR 0003 steps 3-4, drop the plain token columns, close ports 5001/5002 in the prod override
+- [ ] Owner decisions pending: MinIO image (F7: keep the coollabsio fork, build from source, or switch store), ADR 0001 questions, A9 (generic login error), A15 (first admin), keep or drop the User service in compose

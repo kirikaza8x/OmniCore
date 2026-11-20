@@ -27,8 +27,9 @@ off as they land; the status here is also mirrored in `CLAUDE.md`.
 - [ ] Still open from this phase: close the published service ports 5001/5002 in the prod override (they bypass the gateway), real client IP behind a TLS proxy (`set_real_ip_from`), per-account lockout (A8)
 
 ## Phase 4: auth hardening (F5)
-- [ ] Asymmetric signing (RS256/ES256) with a JWKS endpoint, so any language can verify without minting
-- [ ] Hashed refresh tokens (A6), safe rotation (A7), session cap and purge (A10): all designed in [ADR 0003](decisions/0003-auth-token-hardening.md), **waiting for the owner** (token format and schema change)
+- [ ] Asymmetric signing (RS256) with a JWKS endpoint, so any language can verify without minting (ADR 0003 step 4)
+- [x] Hashed refresh tokens (A6, backfilling migration) and safe rotation (A7, xmin): [ADR 0003](decisions/0003-auth-token-hardening.md) steps 1-2, **green in CI 2026-11-20**; reasons in [auth-tokens.md](auth-tokens.md)
+- [ ] Session cap and purge (A10), RS256 + JWKS (step 4), later migration dropping the plain `token` columns
 - [x] A11: unique-index race on register answers 409 instead of 500 (built by CI, no test yet)
 
 ## Phase 5: contracts (F9)
