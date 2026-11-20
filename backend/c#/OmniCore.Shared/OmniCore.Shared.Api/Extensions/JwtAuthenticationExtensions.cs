@@ -1,11 +1,11 @@
 namespace OmniCore.Shared.Api.Extensions;
-using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using OmniCore.Shared.Api.Results;
 using OmniCore.Shared.Infrastructure.Configs.Security;
+using OmniCore.Shared.Infrastructure.Security;
 
 public static class JwtAuthenticationExtensions
 {
@@ -28,7 +28,6 @@ public static class JwtAuthenticationExtensions
                 ValidateIssuer = true,
                 ValidateAudience = true,
                 ValidateLifetime = true,
-                ValidAlgorithms = new[] { SecurityAlgorithms.HmacSha256 }, // tokens are signed HS256 only; reject any other alg
                 ClockSkew = TimeSpan.Zero
             };
 
@@ -58,15 +57,21 @@ public static class JwtAuthenticationExtensions
 
         // 2. Bind JwtConfig deferred via DI Options
         services.AddOptions<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme)
-            .Configure<IOptions<JwtConfig>>((options, jwtConfigs) =>
+            .Configure<IOptions<JwtConfig>, JwtKeySet>((options, jwtConfigs, keySet) =>
             {
                 var jwtSettings = jwtConfigs.Value;
-                var key = Encoding.UTF8.GetBytes(jwtSettings.Secret);
 
-                options.TokenValidationParameters.IssuerSigningKey = new SymmetricSecurityKey(key);
+                // Keys come from the key set: local public keys (Auth) or the cached JWKS (other services), plus the
+                // legacy HS256 secret while it is configured. Only the algorithms the key set lists are accepted.
+                options.TokenValidationParameters.ValidAlgorithms = keySet.ValidAlgorithms;
+                options.TokenValidationParameters.IssuerSigningKeyResolver =
+                    (token, securityToken, kid, parameters) => keySet.ResolveKeys(kid);
                 options.TokenValidationParameters.ValidIssuer = jwtSettings.Issuer;
                 options.TokenValidationParameters.ValidAudience = jwtSettings.Audience;
             });
+
+        // The key set is shared by validation (here) and by the Auth service when it signs tokens.
+        services.AddSingleton<JwtKeySet>();
 
         // 3. Register Authorization Framework
         services.AddAuthorization();

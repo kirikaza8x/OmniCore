@@ -11,6 +11,9 @@ namespace OmniCore.Services.Auth.IntegrationTests;
 /// </summary>
 public sealed class AuthApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
 {
+    /// <summary>The key Auth signs with in the tests; tests also use it to check tokens and the JWKS.</summary>
+    public static readonly System.Security.Cryptography.RSA SigningKey = System.Security.Cryptography.RSA.Create(2048);
+
     private readonly PostgreSqlContainer _postgres = new PostgreSqlBuilder().WithImage("postgres:16-alpine").Build();
     private readonly RabbitMqContainer _rabbit = new RabbitMqBuilder().WithImage("rabbitmq:3.13-alpine")
         .WithPortBinding(5672, 5672)   // MessageBrokerConfig has no Port setting, so the broker must be on 5672
@@ -30,7 +33,9 @@ public sealed class AuthApiFactory : WebApplicationFactory<Program>, IAsyncLifet
             ["MessageBroker__Password"] = "guest",
             ["MessageBroker__OutboxDbProvider"] = "Postgres",
             ["MessageBroker__EnableOutbox"] = "true",
-            ["Jwt__Secret"] = "CHANGE_ME_test_only_secret_at_least_32_chars",
+            // The API runs in the post-cut-over state (ADR 0003 step 4): RS256 only, no legacy HS256 secret.
+            ["Jwt__PrivateKeyPem"] = SigningKey.ExportPkcs8PrivateKeyPem(),
+            ["Jwt__Secret"] = "",
             ["Jwt__Issuer"] = "omnicore-tests",
             ["Jwt__Audience"] = "omnicore-tests",
             ["GoogleAuth__ServerClientId"] = "CHANGE_ME",

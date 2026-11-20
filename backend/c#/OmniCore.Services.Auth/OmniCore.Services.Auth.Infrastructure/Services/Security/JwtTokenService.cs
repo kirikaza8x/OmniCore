@@ -3,21 +3,21 @@ namespace OmniCore.Services.Auth.Infrastructure.Services.Security;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
-using System.Text;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using OmniCore.Services.Auth.Application.Abstractions.Security;
 using OmniCore.Shared.Application.Abstractions.Time;
 using OmniCore.Shared.Infrastructure.Configs.Security;
+using OmniCore.Shared.Infrastructure.Security;
 
 public sealed class JwtTokenService(
     IOptions<JwtConfig> options,
+    JwtKeySet keySet,
     IDateTimeProvider dateTimeProvider,
     ILogger<JwtTokenService> logger) : IJwtTokenService
 {
     private readonly JwtConfig _config = options.Value;
-    private readonly byte[] _key = Encoding.UTF8.GetBytes(options.Value.Secret);
 
     public int ExpiryMinutes => _config.ExpiryMinutes;
     public int RefreshTokenExpiryDays => _config.RefreshTokenExpiryDays;
@@ -48,9 +48,12 @@ public sealed class JwtTokenService(
             Expires = dateTimeProvider.UtcNow.AddMinutes(ExpiryMinutes),
             Issuer = _config.Issuer,
             Audience = _config.Audience,
-            SigningCredentials = new SigningCredentials(
-                new SymmetricSecurityKey(_key),
-                SecurityAlgorithms.HmacSha256Signature)
+            // RS256 with the private key when configured (ADR 0003 step 4); the legacy HS256 secret otherwise.
+            SigningCredentials = keySet.Signing is not null
+                ? new SigningCredentials(keySet.Signing, SecurityAlgorithms.RsaSha256)
+                : new SigningCredentials(
+                    keySet.Hs256Key ?? throw new InvalidOperationException("No JWT signing key is configured."),
+                    SecurityAlgorithms.HmacSha256Signature)
         };
 
         var tokenHandler = new JwtSecurityTokenHandler();
@@ -99,9 +102,9 @@ public sealed class JwtTokenService(
     {
         return new TokenValidationParameters
         {
-            ValidAlgorithms = new[] { SecurityAlgorithms.HmacSha256 },
+            ValidAlgorithms = keySet.ValidAlgorithms,
             ValidateIssuerSigningKey = true,
-            IssuerSigningKey = new SymmetricSecurityKey(_key),
+            IssuerSigningKeyResolver = (_, _, kid, _) => keySet.ResolveKeys(kid),
 
             ValidateIssuer = true,
             ValidIssuer = _config.Issuer,
