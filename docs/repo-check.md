@@ -68,6 +68,13 @@ change that still needs `dotnet build` and a smoke test by the owner. Status: **
 | I6 | low | Handlers of one integration event run in parallel and are all retried when one fails (must be idempotent); the Kafka path has no retry or outbox | open |
 | I7 | low | Four `Microsoft.CodeAnalysis.*` packages referenced, unused by code (maybe EF tooling pins) | open, check before removing |
 | I8 | low | `CurrentUserService.DeviceId` trusts the client `X-Device-ID` header | open |
+| W1 | medium | `UseRateLimiter` runs before `UseAuthentication`, so the per-user partition never applies and every client shares the IP bucket (S2: the IP is the gateway's) | open |
+| W2 | low | Named rate-limit policies are registered but never applied (`RequireRateLimiting` unused); only the global policy limits | open |
+| W3 | low | Two response shapes (`ApiResult` on success, `ProblemDetails` on failure); `isSuccess` redundant | open, by design for now |
+| W4 | low | Problem `Title` is the error code; validation codes are property names, not stable codes | open |
+| W5 | low | `GlobalExceptionHandler` depends on `PostgresException` | open, accepted |
+| W6 | low | `RequireRoles` is case-sensitive, `CurrentUserService.IsInRole` is not | open |
+| W7 | low | `RequireHttpsMetadata=false`, `SaveToken=true` unused, double `AddSignalR`, `FIleUpload.cs` file-name typo | open |
 
 ## 2b. OmniCore.Services.Auth review
 
