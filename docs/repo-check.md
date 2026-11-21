@@ -60,6 +60,14 @@ change that still needs `dotnet build` and a smoke test by the owner. Status: **
 | AP3 | low | `PerformanceBehavior` keeps an instance `Stopwatch` that is never reset (correct only while transient) | open |
 | AP4 | low | Unused: `IEmailSender` (no implementation), `IOutboxService`, `IStreamCommand*`, `PagedRequest` family (`PageNumber` not clamped), `BaseDto`/`AuditableDto`, `SlugHelper` | open |
 | AP5 | low | Unused `Serilog` package in Shared.Application; AutoMapper profiles and hand-written mapping extensions coexist | open |
+| I1 | medium (latent) | `ApplyDynamicFilters` / `ApplyDynamicSorting` paste client `Field` and `Logic` into a Dynamic LINQ string: filter/sort on any property (e.g. `PasswordHash.Value`) and `or` injection; parse errors return the unfiltered query. No endpoint exposes it yet | open, fix with a per-query field allow-list before any endpoint uses `AdvancedPagedQuery` / `PagedQuery.SortColumn` |
+| I2 | low | `CacheService.RemoveByPrefixAsync` scans `<prefix>*` but Redis keys are stored as `<InstanceName><key>`, so it matches nothing (no caller yet) | open |
+| I3 | medium (when a 2nd consumer appears) | RabbitMQ queue names and Kafka group ids (`<topic>-consumer`) are not service-scoped: two services handling the same event would split messages instead of both receiving them | open, before User consumes `AccountRegisteredIntegrationEvent` |
+| I4 | low | Dead/unwired: correlation-id middleware + accessor (accessor unregistered), `UseDeviceId`, `AddSignalRLogger`, `AddCacheServices`, duplicate `EventBus`, commented-out health checks and resilience, `QdrantConfig` | open |
+| I5 | low | `AddControllers()` registered although every endpoint is a Carter module | open |
+| I6 | low | Handlers of one integration event run in parallel and are all retried when one fails (must be idempotent); the Kafka path has no retry or outbox | open |
+| I7 | low | Four `Microsoft.CodeAnalysis.*` packages referenced, unused by code (maybe EF tooling pins) | open, check before removing |
+| I8 | low | `CurrentUserService.DeviceId` trusts the client `X-Device-ID` header | open |
 
 ## 2b. OmniCore.Services.Auth review
 
