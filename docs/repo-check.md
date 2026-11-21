@@ -45,6 +45,17 @@ change that still needs `dotnet build` and a smoke test by the owner. Status: **
 | S12 | low | `UnitOfWorkBehavior` calls `SaveChangesAsync` after every command; `ITransactionalCommand` exists but nothing uses it, so there is no explicit transaction around handlers that save more than once | open, phase 7 |
 | S13 | low | `MinioStorageService` trusts the client's `ContentType` and file name (sanitised only against invalid path characters); the object key gets a GUID prefix, so there is no overwrite or traversal | noted; content-sniffing is in the User review |
 
+### Findings from the per-layer READMEs (`README.md` in each project; started 2026-11-21)
+| # | Sev | Finding | Status |
+|---|---|---|---|
+| D1 | medium | `ISoftDeletable` is only `IsActive`; `AuditableEntityInterceptor` turns a hard delete into `IsActive = false`, while `Account` also has `IsDeleted` / `DeletedAtUtc` that nothing sets through the interceptor. Two meanings (inactive vs deleted) share one flag | open, see `docs/entities.md` |
+| D2 | low | `PagedQuery.SortColumn` defaults to `"CreatedAt"`; entities that are not `IAuditableEntity` (e.g. `Role`) have no such column | open |
+| D3 | low | `IDomainEvent : INotification` ties Shared.Domain to MediatR | open, accepted for now |
+| D4 | low | Namespaces do not match folders (`Data/Repositories` -> `...Domain.Repositories`, `ValueObject` vs `ValueObjects`, `OmniCoreApplicationException` is in Domain's `Abstractions/` but declares `...Application.Exceptions`) | open |
+| D5 | low | Two value-object styles (abstract `ValueObject` class and sealed records) | open, use records for new code |
+| D6 | low | Unused: `Guard`, `DomainException`, `OmniCoreApplicationException`, `Address`, `Money`, `DateRange`, `ITenantScoped`, `TenantEntity` | open, decide with ADR 0001 |
+| C1 | low | `IntegrationEvent` has no version / event-type field; `IPartitionedIntegrationEvent` does not extend `IIntegrationEvent`; without a partition key Kafka uses a random GUID, so no per-aggregate ordering | open |
+
 ## 2b. OmniCore.Services.Auth review
 
 Read: register / login / refresh / logout handlers, `Account` refresh-token logic, `RefreshToken`, the repository,
