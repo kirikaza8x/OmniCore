@@ -55,6 +55,11 @@ change that still needs `dotnet build` and a smoke test by the owner. Status: **
 | D5 | low | Two value-object styles (abstract `ValueObject` class and sealed records) | open, use records for new code |
 | D6 | low | Unused: `Guard`, `DomainException`, `OmniCoreApplicationException`, `Address`, `Money`, `DateRange`, `ITenantScoped`, `TenantEntity` | open, decide with ADR 0001 |
 | C1 | low | `IntegrationEvent` has no version / event-type field; `IPartitionedIntegrationEvent` does not extend `IIntegrationEvent`; without a partition key Kafka uses a random GUID, so no per-aggregate ordering | open |
+| AP1 | medium | `CachingBehavior` could never work even if registered: its constraint `TRequest : ICacheableQuery<TResponse>` (with `TResponse : Result`) cannot match a query that is `ICacheableQuery<AccountResponse>` (its pipeline response is `Result<AccountResponse>`); caching a `Result<T>` object also has no deserialization path | open, with S6 |
+| AP2 | medium | Cache invalidation keys differ from query keys (`GetAccountByIdQuery:<id>` vs `auth:account:id:<id>`) | open, fix together with S6/AP1 |
+| AP3 | low | `PerformanceBehavior` keeps an instance `Stopwatch` that is never reset (correct only while transient) | open |
+| AP4 | low | Unused: `IEmailSender` (no implementation), `IOutboxService`, `IStreamCommand*`, `PagedRequest` family (`PageNumber` not clamped), `BaseDto`/`AuditableDto`, `SlugHelper` | open |
+| AP5 | low | Unused `Serilog` package in Shared.Application; AutoMapper profiles and hand-written mapping extensions coexist | open |
 
 ## 2b. OmniCore.Services.Auth review
 
