@@ -75,6 +75,11 @@ change that still needs `dotnet build` and a smoke test by the owner. Status: **
 | W5 | low | `GlobalExceptionHandler` depends on `PostgresException` | open, accepted |
 | W6 | low | `RequireRoles` is case-sensitive, `CurrentUserService.IsInRole` is not | open |
 | W7 | low | `RequireHttpsMetadata=false`, `SaveToken=true` unused, double `AddSignalR`, `FIleUpload.cs` file-name typo | open |
+| AA1 | medium | No authorization fallback policy: an Auth endpoint that forgets `RequireAuthorization()` is public (all current ones are fine, nothing enforces it) | open |
+| AA2 | low | `CreateRoleEndpoint` calls `ToCreated("message")`, which binds the message to the `uri` parameter, so `Location` is the message | open |
+| AA3 | low | `LogoutEndpoint` is anonymous (refresh token is the credential), no rate limit beyond the gateway | open, see Application README |
+| AA4 | medium | Missing endpoints: password change/reset, e-mail confirmation, MFA, external login, session list/revoke, deactivation, role delete (entities exist for most) | open, roadmap |
+| AA5 | low | Public endpoints bind the command from the body, admin endpoints bind a request DTO | open |
 
 ## 2b. OmniCore.Services.Auth review
 
