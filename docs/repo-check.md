@@ -90,6 +90,14 @@ change that still needs `dotnet build` and a smoke test by the owner. Status: **
 | AN8 | medium | No audit trail (`SecurityAuditLog` never written); `AccountDto` carries the password hash for no reason | open |
 | AC1 | low | Only one integration event; no contracts for e-mail changed, deactivated/deleted, role changed | open, with AA4 |
 | AC2 | low | `AccountRegisteredIntegrationEvent` carries `FirstName`/`LastName` that Auth does not store (filled with username / empty) | open |
+| AI1 | medium | Usernames are case-sensitive (`Alice` and `alice` both allowed), e-mail is lower-cased | open, needs ADR + migration |
+| AI2 | low | `SessionRepository` / `UserSession` / `user_sessions` unused (refresh tokens are the sessions) | open, entity review |
+| AI3 | medium | Soft-delete query filters commented out, repositories return soft-deleted accounts | open, with D1 |
+| AI4 | low | `GoogleAuth__ServerClientId` is required at startup although no endpoint uses Google login | open |
+| AI5 | low | BCrypt cost hard-coded (12), no rehash on login | open |
+| AI6 | low | Every account lookup includes tokens, roles and role rows | open, watch |
+| AI7 | low | Role name check uses `ToLower()` in SQL, the unique index is case-sensitive | open |
+| AI8 | low | Migrations named by timestamp only; plain token columns remain | open (A6) |
 
 ## 2b. OmniCore.Services.Auth review
 
