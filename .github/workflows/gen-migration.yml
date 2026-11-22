@@ -1,0 +1,46 @@
+name: gen-migration
+
+# Temporary helper: generates the first EF migration for the User service (the agent sandbox has no .NET SDK)
+# and commits it to the same branch. Runs only on gen/** branches; delete this file after use.
+on:
+  push:
+    branches: ['gen/**']
+
+permissions:
+  contents: write
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 9.0.x
+      - run: dotnet tool install --global dotnet-ef --version 9.0.9
+      - name: Add migration
+        working-directory: backend/c#
+        shell: bash
+        run: |
+          set -o pipefail
+          dotnet restore OmniCore.Services.User/OmniCore.Services.User.Api 2>&1 | tail -5
+          dotnet ef migrations add InitialUser \
+            --project OmniCore.Services.User/OmniCore.Services.User.Infrastructure \
+            --startup-project OmniCore.Services.User/OmniCore.Services.User.Api \
+            --context UserDbContext \
+            --output-dir Persistence/Migrations 2>&1 | tee "$RUNNER_TEMP/ef.log"
+      - name: Report failure
+        if: failure()
+        shell: bash
+        run: |
+          TXT=$(sed 's#/home/runner/work/[^/]*/[^/]*/##' "$RUNNER_TEMP/ef.log" 2>/dev/null | grep -E "error|Unable|Exception|at " | head -60)
+          TXT="${TXT//'%'/'%25'}"; TXT="${TXT//$'\n'/'%0A'}"
+          echo "::error title=ef-output::${TXT:0:6000}"
+      - name: Commit migration
+        shell: bash
+        run: |
+          git config user.name "github-actions"; git config user.email "actions@users.noreply.github.com"
+          git add backend/c#/OmniCore.Services.User/OmniCore.Services.User.Infrastructure/Persistence/Migrations
+          git commit -m "chore(user): generate initial migration (CI)"
+          git push

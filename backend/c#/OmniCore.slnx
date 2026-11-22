@@ -24,5 +24,8 @@
     <Project Path="tests/OmniCore.Services.Auth.Application.Tests/OmniCore.Services.Auth.Application.Tests.csproj" />
     <Project Path="tests/OmniCore.Services.Auth.Domain.Tests/OmniCore.Services.Auth.Domain.Tests.csproj" />
     <Project Path="tests/OmniCore.Services.Auth.IntegrationTests/OmniCore.Services.Auth.IntegrationTests.csproj" />
+    <Project Path="tests/OmniCore.Services.User.Application.Tests/OmniCore.Services.User.Application.Tests.csproj" />
+    <Project Path="tests/OmniCore.Services.User.Domain.Tests/OmniCore.Services.User.Domain.Tests.csproj" />
+    <Project Path="tests/OmniCore.Services.User.IntegrationTests/OmniCore.Services.User.IntegrationTests.csproj" />
   </Folder>
 </Solution>

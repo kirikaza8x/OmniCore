@@ -14,7 +14,7 @@ RUN --mount=type=cache,target=/root/.nuget/packages \
 
 # Copy source code for User service, Auth.Contracts, and Shared kernel
 COPY backend/c#/OmniCore.Services.User/ backend/c#/OmniCore.Services.User/
-#COPY backend/c#/OmniCore.Services.Auth/OmniCore.Services.Auth.Contracts/ backend/c#/OmniCore.Services.Auth/OmniCore.Services.Auth.Contracts/
+COPY backend/c#/OmniCore.Services.Auth/OmniCore.Services.Auth.Contracts/ backend/c#/OmniCore.Services.Auth/OmniCore.Services.Auth.Contracts/
 COPY backend/c#/OmniCore.Shared/ backend/c#/OmniCore.Shared/
 
 # Publish directly (skips redundant intermediate `dotnet build` step)
