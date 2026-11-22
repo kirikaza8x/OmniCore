@@ -88,6 +88,8 @@ change that still needs `dotnet build` and a smoke test by the owner. Status: **
 | AN6 | low | `IJwtTokenService` has five members no handler uses | open |
 | AN7 | low | Password rules only in the register validator; register does not trim like login | open |
 | AN8 | medium | No audit trail (`SecurityAuditLog` never written); `AccountDto` carries the password hash for no reason | open |
+| AC1 | low | Only one integration event; no contracts for e-mail changed, deactivated/deleted, role changed | open, with AA4 |
+| AC2 | low | `AccountRegisteredIntegrationEvent` carries `FirstName`/`LastName` that Auth does not store (filled with username / empty) | open |
 
 ## 2b. OmniCore.Services.Auth review
 
