@@ -1,9 +1,8 @@
 # OmniCore
 
-OmniCore is a modular, service-oriented backend with Docker infrastructure. **Only the C# (.NET 9) backend exists
-today**; services in other languages (for example the Python `owl_editor` service) are planned, see
-[docs/integrations/owl-editor.md](docs/integrations/owl-editor.md). There is no frontend, no shared contracts folder
-and no test project in the repo yet.
+OmniCore is a modular, service-oriented backend with Docker infrastructure and a Next.js web client
+(`frontend/web`, see its README). **Only the C# (.NET 9) backend exists today**; services in other languages (for example the Python `owl_editor` service) are planned, see
+[docs/integrations/owl-editor.md](docs/integrations/owl-editor.md). There is no shared contracts folder yet.
 
 **Status:** working prototype, not production-ready. Nothing has been built or run in the last documentation review
 (no .NET SDK available), and there are no automated tests. See [docs/repo-check.md](docs/repo-check.md) for the
@@ -32,7 +31,7 @@ backend/c#/
 infra/docker/                        docker-compose.{database,infra,services,gateway}.yml, nginx/, scripts/init-dbs.sql
 docs/                                documentation (see the table above)
 ```
-Planned, **not in the repo yet** (git does not track empty folders): `frontend/`, `shared/contracts/`, `tests/`, and
+Planned, **not in the repo yet** (git does not track empty folders): `shared/contracts/` and
 language folders for Python / Rust / Go / Java / C++.
 
 ## Tech stack

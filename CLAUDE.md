@@ -4,14 +4,15 @@
 (numbered findings), [docs/roadmap.md](docs/roadmap.md) (the plan), [docs/decisions/](docs/decisions/) (ADRs).
 
 ## What this is
-**OmniCore** is a .NET 9 service-oriented backend (`backend/c#/`) plus Docker infrastructure (`infra/docker/`). Only the
-C# backend exists today; other languages are planned, not in the repo.
+**OmniCore** is a .NET 9 service-oriented backend (`backend/c#/`), a Next.js web client (`frontend/web/`, ADR 0005) and Docker
+infrastructure (`infra/docker/`). Other backend languages are planned, not in the repo.
 
 | Project | Responsibility |
 |---|---|
 | `OmniCore.Services.Auth` | Accounts (register, login, logout, refresh-token rotation, current user), roles, JWT issuing. Own database. A Google token validator exists but no endpoint uses it. |
 | `OmniCore.Services.User` | Profiles, settings, addresses (ADR 0004). Profile id = Auth account id, created from `AccountRegisteredIntegrationEvent`; `/api/v1/users/me/...`. Own database (schema `users`). Tenant profiles not built (ADR 0001). Built and tested by CI 2026-11-22; not run as a compose stack. |
 | `OmniCore.Shared` | Shared library: Domain (DDD base types, `Result`, `Error`), Application (MediatR behaviours), Infrastructure (EF, MassTransit + outbox, Redis, MinIO, config), Api (Carter, JWT bearer, CORS, rate limiting, Swagger), Contracts (integration events). |
+| `frontend/web` | Next.js 16 web client: BFF route handlers keep tokens in httpOnly cookies, features `auth` and `profile`, layer rules enforced by ESLint. See `frontend/web/README.md`. |
 | nginx gateway | `infra/docker/` : routes `/api/v1/auth/` and `/api/v1/users/` (User not running yet), per-IP `limit_req`, no JWT validation (ADR 0002). |
 
 Each service has layers `Api / Application / Domain / Infrastructure / Contracts`. Stack: Carter, MediatR,
@@ -20,7 +21,8 @@ FluentValidation, EF Core + PostgreSQL (snake_case), MassTransit (RabbitMQ; Kafk
 ## Repo map
 - Solution: `backend/c#/OmniCore.slnx` (services, Shared, `tests/`)
 - Tests: `backend/c#/tests/` (`...Auth.*Tests`, `...User.*Tests`; integration projects use Testcontainers and run one after the other because RabbitMQ binds port 5672)
-- CI: `.github/workflows/backend.yml`
+- CI: `.github/workflows/backend.yml`, `.github/workflows/frontend.yml` (lint, typecheck, test, build, Docker image)
+- Web client: `frontend/web/` (`npm run lint|typecheck|test|build`; npm works in the agent sandbox, so it can be built and tested locally)
 - Compose + gateway: `infra/docker/` (`docker-compose*.yml`, `nginx.conf`, `scripts/init-dbs.sql`, **`.env.example` here**)
 - Developer scripts (PowerShell): `backend/c#/scripts/shells/` (`scaffold_service.ps1`, `add-migration.ps1`, `run.ps1`, `remove_service.ps1`)
 - Settings come **only from environment variables** (compose). `appsettings*.json` are git-ignored and absent.
@@ -72,7 +74,7 @@ takes about a minute.
 ## Known issues (full list in docs/repo-check.md)
 `AllowedHosts` still defaults to `*` in the base compose file (the prod override requires it) (F3);
 the in-service rate limiter sees only the nginx address (S2, mitigated by the gateway limits); published service ports 5001/5002 bypass the gateway;
-old plain `token` column still present until the follow-up migration drops it (A6); RS256 is available but the repo defaults and prod override still allow the legacy HS256 `JWT_SECRET` until the owner sets `JWT_PRIVATE_KEY_PEM` (finding 5; cut-over steps in `.env.example`); no account lockout (A8, only the gateway IP limit); no first admin account (A15); User service not run in compose yet; the Auth and Shared fixes
+old plain `token` column still present until the follow-up migration drops it (A6); RS256 is available but the repo defaults and prod override still allow the legacy HS256 `JWT_SECRET` until the owner sets `JWT_PRIVATE_KEY_PEM` (finding 5; cut-over steps in `.env.example`); no account lockout (A8, only the gateway IP limit); User service not run in compose yet; the Auth and Shared fixes
 below now compile and pass CI, but only the register/login/refresh/reuse path is exercised by a test.
 
 ## Current progress
@@ -96,5 +98,6 @@ Reflects branch `docs/readme-and-roadmap`, 2026-11-20, last code/doc commit befo
 - [x] Docs 2026-11-22: `docs/entities.md`, `docs/layers.md`, `docs/services-plan.md`, roadmap phases 9-13; cloud simulation override `infra/docker/docker-compose.cloud-sim.yml` + `scripts/cloud-sim.sh` (renders in CI, never started)
 - [x] Full scan 2026-11-22 (repo-check SH1-SH8, IF1-IF5): fixed SH1-SH4 (paging clamp, dynamic filter/sort field validation, device id, storage keys; 37 tests in `tests/OmniCore.Shared.Tests`), IF1/IF2 (gateway uses compose service names, headers). Optional AWS emulator profile (Floci / LocalStack) in `infra/docker/docker-compose.aws.yml`. **CI green**
 - [x] Compose reorganised 2026-11-22: shared service env/base defined once in `docker-compose.services.yml`, documented master file, `infra/docker/README.md`; rendered config identical (dev, prod, cloud-sim), **CI green**
+- [x] 2026-11-23: A9 (generic login failure, constant-cost check) and A15 (first admin from `ADMIN_EMAIL`/`ADMIN_USERNAME`/`ADMIN_PASSWORD`, only when no admin exists, never promotes an existing account); web client `frontend/web` (ADR 0005) built, linted, 13 tests, BFF smoke-tested against a fake gateway; Docker image and compose profile `web` **not built here** (no Docker daemon; CI builds the image)
 - [ ] Next: owner makes `build-and-unit-test` + integration required checks (repo setting), more handler tests (logout, roles), owner generates `JWT_PRIVATE_KEY_PEM` and does the cut-over, then drop the plain token columns, require the key in the prod override, close ports 5001/5002 in the prod override
-- [ ] Owner decisions pending: MinIO image (F7: keep the coollabsio fork, build from source, or switch store), ADR 0001 questions, A9 (generic login error), A15 (first admin), keep or drop the User service in compose
+- [ ] Owner decisions pending: MinIO image (F7: keep the coollabsio fork, build from source, or switch store), ADR 0001 questions, keep or drop the User service in compose

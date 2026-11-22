@@ -73,3 +73,10 @@ Order: W1+S2 (real client IP / rate limit), I1, I3 (service-scoped queue names),
 
 ## Phase 13: new services
 Candidates, effort and order: [services-plan.md](services-plan.md). Each new service starts from `scaffold_service.ps1`, an ADR and an integration test.
+
+## Phase 14: web client (ADR 0005)
+- [x] `frontend/web`: Next.js, BFF cookies, sign in / register / profile, Dockerfile, compose profile `web`, CI workflow
+- [ ] Run it against the real stack (compose `--profile web`), then add Playwright smoke tests
+- [ ] Apply the theme setting, edit/promote addresses, show other users' public profiles
+- [ ] Password reset and e-mail verification screens (after Notification service + AA4)
+- [ ] Admin screens (roles, accounts) once the admin endpoints are settled
