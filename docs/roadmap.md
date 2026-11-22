@@ -43,10 +43,33 @@ off as they land; the status here is also mirrored in `CLAUDE.md`.
 ## Phase 7: code review of the three code projects
 - [x] 2a `OmniCore.Shared` reviewed (S1-S13 in repo-check; S1, S4, S5, S7 fixed, not built)
 - [x] 2b `OmniCore.Services.Auth` reviewed (A1-A18 in repo-check; A1-A5 fixed, not built; A9 and A15 need an owner decision)
-- [x] 2c `OmniCore.Services.User` reviewed (U1-U10 in repo-check; U4 and U10 fixed, not built; U1 and U2 are the real gaps)
+- [x] 2c `OmniCore.Services.User` reviewed (U1-U10 in repo-check)
 Findings go to `repo-check.md`; safe fixes are committed one by one; docs and `CLAUDE.md` updated after each.
 
 ## Phase 8: multi-tenancy (F10)
 - [x] ADR `docs/decisions/0001-multitenancy.md` written and committed (status: proposed)
 - [ ] Owner confirms or amends the ADR (open questions in section 7)
 - [ ] Implementation order after confirmation: Shared -> Auth -> User -> gateway
+
+## Phase 9: User service (ADR 0004)
+- [x] Rebuilt: aggregate rules, 10 endpoints, Auth-event consumer, CI-generated migration, 53 tests, **green in CI 2026-11-22**
+- [ ] Start `user-api` in the real compose stack and add it to the smoke check
+- [ ] Profile deletion/deactivation (needs the Auth lifecycle events, Phase 10)
+
+## Phase 10: entity fixes (order from [entities.md](entities.md))
+- [ ] AD2 events from `Deactivate`/`SoftDelete`/`AttachEmail`, AD7 username rules (case-insensitive, reserved names)
+- [ ] `IsSystem` roles + first admin account (AD1, A15), migration
+- [ ] Remove `UserSession`; device columns on `RefreshToken` (AI2)
+- [ ] Write `SecurityAuditLog` (login, password change, role change, token reuse)
+- [ ] `AccountDeactivated` / `AccountDeleted` / `AccountEmailChanged` in `Auth.Contracts` + User consumer (UD2)
+- [ ] E-mail verification and password reset on `SecurityToken` (AA4)
+
+## Phase 11: shared-layer and auth fixes from the master READMEs
+Order: W1+S2 (real client IP / rate limit), I1, I3 (service-scoped queue names), AP1/AP2/S6, D1, AD1, AA1 (fallback authorization policy), A15, AN1, AI1.
+
+## Phase 12: cloud simulation and observability
+- [x] [Cloud simulation override](../infra/docker/CLOUD-SIM.md): prod-like local run (one public port, isolated networks, replicas, limits, chaos helper). Renders in CI; **not started yet**
+- [ ] First observability slice (logs, metrics, traces): see [services-plan.md](services-plan.md)
+
+## Phase 13: new services
+Candidates, effort and order: [services-plan.md](services-plan.md). Each new service starts from `scaffold_service.ps1`, an ADR and an integration test.

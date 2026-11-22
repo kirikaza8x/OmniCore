@@ -1,0 +1,94 @@
+# Cloud simulation override: runs the stack the way a small cloud deployment would, on your own machine.
+#
+#   ./scripts/cloud-sim.sh up          (wraps the command below, see CLOUD-SIM.md)
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml -f docker-compose.cloud-sim.yml --env-file .env up -d --build
+#
+# Differences from the dev stack:
+#   - two networks: `edge` (gateway only, reachable from the host) and `backend` (internal: no route to the internet,
+#     nothing in it is published). Only the gateway port and MinIO's public download port are open on the host.
+#   - several replicas of every API behind the gateway (nginx resolves service names per request, so it balances)
+#   - CPU/memory limits, log rotation, no new privileges, all Linux capabilities dropped for the APIs
+# Written without a Docker daemon: validated with `docker compose config` (CI job infra-config) only, never started.
+
+x-limits-api: &limits-api
+  resources:
+    limits: { cpus: "0.50", memory: 384M }
+x-logging: &logging
+  driver: json-file
+  options: { max-size: "10m", max-file: "3" }
+x-hardening: &hardening
+  security_opt: ["no-new-privileges:true"]
+  cap_drop: [ALL]
+
+services:
+  auth-api:
+    <<: *hardening
+    container_name: !reset null
+    ports: !reset []
+    networks: !override [backend]
+    logging: *logging
+    deploy:
+      replicas: ${SIM_API_REPLICAS:-2}
+      <<: *limits-api
+
+  user-api:
+    <<: *hardening
+    container_name: !reset null
+    ports: !reset []
+    networks: !override [backend]
+    logging: *logging
+    deploy:
+      replicas: ${SIM_API_REPLICAS:-2}
+      <<: *limits-api
+
+  gateway:
+    networks: !override [edge, backend]
+    logging: *logging
+    deploy:
+      resources:
+        limits: { cpus: "0.50", memory: 128M }
+
+  swagger-ui:
+    networks: !override [backend]
+
+  postgres:
+    networks: !override [backend]
+    logging: *logging
+    deploy:
+      resources:
+        limits: { cpus: "1.00", memory: 512M }
+
+  redis:
+    networks: !override [backend]
+    logging: *logging
+    deploy:
+      resources:
+        limits: { cpus: "0.25", memory: 128M }
+
+  rabbitmq:
+    networks: !override [backend]
+    logging: *logging
+    deploy:
+      resources:
+        limits: { cpus: "0.50", memory: 512M }
+
+  kafka:
+    networks: !override [backend]
+
+  kafka-ui:
+    networks: !override [backend]
+
+  # MinIO keeps its published ports: clients download avatars straight from it (STORAGE_PUBLIC_URL), like a public
+  # object-storage endpoint. It sits on both networks so the APIs reach it and the host can too.
+  minio:
+    networks: !override [edge, backend]
+    logging: *logging
+
+networks:
+  edge:
+    name: omnicore-edge
+    driver: bridge
+  backend:
+    name: omnicore-backend
+    driver: bridge
+    internal: true
