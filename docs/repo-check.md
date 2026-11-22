@@ -164,4 +164,10 @@ Read: the whole Domain and Application projects, `Program.cs`, the csproj refere
 | UD7 | low | `SoftDelete` raises no event; identifier specification ignores `IsDeleted` and is case-sensitive | open |
 | UD8 | low | `GetWithSpecificationAsync` duplicates the Shared repository method | open |
 | UC1 | low | `User.Contracts` is empty (no outgoing events, project has no reference to `Shared.Contracts`); the Auth event is not consumed (U6) | open |
+| UA1 | high (verify) | `AddUserAddress` / `UpdateUserSettings` load with no-tracking specs then call `Update`: new child entities would be saved as UPDATE, failing with a concurrency exception | open, test when Infrastructure exists |
+| UA2 | medium | No `AddUserApplication`, no wiring, no tests: layer unproven | open (U1) |
+| UA3 | low | Avatar upload before save can orphan files; old-file delete swallows exceptions silently | open |
+| UA4 | low | Thin validation (names, phone, language, tenant avatar URL) | open |
+| UA5 | low | Namespaces do not match folders; tenant feature has no queries | open |
+| UA6 | low | Missing use cases: list/update/delete address, delete/deactivate profile; profile query returns phone/e-mail so needs owner/admin restriction | open |
 
