@@ -172,6 +172,25 @@ Read: the whole Domain and Application projects, `Program.cs`, the csproj refere
 | UA6 | low | Missing use cases: list/update/delete address, delete/deactivate profile; profile query returns phone/e-mail so needs owner/admin restriction | **fixed** (ADR 0004, CI green 2026-11-22) |
 | UI1 | medium | `User.Infrastructure` references EF Core Tools 10.0.11 while the backend uses EF Core 9.0.9 | **fixed** (ADR 0004, CI green 2026-11-22) |
 | UI2 | low | No design-time context factory, so `dotnet ef` could not run | **fixed** (ADR 0004, CI green 2026-11-22) |
-| UP1 | medium | Compose service `user-api` and gateway route exist for a service that cannot start | open, owner decision |
+| UP1 | medium | Compose service `user-api` and gateway route exist for a service that cannot start | service now starts in tests; **still to verify in the real compose stack** |
 | UP2 | low | User Dockerfile restores `Auth.Contracts` projects but its source `COPY` is commented out | **fixed** (ADR 0004, CI green 2026-11-22) |
+
+## Full scan, 2026-11-22 (Shared first, then storage, gateway, infra)
+New findings from re-reading the Shared infrastructure, storage, gateway and compose files, beyond S1-S13.
+
+| Id | Severity | Finding | Status |
+|---|---|---|---|
+| SH1 | medium | `ToPagedResultAsync` / `ApplyPagination` accepted any page size from callers that skip `PagedQuery` (which clamps to 100) and computed `(page-1)*size` in 32 bits (overflow to a negative Skip) | **fixed** (clamp to 100, 64-bit offset), tests in `OmniCore.Shared.Tests` |
+| SH2 | high (latent) | `ApplyDynamicFilters` / `ApplyDynamicSorting` put client-supplied field names straight into a Dynamic LINQ string: `PasswordHash.StartsWith("a") or Id` would have read any property one character at a time. No endpoint uses them yet | **fixed**: field must be a plain public property path on the entity, `Logic` only `and`/`or`; tests |
+| SH3 | low | `X-Device-ID` accepted any value (any length, control characters), then used by `CurrentUserService` and echoed in responses | **fixed**: 1-64 chars of `[A-Za-z0-9_-]`, else a new id; tests |
+| SH4 | low | (S13) Object keys kept a weakly sanitised client file name and an unsanitised folder | **fixed**: last path segment, `[A-Za-z0-9._-]`, max 100 chars; folder segments `[A-Za-z0-9_-]`; tests. Content-type trust is handled per use case (User avatar checks the file signature) |
+| SH5 | medium | The bucket policy created on first use makes **every** object in the bucket public (`s3:GetObject` on `bucket/*`); a later private upload would be world-readable | open, owner decision: public prefix only (`avatars/*`) or a second private bucket with presigned URLs (File/Media service in services-plan) |
+| SH6 | low | `JwtKeySet` fetches the JWKS synchronously while holding its lock: during an Auth outage with no cached keys, requests queue behind a 5 s timeout every 30 s | open |
+| SH7 | low | Invalid filter or sort input is ignored and the query runs unfiltered (fails open). Fine for list screens; do **not** use it to scope data by tenant or owner | open, documented |
+| SH8 | low | `KafkaExtensions` swallows type-load errors with a bare `catch { }` | open |
+| IF1 | high | Gateway upstreams used container names (`omnicore-auth-api`); a deployment with replicas has no fixed container name, so the gateway could not reach them | **fixed**: compose service names, round robin through Docker DNS |
+| IF2 | low | Gateway sent no basic security headers | **fixed** (`nosniff`, `X-Frame-Options`, `Referrer-Policy`); locations with their own `add_header` do not inherit them |
+| IF3 | low | GitHub Actions are pinned by tag (`@v4`), not by commit SHA | open |
+| IF4 | info | `init-dbs.sql` already creates `omnicore_notification_db` for a service that does not exist (the planned Notification service) | note |
+| IF5 | low | Base images (`dotnet/sdk:9.0`, `aspnet:9.0`) are not pinned by digest | open |
 
