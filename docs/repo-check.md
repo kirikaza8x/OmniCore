@@ -163,4 +163,5 @@ Read: the whole Domain and Application projects, `Program.cs`, the csproj refere
 | UD6 | low | `GamerTag` is game-specific naming; `UserTenantProfile` is tenant-scoped while its parent is not | open, entity review |
 | UD7 | low | `SoftDelete` raises no event; identifier specification ignores `IsDeleted` and is case-sensitive | open |
 | UD8 | low | `GetWithSpecificationAsync` duplicates the Shared repository method | open |
+| UC1 | low | `User.Contracts` is empty (no outgoing events, project has no reference to `Shared.Contracts`); the Auth event is not consumed (U6) | open |
 
