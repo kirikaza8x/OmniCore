@@ -170,4 +170,8 @@ Read: the whole Domain and Application projects, `Program.cs`, the csproj refere
 | UA4 | low | Thin validation (names, phone, language, tenant avatar URL) | open |
 | UA5 | low | Namespaces do not match folders; tenant feature has no queries | open |
 | UA6 | low | Missing use cases: list/update/delete address, delete/deactivate profile; profile query returns phone/e-mail so needs owner/admin restriction | open |
+| UI1 | medium | `User.Infrastructure` references EF Core Tools 10.0.11 while the backend uses EF Core 9.0.9 | open |
+| UI2 | low | No design-time context factory, so `dotnet ef` could not run | open |
+| UP1 | medium | Compose service `user-api` and gateway route exist for a service that cannot start | open, owner decision |
+| UP2 | low | User Dockerfile restores `Auth.Contracts` projects but its source `COPY` is commented out | open |
 
