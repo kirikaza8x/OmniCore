@@ -4,6 +4,7 @@ include:
   - path: ./docker-compose.infra.yml
   - path: ./docker-compose.services.yml
   - path: ./docker-compose.gateway.yml
+  - path: ./docker-compose.aws.yml
 
 networks:
   omnicore-network:

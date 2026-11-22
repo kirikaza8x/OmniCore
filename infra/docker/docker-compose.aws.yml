@@ -1,0 +1,40 @@
+# Local AWS emulator (S3, SQS, SNS, SES, Secrets Manager, ...) on port 4566, for practising against the AWS APIs
+# without an account. Not started by default: enable the profile.
+#
+#   docker compose --profile aws up -d aws-emulator                      # Floci (MIT, no account, no token)
+#   docker compose --profile aws-localstack up -d aws-emulator-localstack  # LocalStack (needs LOCALSTACK_AUTH_TOKEN)
+#
+# Point an AWS SDK or the CLI at http://localhost:4566 with region us-east-1 and any non-empty key/secret, e.g.
+#   AWS_ENDPOINT_URL=http://localhost:4566 AWS_ACCESS_KEY_ID=test AWS_SECRET_ACCESS_KEY=test aws s3 mb s3://demo
+# The services' `Storage__*` settings speak the S3 API, so `Storage__Endpoint=http://aws-emulator:4566` swaps MinIO for it.
+#
+# LocalStack: since 2026-03-23 the current image needs a LocalStack account and auth token (free plan for hobby use);
+# 4.12 is the last tag without it, kept here as the fallback. Floci is the default because it needs neither.
+# Written without a Docker daemon: validated with `docker compose config` and the CI tag check only, never started.
+
+services:
+  aws-emulator:
+    image: floci/floci:1.5.12
+    container_name: omnicore-aws-emulator
+    restart: unless-stopped
+    profiles: [aws]
+    ports:
+      - "${AWS_EMULATOR_PORT:-4566}:4566"
+    environment:
+      AWS_DEFAULT_REGION: ${STORAGE_REGION:-us-east-1}
+    networks:
+      - omnicore-network
+
+  aws-emulator-localstack:
+    image: localstack/localstack:4.12
+    container_name: omnicore-aws-localstack
+    restart: unless-stopped
+    profiles: [aws-localstack]
+    ports:
+      - "${AWS_EMULATOR_PORT:-4566}:4566"
+    environment:
+      SERVICES: ${LOCALSTACK_SERVICES:-s3,sqs,sns,ses,secretsmanager}
+      LOCALSTACK_AUTH_TOKEN: ${LOCALSTACK_AUTH_TOKEN:-}
+      DEFAULT_REGION: ${STORAGE_REGION:-us-east-1}
+    networks:
+      - omnicore-network

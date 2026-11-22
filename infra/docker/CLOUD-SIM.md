@@ -36,3 +36,12 @@ Layering: `docker-compose.yml` (dev base) + `docker-compose.prod.yml` (Productio
 - Published MinIO ports and the 5001/5002 ports (dev only) are the "holes" to close in a real deployment; here 5001/5002 are already closed.
 - No TLS, no real DNS, no autoscaling, one host. For TLS practice put Caddy or Traefik in front of the gateway (see [services-plan](../../docs/services-plan.md)).
 - `read_only` root filesystems are not enabled: the .NET images were not checked for write needs.
+
+## AWS emulator (optional)
+`docker-compose.aws.yml` adds a local AWS API on port 4566 (S3, SQS, SNS, SES, Secrets Manager) under a compose profile, so you can practise the AWS SDK/CLI without an account:
+```bash
+docker compose --profile aws up -d aws-emulator          # Floci: MIT, no account or token
+docker compose --profile aws-localstack up -d aws-emulator-localstack   # LocalStack: needs LOCALSTACK_AUTH_TOKEN (free hobby plan)
+AWS_ENDPOINT_URL=http://localhost:4566 AWS_ACCESS_KEY_ID=test AWS_SECRET_ACCESS_KEY=test aws s3 mb s3://demo
+```
+Ideas that use it: point `Storage__Endpoint` at it instead of MinIO (same S3 API); switch MassTransit to the Amazon SQS/SNS transport as an experiment (not built); keep the JWT private key in Secrets Manager instead of an env var. Nothing in the code depends on it. In the cloud simulation the emulator sits on the private network only. Why Floci first: LocalStack's current image requires an account since 2026-03-23 ([LocalStack announcement](https://blog.localstack.cloud/localstack-single-image-next-steps/)); `localstack/localstack:4.12` is the last tag without it and is the fallback profile. Both image tags were chosen from documentation and are checked for existence by CI.

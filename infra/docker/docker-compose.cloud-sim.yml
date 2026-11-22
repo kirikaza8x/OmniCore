@@ -78,6 +78,10 @@ services:
   kafka-ui:
     networks: !override [backend]
 
+  # Optional AWS emulator (profile aws): private network only, reachable by the APIs, not from the host.
+  aws-emulator:
+    networks: !override [backend]
+
   # MinIO keeps its published ports: clients download avatars straight from it (STORAGE_PUBLIC_URL), like a public
   # object-storage endpoint. It sits on both networks so the APIs reach it and the host can too.
   minio:
