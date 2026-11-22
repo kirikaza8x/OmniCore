@@ -78,6 +78,16 @@ services:
   kafka-ui:
     networks: !override [backend]
 
+  # Web client (profile web): public, so it sits on the edge network next to the gateway.
+  web:
+    networks: !override [edge, backend]
+    logging: *logging
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: [ALL]
+    deploy:
+      resources:
+        limits: { cpus: "0.50", memory: 256M }
+
   # Optional AWS emulator (profile aws): private network only, reachable by the APIs, not from the host.
   aws-emulator:
     networks: !override [backend]

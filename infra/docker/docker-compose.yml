@@ -4,6 +4,7 @@
 #   docker-compose.infra.yml      RabbitMQ, Redis, MinIO, Kafka (+ Kafka UI)
 #   docker-compose.services.yml   the .NET services (shared settings defined once at the top)
 #   docker-compose.gateway.yml    nginx gateway, Swagger UI
+#   docker-compose.web.yml        the Next.js web client (profile: web)
 #   docker-compose.aws.yml        optional local AWS emulator (profiles: aws, aws-localstack)
 #
 # Overrides, added with extra -f flags (see README.md):
@@ -14,6 +15,7 @@ include:
   - path: ./docker-compose.infra.yml
   - path: ./docker-compose.services.yml
   - path: ./docker-compose.gateway.yml
+  - path: ./docker-compose.web.yml
   - path: ./docker-compose.aws.yml
 
 networks:

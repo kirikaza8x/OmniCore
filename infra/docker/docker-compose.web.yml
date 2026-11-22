@@ -1,0 +1,19 @@
+# Web client (Next.js, frontend/web). Opt-in: `docker compose --profile web up -d --build web`
+# The browser talks only to this container; it calls the gateway from the server side and keeps tokens in httpOnly cookies.
+services:
+  web:
+    build:
+      context: ../../frontend/web
+    container_name: omnicore-web
+    restart: always
+    profiles: [web]
+    ports:
+      - "${WEB_PORT:-3000}:3000"
+    environment:
+      API_BASE_URL: http://gateway:80
+      COOKIE_SECURE: ${WEB_COOKIE_SECURE:-false}
+    depends_on:
+      gateway:
+        condition: service_started
+    networks:
+      - omnicore-network

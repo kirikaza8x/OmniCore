@@ -59,6 +59,12 @@ public class FirstAdminAndLoginTests(AuthApiFactory factory)
 
         Assert.Equal(HttpStatusCode.Unauthorized, unknown.StatusCode);
         Assert.Equal(HttpStatusCode.Unauthorized, wrong.StatusCode);
-        Assert.Equal(await unknown.Content.ReadAsStringAsync(), await wrong.Content.ReadAsStringAsync());
+        // Same problem details apart from the per-request trace id.
+        static async Task<string> Shape(HttpResponseMessage r)
+        {
+            var json = (await r.Content.ReadFromJsonAsync<JsonElement>())!;
+            return string.Join("|", json.EnumerateObject().Where(p => p.Name != "traceId").Select(p => $"{p.Name}={p.Value}"));
+        }
+        Assert.Equal(await Shape(unknown), await Shape(wrong));
     }
 }

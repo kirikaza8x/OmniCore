@@ -10,6 +10,7 @@ Compose files for OmniCore. Settings come from `.env` (copy `.env.example`, repl
 | `docker-compose.infra.yml` | RabbitMQ, Redis, MinIO, Kafka, Kafka UI |
 | `docker-compose.services.yml` | `auth-api`, `user-api`. Shared settings are defined once (`x-service-env`, `x-service-base`); a service lists only its differences |
 | `docker-compose.gateway.yml` | nginx gateway (`nginx/nginx.conf`) and Swagger UI (profile `dev`/`swagger`) |
+| `docker-compose.web.yml` | the Next.js web client `web` (profile `web`; source in `frontend/web`) |
 | `docker-compose.aws.yml` | optional AWS emulator (profile `aws` = Floci, `aws-localstack` = LocalStack) |
 | `docker-compose.prod.yml` | override: Production, Swagger off, requires `ALLOWED_HOSTS` and `CORS_ALLOWED_ORIGIN`, data-store ports closed |
 | `docker-compose.cloud-sim.yml` | override: simulated cloud, see [CLOUD-SIM.md](CLOUD-SIM.md) |
@@ -20,6 +21,7 @@ cp .env.example .env
 docker compose up -d --build                                   # local development
 docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build   # server
 ./scripts/cloud-sim.sh up --build                              # simulated cloud (prod + cloud-sim)
+docker compose --profile web up -d --build web                 # web client on :3000 (needs the gateway and services)
 docker compose --profile aws up -d aws-emulator                # local AWS API on :4566
 docker compose config --quiet                                  # check that everything renders
 ```
