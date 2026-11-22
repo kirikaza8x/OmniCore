@@ -30,13 +30,27 @@ public sealed class DeviceIdMiddleware
     }
 
     /// <summary>
+    /// A device id is client-supplied, so only a short token of letters, digits, '-' and '_' is accepted; anything else
+    /// (too long, spaces, control characters, markup) is replaced by a fresh id instead of being stored, logged or echoed.
+    /// </summary>
+    public static bool IsValid(string? value)
+    {
+        if (string.IsNullOrEmpty(value) || value.Length > 64) return false;
+        foreach (var c in value)
+        {
+            if (!(char.IsAsciiLetterOrDigit(c) || c == '-' || c == '_')) return false;
+        }
+        return true;
+    }
+
+    /// <summary>
     /// Invokes the middleware to process the incoming HTTP request.
     /// </summary>
     /// <param name="context">The current <see cref="HttpContext"/>.</param>
     public async Task InvokeAsync(HttpContext context)
     {
         if (!context.Request.Headers.TryGetValue(HeaderName, out var deviceId) 
-            || string.IsNullOrWhiteSpace(deviceId))
+            || !IsValid(deviceId.ToString()))
         {
             deviceId = Guid.NewGuid().ToString();
             context.Request.Headers[HeaderName] = deviceId;

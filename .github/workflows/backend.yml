@@ -40,7 +40,7 @@ jobs:
         shell: bash
         run: |
           set -o pipefail
-          for p in tests/OmniCore.Services.Auth.Domain.Tests tests/OmniCore.Services.Auth.Application.Tests tests/OmniCore.Services.User.Domain.Tests tests/OmniCore.Services.User.Application.Tests; do
+          for p in tests/OmniCore.Services.Auth.Domain.Tests tests/OmniCore.Services.Auth.Application.Tests tests/OmniCore.Services.User.Domain.Tests tests/OmniCore.Services.User.Application.Tests tests/OmniCore.Shared.Tests; do
             dotnet test "$p" --no-build -c Release --logger "trx;LogFileName=$(basename "$p").trx" 2>&1 | tee -a "$RUNNER_TEMP/unit.log"
           done
       - name: Annotate unit test failures

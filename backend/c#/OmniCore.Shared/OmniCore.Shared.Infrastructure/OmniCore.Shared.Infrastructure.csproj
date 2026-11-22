@@ -45,4 +45,8 @@
         <ProjectReference Include="..\OmniCore.Shared.Domain\OmniCore.Shared.Domain.csproj" />
     </ItemGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="OmniCore.Shared.Tests" />
+  </ItemGroup>
+
 </Project>

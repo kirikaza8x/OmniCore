@@ -25,6 +25,20 @@ public static class QueryableExtensions
         { "contains", "Contains" }, { "doesnotcontain", "Contains" }
     };
 
+    /// <summary>Largest page a caller can ask for (matches <see cref="PagedQuery"/>); bigger values are clamped.</summary>
+    public const int MaxPageSize = 100;
+    private const int DefaultPageSize = 10;
+
+    // Page and size from callers that did not go through PagedQuery: clamp, and compute the offset in 64 bits
+    // so a huge page number cannot overflow into a negative Skip.
+    internal static (int Page, int Size, int Skip) NormalizePaging(int pageNumber, int pageSize)
+    {
+        int page = pageNumber > 0 ? pageNumber : 1;
+        int size = pageSize > 0 ? Math.Min(pageSize, MaxPageSize) : DefaultPageSize;
+        long skip = (long)(page - 1) * size;
+        return (page, size, (int)Math.Min(skip, int.MaxValue));
+    }
+
     #region Pagination
 
     /// <summary>
@@ -41,10 +55,9 @@ public static class QueryableExtensions
         ArgumentNullException.ThrowIfNull(query);
         ArgumentNullException.ThrowIfNull(pageable);
 
-        int page = pageable.PageNumber > 0 ? pageable.PageNumber : 1;
-        int size = pageable.PageSize > 0 ? pageable.PageSize : 10;
+        var (_, size, skip) = NormalizePaging(pageable.PageNumber, pageable.PageSize);
 
-        return query.Skip((page - 1) * size).Take(size);
+        return query.Skip(skip).Take(size);
     }
 
     /// <summary>
@@ -64,11 +77,10 @@ public static class QueryableExtensions
     {
         ArgumentNullException.ThrowIfNull(query);
 
-        int validPage = pageNumber > 0 ? pageNumber : 1;
-        int validSize = pageSize > 0 ? pageSize : 10;
+        var (validPage, validSize, skip) = NormalizePaging(pageNumber, pageSize);
 
         int totalCount = await query.CountAsync(cancellationToken);
-        List<T> items = await query.Skip((validPage - 1) * validSize)
+        List<T> items = await query.Skip(skip)
                                    .Take(validSize)
                                    .ToListAsync(cancellationToken);
 
@@ -136,12 +148,12 @@ public static class QueryableExtensions
         if (filter is null) return query;
 
         var values = new List<object?>();
-        CollectFilterValues(filter, values);
+        CollectFilterValues(typeof(T), filter, values);
 
         if (values.Count == 0) return query;
 
         int indexPointer = 0;
-        string whereClause = TransformFilter(filter, ref indexPointer);
+        string whereClause = TransformFilter(typeof(T), filter, ref indexPointer);
 
         if (string.IsNullOrWhiteSpace(whereClause) || whereClause == "()") 
             return query;
@@ -157,29 +169,29 @@ public static class QueryableExtensions
         }
     }
 
-    private static void CollectFilterValues(Filter filter, List<object?> values)
+    private static void CollectFilterValues(Type entity, Filter filter, List<object?> values)
     {
         if (filter.Filters != null && filter.Filters.Count > 0)
         {
             foreach (var child in filter.Filters)
             {
-                CollectFilterValues(child, values);
+                CollectFilterValues(entity, child, values);
             }
         }
-        else if (IsValidLeafFilter(filter))
+        else if (IsValidLeafFilter(entity, filter))
         {
             values.Add(ExtractValue(filter.Value));
         }
     }
 
-    private static string TransformFilter(Filter filter, ref int index)
+    private static string TransformFilter(Type entity, Filter filter, ref int index)
     {
         if (filter.Filters != null && filter.Filters.Count > 0)
         {
             var children = new List<string>();
             foreach (var child in filter.Filters)
             {
-                var childClause = TransformFilter(child, ref index);
+                var childClause = TransformFilter(entity, child, ref index);
                 if (!string.IsNullOrEmpty(childClause))
                 {
                     children.Add(childClause);
@@ -187,11 +199,11 @@ public static class QueryableExtensions
             }
 
             return children.Count > 0 
-                ? $"({string.Join($" {filter.Logic} ", children)})" 
+                ? $"({string.Join($" {(string.Equals(filter.Logic, "or", StringComparison.OrdinalIgnoreCase) ? "or" : "and")} ", children)})" 
                 : string.Empty;
         }
 
-        if (!IsValidLeafFilter(filter)) return string.Empty;
+        if (!IsValidLeafFilter(entity, filter)) return string.Empty;
 
         Operators.TryGetValue(filter.Operator!, out var comparison);
         int currentIndex = index++;
@@ -209,11 +221,45 @@ public static class QueryableExtensions
         return $"{filter.Field} {comparison} @{currentIndex}";
     }
 
-    private static bool IsValidLeafFilter(Filter filter)
+    private static bool IsValidLeafFilter(Type entity, Filter filter)
     {
-        return !string.IsNullOrWhiteSpace(filter.Field) &&
+        return IsSafeFieldPath(entity, filter.Field) &&
                !string.IsNullOrWhiteSpace(filter.Operator) &&
                Operators.ContainsKey(filter.Operator);
+    }
+
+    /// <summary>
+    /// A field name from a client goes into a Dynamic LINQ string, so it must be a plain property path
+    /// (<c>Name</c>, <c>Address.City</c>) that exists on the entity: no method calls, operators, quotes or parentheses.
+    /// Without this a client could send <c>PasswordHash.StartsWith("a") or Id</c> and read any property one character at a time.
+    /// </summary>
+    internal static bool IsSafeFieldPath(Type entity, string? field)
+    {
+        if (string.IsNullOrWhiteSpace(field) || field.Length > 100) return false;
+
+        var current = entity;
+        foreach (var segment in field.Split('.'))
+        {
+            if (segment.Length == 0 || !IsIdentifier(segment)) return false;
+
+            var property = current.GetProperty(segment,
+                System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.IgnoreCase);
+            if (property is null || property.GetIndexParameters().Length > 0) return false;
+
+            current = property.PropertyType;
+        }
+
+        return true;
+    }
+
+    private static bool IsIdentifier(string value)
+    {
+        if (!(char.IsLetter(value[0]) || value[0] == '_')) return false;
+        foreach (var c in value)
+        {
+            if (!(char.IsLetterOrDigit(c) || c == '_')) return false;
+        }
+        return true;
     }
 
     private static object? ExtractValue(object? value)
@@ -252,7 +298,7 @@ public static class QueryableExtensions
         if (sorts is null) return query;
 
         var validSorts = sorts
-            .Where(s => !string.IsNullOrWhiteSpace(s.Field))
+            .Where(s => IsSafeFieldPath(typeof(T), s.Field))
             .ToList();
 
         if (validSorts.Count == 0) return query;

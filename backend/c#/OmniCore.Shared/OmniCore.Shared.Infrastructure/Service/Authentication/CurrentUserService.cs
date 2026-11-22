@@ -108,6 +108,7 @@ public sealed class CurrentUserService : ICurrentUserService
 
     private string? GetDeviceIdFromHeader()
     {
-        return Context?.Request.Headers[DeviceIdMiddleware.HeaderName].ToString();
+        var header = Context?.Request.Headers[DeviceIdMiddleware.HeaderName].ToString();
+        return DeviceIdMiddleware.IsValid(header) ? header : null;
     }
 }
