@@ -2,6 +2,12 @@
 # OmniCore Developer Task Launcher
 # ==============================================================================
 
+param(
+    [string]$Script,                                  # run a script by (partial) name without the menu, e.g. -Script migration
+    [Parameter(ValueFromRemainingArguments = $true)]
+    [string[]]$ScriptArgs                             # everything after is passed on, e.g. -Script migration -Service User -Action List
+)
+
 # Ensure execution policy allows current process script execution
 Set-ExecutionPolicy -ExecutionPolicy Unrestricted -Scope Process -ErrorAction SilentlyContinue
 
@@ -45,6 +51,17 @@ function Show-Menu ($map) {
     Write-Host ""
     Write-Host "  [0] Exit" -ForegroundColor Red
     Write-Host "=====================================================" -ForegroundColor Cyan
+}
+
+if ($Script) {
+    $hits = @((Get-ScriptMap).Values | Where-Object { [IO.Path]::GetFileNameWithoutExtension($_) -like "*$Script*" })
+    if ($hits.Count -ne 1) {
+        Write-Host "[X] '$Script' matches $($hits.Count) scripts. Use a more specific name." -ForegroundColor Red
+        exit 1
+    }
+    # a child process so "-Service User" style named parameters bind correctly
+    & (Get-Process -Id $PID).Path -NoProfile -File $hits[0] @ScriptArgs
+    exit $LASTEXITCODE
 }
 
 do {
