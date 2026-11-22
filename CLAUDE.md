@@ -10,7 +10,7 @@ C# backend exists today; other languages are planned, not in the repo.
 | Project | Responsibility |
 |---|---|
 | `OmniCore.Services.Auth` | Accounts (register, login, logout, refresh-token rotation, current user), roles, JWT issuing. Own database. A Google token validator exists but no endpoint uses it. |
-| `OmniCore.Services.User` | **Design only, not running** (no endpoints, DbContext, repository or migrations): profiles, settings, addresses, tenant profiles. See U1/U2 in repo-check. |
+| `OmniCore.Services.User` | Profiles, settings, addresses (ADR 0004). Profile id = Auth account id, created from `AccountRegisteredIntegrationEvent`; `/api/v1/users/me/...`. Own database (schema `users`). Tenant profiles not built (ADR 0001). Built and tested by CI 2026-11-22; not run as a compose stack. |
 | `OmniCore.Shared` | Shared library: Domain (DDD base types, `Result`, `Error`), Application (MediatR behaviours), Infrastructure (EF, MassTransit + outbox, Redis, MinIO, config), Api (Carter, JWT bearer, CORS, rate limiting, Swagger), Contracts (integration events). |
 | nginx gateway | `infra/docker/` : routes `/api/v1/auth/` and `/api/v1/users/` (User not running yet), per-IP `limit_req`, no JWT validation (ADR 0002). |
 
@@ -19,7 +19,7 @@ FluentValidation, EF Core + PostgreSQL (snake_case), MassTransit (RabbitMQ; Kafk
 
 ## Repo map
 - Solution: `backend/c#/OmniCore.slnx` (services, Shared, `tests/`)
-- Tests: `backend/c#/tests/` (`...Auth.Domain.Tests`, `...Auth.IntegrationTests` with Testcontainers)
+- Tests: `backend/c#/tests/` (`...Auth.*Tests`, `...User.*Tests`; integration projects use Testcontainers and run one after the other because RabbitMQ binds port 5672)
 - CI: `.github/workflows/backend.yml`
 - Compose + gateway: `infra/docker/` (`docker-compose*.yml`, `nginx.conf`, `scripts/init-dbs.sql`, **`.env.example` here**)
 - Developer scripts (PowerShell): `backend/c#/scripts/shells/` (`scaffold_service.ps1`, `add-migration.ps1`, `run.ps1`, `remove_service.ps1`)
@@ -72,7 +72,7 @@ takes about a minute.
 ## Known issues (full list in docs/repo-check.md)
 `AllowedHosts` still defaults to `*` in the base compose file (the prod override requires it) (F3);
 the in-service rate limiter sees only the nginx address (S2, mitigated by the gateway limits); published service ports 5001/5002 bypass the gateway;
-old plain `token` column still present until the follow-up migration drops it (A6); RS256 is available but the repo defaults and prod override still allow the legacy HS256 `JWT_SECRET` until the owner sets `JWT_PRIVATE_KEY_PEM` (finding 5; cut-over steps in `.env.example`); no account lockout (A8, only the gateway IP limit); no first admin account (A15); User service not running (U1); the Auth and Shared fixes
+old plain `token` column still present until the follow-up migration drops it (A6); RS256 is available but the repo defaults and prod override still allow the legacy HS256 `JWT_SECRET` until the owner sets `JWT_PRIVATE_KEY_PEM` (finding 5; cut-over steps in `.env.example`); no account lockout (A8, only the gateway IP limit); no first admin account (A15); User service not run in compose yet; the Auth and Shared fixes
 below now compile and pass CI, but only the register/login/refresh/reuse path is exercised by a test.
 
 ## Current progress
@@ -92,5 +92,6 @@ Reflects branch `docs/readme-and-roadmap`, 2026-11-20, last code/doc commit befo
       CI job `infra-config` (compose renders, image tags exist, `nginx -t`). Behavior tested with nginx 1.24 and fake backends in the sandbox;
       found and fixed a limit bypass via `/Login/` (case, trailing slash). Not run against the real containers
 - [x] Phase 4 (ADR 0003, **accepted by delegation**, reasons in `docs/auth-tokens.md`), 2026-11-20: all four steps **built and green in CI** (23 integration, 17 domain, 14 application tests): hashed refresh tokens + backfilling migration, xmin rotation guard, session cap 10 + Quartz purge (expired + 30 d), RS256 + `/.well-known/jwks.json` + validators via JWKS (HS256 only while `Jwt__Secret` is set). A11 (409 on unique race). Not run as a real compose stack
+- [x] User service rebuilt per ADR 0004 (accepted by delegation), 2026-11-22: domain rules, 10 endpoints, Auth-event consumer, CI-generated migration; **CI green** (25 domain, 22 application, 6 integration tests). Layer READMEs still to be updated.
 - [ ] Next: owner makes `build-and-unit-test` + integration required checks (repo setting), more handler tests (logout, roles), owner generates `JWT_PRIVATE_KEY_PEM` and does the cut-over, then drop the plain token columns, require the key in the prod override, close ports 5001/5002 in the prod override
 - [ ] Owner decisions pending: MinIO image (F7: keep the coollabsio fork, build from source, or switch store), ADR 0001 questions, A9 (generic login error), A15 (first admin), keep or drop the User service in compose

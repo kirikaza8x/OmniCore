@@ -145,33 +145,33 @@ Read: the whole Domain and Application projects, `Program.cs`, the csproj refere
 
 | # | Severity | Finding | Status |
 |---|---|---|---|
-| U1 | high | `Program.cs` registers none of the layers (no `AddApi`, no application or infrastructure registration), and `Infrastructure` holds only an `AssemblyReference`: no DbContext, no repository implementation (`IUserProfileRepository` has none), no migration, no Carter endpoints. The compose `user-api` container therefore serves nothing; it probably fails at startup, because `UseApi` calls `UseAuthorization`, `UseExceptionHandler` and `MapHub` without the services `AddApi` registers (inferred from the code, not run) | open, phase 2/7: decide whether to finish it or drop it from compose |
-| U2 | high | `CreateTenantProfileCommandHandler` builds a `UserTenantProfile` and returns it as a success but **never attaches or saves it** (the aggregate has no `AddTenantProfile`, `_tenantProfiles` is private and never written): silent data loss | open: left for the multi-tenancy work (ADR 0001), because the model is likely to change |
-| U3 | high | Tenant and user ids come from the **request body** (`CreateTenantProfileCommand.TenantId` / `UserId`, `CreateUserProfileCommand.UserId`, `UploadAvatarCommand.UserId`), not from the token, so a caller could act on another user or tenant once endpoints exist | open: rule for the ADR (ids from `ICurrentUserService` / `ITenantContext` only) |
+| U1 | high | `Program.cs` registers none of the layers (no `AddApi`, no application or infrastructure registration), and `Infrastructure` holds only an `AssemblyReference`: no DbContext, no repository implementation (`IUserProfileRepository` has none), no migration, no Carter endpoints. The compose `user-api` container therefore serves nothing; it probably fails at startup, because `UseApi` calls `UseAuthorization`, `UseExceptionHandler` and `MapHub` without the services `AddApi` registers (inferred from the code, not run) | **fixed** (ADR 0004, CI green 2026-11-22) |
+| U2 | high | `CreateTenantProfileCommandHandler` builds a `UserTenantProfile` and returns it as a success but **never attaches or saves it** (the aggregate has no `AddTenantProfile`, `_tenantProfiles` is private and never written): silent data loss | **fixed** (ADR 0004, CI green 2026-11-22) |
+| U3 | high | Tenant and user ids come from the **request body** (`CreateTenantProfileCommand.TenantId` / `UserId`, `CreateUserProfileCommand.UserId`, `UploadAvatarCommand.UserId`), not from the token, so a caller could act on another user or tenant once endpoints exist | **fixed** (ADR 0004, CI green 2026-11-22) |
 | U4 | medium | `UploadAvatarCommandHandler` deleted the old avatar before uploading the new one, so a failed upload left the profile pointing at a missing file | **fixed**: old file is removed after the upload and attach |
-| U5 | medium | Avatar validation trusts the client `ContentType` (5 MB cap, jpeg/png/webp list) and does not check the file signature | open, with S13 |
-| U6 | medium | No consumer exists for `AccountRegisteredIntegrationEvent` (Auth publishes it): nothing creates a `UserProfile` when an account registers, and `UserProfile` copies `Username` and `Email` from Auth with no update path | open, phase 5/7 |
+| U5 | medium | Avatar validation trusts the client `ContentType` (5 MB cap, jpeg/png/webp list) and does not check the file signature | **fixed** (ADR 0004, CI green 2026-11-22) |
+| U6 | medium | No consumer exists for `AccountRegisteredIntegrationEvent` (Auth publishes it): nothing creates a `UserProfile` when an account registers, and `UserProfile` copies `Username` and `Email` from Auth with no update path | **fixed** (ADR 0004, CI green 2026-11-22) |
 | U7 | medium | Two aggregate roots overlap: `UserProfile` (global) contains `TenantProfiles`, while `UserTenantProfile` is itself a `TenantAggregateRoot` with a `UserProfile` navigation. The tenant-aware part is not isolated by any filter yet | open: ADR 0001 |
-| U8 | low | `GetUserProfileByIdQuery` is `ICacheableQuery` but `CachingBehavior` is not registered (S6), so it is never cached; the invalidation handler is correct | open (S6) |
+| U8 | low | `GetUserProfileByIdQuery` is `ICacheableQuery` but `CachingBehavior` is not registered (S6), so it is never cached; the invalidation handler is correct | **fixed** (ADR 0004, CI green 2026-11-22) |
 | U9 | low | `Username` value object is duplicated between Auth and User (and email uses the Shared one) | open, phase 7 |
 | U10 | low | Swagger title said "Auth API" | **fixed** |
-| UD1 | medium | `UserProfile` incomplete: no update/remove address, settings changed outside the aggregate, no add tenant profile, no e-mail/username/deactivate | open |
+| UD1 | medium | `UserProfile` incomplete: no update/remove address, settings changed outside the aggregate, no add tenant profile, no e-mail/username/deactivate | **fixed** (ADR 0004, CI green 2026-11-22) |
 | UD2 | medium | E-mail and username copied from Auth with no sync; no deactivation when the account is disabled/deleted | open, decide with ADR |
-| UD3 | low | `UpdatePersonalInformation` overwrites all fields, no length/format rules | open |
-| UD4 | low | `Theme`/`Language` are free strings; settings could be an owned type | open |
-| UD5 | low | `SetPrimary` public, no address limit or duplicate check, no one-primary guarantee | open |
+| UD3 | low | `UpdatePersonalInformation` overwrites all fields, no length/format rules | **fixed** (ADR 0004, CI green 2026-11-22) |
+| UD4 | low | `Theme`/`Language` are free strings; settings could be an owned type | **fixed** (ADR 0004, CI green 2026-11-22) |
+| UD5 | low | `SetPrimary` public, no address limit or duplicate check, no one-primary guarantee | **fixed** (ADR 0004, CI green 2026-11-22) |
 | UD6 | low | `GamerTag` is game-specific naming; `UserTenantProfile` is tenant-scoped while its parent is not | open, entity review |
-| UD7 | low | `SoftDelete` raises no event; identifier specification ignores `IsDeleted` and is case-sensitive | open |
-| UD8 | low | `GetWithSpecificationAsync` duplicates the Shared repository method | open |
+| UD7 | low | `SoftDelete` raises no event; identifier specification ignores `IsDeleted` and is case-sensitive | **fixed** (ADR 0004, CI green 2026-11-22) |
+| UD8 | low | `GetWithSpecificationAsync` duplicates the Shared repository method | **fixed** (ADR 0004, CI green 2026-11-22) |
 | UC1 | low | `User.Contracts` is empty (no outgoing events, project has no reference to `Shared.Contracts`); the Auth event is not consumed (U6) | open |
-| UA1 | high (verify) | `AddUserAddress` / `UpdateUserSettings` load with no-tracking specs then call `Update`: new child entities would be saved as UPDATE, failing with a concurrency exception | open, test when Infrastructure exists |
-| UA2 | medium | No `AddUserApplication`, no wiring, no tests: layer unproven | open (U1) |
-| UA3 | low | Avatar upload before save can orphan files; old-file delete swallows exceptions silently | open |
-| UA4 | low | Thin validation (names, phone, language, tenant avatar URL) | open |
+| UA1 | high (verify) | `AddUserAddress` / `UpdateUserSettings` load with no-tracking specs then call `Update`: new child entities would be saved as UPDATE, failing with a concurrency exception | **fixed** (ADR 0004, CI green 2026-11-22) |
+| UA2 | medium | No `AddUserApplication`, no wiring, no tests: layer unproven | **fixed** (ADR 0004, CI green 2026-11-22) |
+| UA3 | low | Avatar upload before save can orphan files; old-file delete swallows exceptions silently | **fixed** (ADR 0004, CI green 2026-11-22) |
+| UA4 | low | Thin validation (names, phone, language, tenant avatar URL) | **fixed** (ADR 0004, CI green 2026-11-22) |
 | UA5 | low | Namespaces do not match folders; tenant feature has no queries | open |
-| UA6 | low | Missing use cases: list/update/delete address, delete/deactivate profile; profile query returns phone/e-mail so needs owner/admin restriction | open |
-| UI1 | medium | `User.Infrastructure` references EF Core Tools 10.0.11 while the backend uses EF Core 9.0.9 | open |
-| UI2 | low | No design-time context factory, so `dotnet ef` could not run | open |
+| UA6 | low | Missing use cases: list/update/delete address, delete/deactivate profile; profile query returns phone/e-mail so needs owner/admin restriction | **fixed** (ADR 0004, CI green 2026-11-22) |
+| UI1 | medium | `User.Infrastructure` references EF Core Tools 10.0.11 while the backend uses EF Core 9.0.9 | **fixed** (ADR 0004, CI green 2026-11-22) |
+| UI2 | low | No design-time context factory, so `dotnet ef` could not run | **fixed** (ADR 0004, CI green 2026-11-22) |
 | UP1 | medium | Compose service `user-api` and gateway route exist for a service that cannot start | open, owner decision |
-| UP2 | low | User Dockerfile restores `Auth.Contracts` projects but its source `COPY` is commented out | open |
+| UP2 | low | User Dockerfile restores `Auth.Contracts` projects but its source `COPY` is commented out | **fixed** (ADR 0004, CI green 2026-11-22) |
 
