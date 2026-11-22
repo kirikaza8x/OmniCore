@@ -1,4 +1,14 @@
-# Master Orchestration File
+# Master compose file: it only lists the parts. Edit the part, not this file.
+#
+#   docker-compose.database.yml   PostgreSQL (one server, one database per service: scripts/init-dbs.sql)
+#   docker-compose.infra.yml      RabbitMQ, Redis, MinIO, Kafka (+ Kafka UI)
+#   docker-compose.services.yml   the .NET services (shared settings defined once at the top)
+#   docker-compose.gateway.yml    nginx gateway, Swagger UI
+#   docker-compose.aws.yml        optional local AWS emulator (profiles: aws, aws-localstack)
+#
+# Overrides, added with extra -f flags (see README.md):
+#   docker-compose.prod.yml       Production settings, data-store ports closed
+#   docker-compose.cloud-sim.yml  prod-like local "cloud": private network, replicas, limits (see CLOUD-SIM.md)
 include:
   - path: ./docker-compose.database.yml
   - path: ./docker-compose.infra.yml

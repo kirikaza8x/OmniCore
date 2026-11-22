@@ -57,7 +57,7 @@ the data stores on the host. TLS is not handled here; put a TLS-terminating prox
 The gateway listens on `GATEWAY_PORT` (default 8080); Swagger UI is at `/swagger` while the `dev` profile is on.
 Or open `backend/c#/OmniCore.slnx` and run a service's `.Api` project against the infra containers. Note that
 `appsettings*.json` are git-ignored and not in the repo: settings come from environment variables (the keys are in
-`infra/docker/docker-compose.services.yml`), so a `.Api` project run outside Docker needs your own
+`infra/docker/docker-compose.services.yml` (see `infra/docker/README.md`)), so a `.Api` project run outside Docker needs your own
 `appsettings.Development.json` or those variables set.
 Add a service with `backend/c#/scripts/shells/scaffold_service.ps1`.
 

@@ -1,6 +1,6 @@
 services:
   # ---------------------------------------------------------------
-  # 1. RabbitMQ Message Broker
+  # RabbitMQ message broker
   # ---------------------------------------------------------------
   rabbitmq:
     image: rabbitmq:4.0-management-alpine
@@ -23,7 +23,7 @@ services:
       - omnicore-network
 
   # ---------------------------------------------------------------
-  # 2. Redis Cache
+  # Redis cache
   # ---------------------------------------------------------------
   redis:
     image: redis:7.4-alpine
@@ -42,7 +42,7 @@ services:
       - omnicore-network
 
   # ---------------------------------------------------------------
-  # 3. MinIO Object Storage
+  # MinIO object storage
   # ---------------------------------------------------------------
   minio:
     image: coollabsio/minio:RELEASE.2025-10-15T17-29-55Z
@@ -66,7 +66,7 @@ services:
       - omnicore-network
 
   # ---------------------------------------------------------------
-  # 4. Apache Kafka (KRaft Mode)
+  # Apache Kafka (KRaft mode; optional, see roadmap phase 6)
   # ---------------------------------------------------------------
   kafka:
     image: apache/kafka:3.9.0
@@ -99,7 +99,7 @@ services:
       - omnicore-network
 
   # ---------------------------------------------------------------
-  # 5. Kafka Management UI
+  # Kafka management UI
   # ---------------------------------------------------------------
   kafka-ui:
     image: provectuslabs/kafka-ui:v0.7.2
