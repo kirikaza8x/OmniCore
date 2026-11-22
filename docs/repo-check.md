@@ -80,6 +80,14 @@ change that still needs `dotnet build` and a smoke test by the owner. Status: **
 | AA3 | low | `LogoutEndpoint` is anonymous (refresh token is the credential), no rate limit beyond the gateway | open, see Application README |
 | AA4 | medium | Missing endpoints: password change/reset, e-mail confirmation, MFA, external login, session list/revoke, deactivation, role delete (entities exist for most) | open, roadmap |
 | AA5 | low | Public endpoints bind the command from the body, admin endpoints bind a request DTO | open |
+| AN1 | medium | Register hard-codes role `User` in the token while the role row is attached by an event handler that only logs when the role is missing | open |
+| AN2 | low | Role changes take effect only at the next token refresh; removing a role does not revoke sessions | open, document |
+| AN3 | low | Dead cache code: evicted keys are never written, `PasswordChanged`/`EmailConfirmed` never raised, key mismatch (AP2) | open, with AP1/AP2 |
+| AN4 | low | Cache eviction runs before the save in Create/UpdateRole | open |
+| AN5 | low | `IGooglePayloadValidatorService` has no caller; Application depends on `Google.Apis.Auth` through its payload type | open, with A5 |
+| AN6 | low | `IJwtTokenService` has five members no handler uses | open |
+| AN7 | low | Password rules only in the register validator; register does not trim like login | open |
+| AN8 | medium | No audit trail (`SecurityAuditLog` never written); `AccountDto` carries the password hash for no reason | open |
 
 ## 2b. OmniCore.Services.Auth review
 
