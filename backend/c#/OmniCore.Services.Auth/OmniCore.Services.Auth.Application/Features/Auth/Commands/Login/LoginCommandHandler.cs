@@ -1,4 +1,4 @@
-namespace OmniCore.Services.Auth.Application.Features.Auth.Commands.Login;
+﻿namespace OmniCore.Services.Auth.Application.Features.Auth.Commands.Login;
 
 using OmniCore.Services.Auth.Application.Abstractions.Security;
 using OmniCore.Services.Auth.Application.Features.Auth.DTOs;
@@ -16,6 +16,15 @@ public sealed class LoginCommandHandler(
     IJwtTokenService jwtTokenService,
     IRefreshTokenService refreshTokenService) : ICommandHandler<LoginCommand, AuthResponse>
 {
+    internal static readonly Error InvalidCredentials =
+        Error.Unauthorized("Auth.InvalidCredentials", "Invalid username, email or password.");
+
+    private static string? _dummyHash;
+
+    // A real bcrypt hash of a random value, made once, so "unknown account" does the same work as "wrong password".
+    private static string DummyHash(IPasswordHasherService hasher) =>
+        _dummyHash ??= hasher.HashPassword(Guid.NewGuid().ToString("N"));
+
     public async Task<Result<AuthResponse>> Handle(
         LoginCommand request,
         CancellationToken cancellationToken)
@@ -25,32 +34,21 @@ public sealed class LoginCommandHandler(
         //    a password hash does not belong in a shared cache and the entry went stale after a password change.
         var account = await accountRepository.GetByIdentifierAsync(request.Identifier.Trim(), cancellationToken);
 
-        // 2. Account Existence Check
-        if (account is null)
+        // 2. One answer for every way a login can fail (A9). The caller cannot tell "no such account", "deactivated",
+        //    "no local password" and "wrong password" apart, neither by the message nor by the response time: when there
+        //    is nothing to compare with, a throw-away hash is checked so the failure costs the same.
+        if (account is null || string.IsNullOrWhiteSpace(account.PasswordHash?.Value))
         {
-            return Result.Failure<AuthResponse>(
-                Error.NotFound("Auth.AccountNotFound", $"No account found matching '{request.Identifier}'."));
+            passwordHasher.VerifyPassword(request.Password, DummyHash(passwordHasher));
+            return Result.Failure<AuthResponse>(InvalidCredentials);
         }
 
-        // 3. Account Active State Check
-        if (!account.IsActive)
-        {
-            return Result.Failure<AuthResponse>(
-                Error.Unauthorized("Auth.AccountInactive", "Your account has been deactivated. Please contact support."));
-        }
+        var passwordMatches = passwordHasher.VerifyPassword(request.Password, account.PasswordHash!.Value);
 
-        // 4. Password Presence Check
-        if (string.IsNullOrWhiteSpace(account.PasswordHash?.Value))
+        // A deactivated account is rejected only after the password check, with the same answer.
+        if (!passwordMatches || !account.IsActive)
         {
-            return Result.Failure<AuthResponse>(
-                Error.Unauthorized("Auth.PasswordNotConfigured", "Account does not have a local password set. Try logging in via your external provider."));
-        }
-
-        // 5. Password Verification Check
-        if (!passwordHasher.VerifyPassword(request.Password, account.PasswordHash!.Value))
-        {
-            return Result.Failure<AuthResponse>(
-                Error.Unauthorized("Auth.InvalidPassword", "The password provided is incorrect."));
+            return Result.Failure<AuthResponse>(InvalidCredentials);
         }
 
         // 6. Generate Refresh Token via Aggregate Root

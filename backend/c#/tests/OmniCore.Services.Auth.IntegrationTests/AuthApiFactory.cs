@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Mvc.Testing;
+﻿using Microsoft.AspNetCore.Mvc.Testing;
 using Testcontainers.PostgreSql;
 using Testcontainers.RabbitMq;
 
@@ -11,6 +11,10 @@ namespace OmniCore.Services.Auth.IntegrationTests;
 /// </summary>
 public sealed class AuthApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
 {
+    public const string AdminEmail = "first.admin@example.com";
+    public const string AdminUsername = "first_admin";
+    public const string AdminPassword = "Test-Only-Admin-Pass-1!";
+
     /// <summary>The key Auth signs with in the tests; tests also use it to check tokens and the JWKS.</summary>
     public static readonly System.Security.Cryptography.RSA SigningKey = System.Security.Cryptography.RSA.Create(2048);
 
@@ -38,6 +42,9 @@ public sealed class AuthApiFactory : WebApplicationFactory<Program>, IAsyncLifet
             ["Jwt__Secret"] = "",
             ["Jwt__Issuer"] = "omnicore-tests",
             ["Jwt__Audience"] = "omnicore-tests",
+            ["Admin__Email"] = AdminEmail,
+            ["Admin__Username"] = AdminUsername,
+            ["Admin__Password"] = AdminPassword,
             ["GoogleAuth__ServerClientId"] = "CHANGE_ME",
             ["GoogleAuth__ClientId"] = "CHANGE_ME",
             ["Cors__AllowAnyOrigin"] = "false",

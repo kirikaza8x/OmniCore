@@ -1,4 +1,4 @@
-using OmniCore.Services.Auth.Application.Abstractions.Security;
+﻿using OmniCore.Services.Auth.Application.Abstractions.Security;
 using OmniCore.Services.Auth.Application.Features.Auth.Commands.Login;
 using OmniCore.Services.Auth.Domain.Entities;
 
@@ -18,28 +18,31 @@ public class LoginCommandHandlerTests
             .Returns(Task.FromResult(account));
 
     [Fact]
-    public async Task UnknownIdentifier_ReturnsNotFound()
+    public async Task UnknownIdentifier_GetsTheGenericAnswer_AndStillCostsAHashCheck()
     {
         Finds(null);
 
         var result = await Handler().Handle(new LoginCommand("nobody", TestSupport.Password), default);
 
         Assert.True(result.IsFailure);
-        Assert.Equal("Auth.AccountNotFound", result.Error.Code);
+        Assert.Equal("Auth.InvalidCredentials", result.Error.Code);
+        Assert.Equal(OmniCore.Shared.Domain.Abstractions.ErrorType.Unauthorized, result.Error.Type);
+        _hasher.Received(1).VerifyPassword(Arg.Any<string>(), Arg.Any<string>());
     }
 
     [Fact]
-    public async Task InactiveAccount_IsRejected_BeforeThePasswordIsChecked()
+    public async Task InactiveAccount_GetsTheSameAnswer_EvenWithTheRightPassword()
     {
         var account = TestSupport.NewAccount();
         account.Deactivate();
         Finds(account);
+        _hasher.VerifyPassword(Arg.Any<string>(), Arg.Any<string>()).Returns(true);
 
         var result = await Handler().Handle(new LoginCommand("alice_01", TestSupport.Password), default);
 
         Assert.True(result.IsFailure);
-        Assert.Equal("Auth.AccountInactive", result.Error.Code);
-        _hasher.DidNotReceive().VerifyPassword(Arg.Any<string>(), Arg.Any<string>());
+        Assert.Equal("Auth.InvalidCredentials", result.Error.Code);
+        _jwt.DidNotReceiveWithAnyArgs().GenerateToken(default, default, default, default!);
     }
 
     [Fact]
@@ -52,7 +55,7 @@ public class LoginCommandHandlerTests
         var result = await Handler().Handle(new LoginCommand("alice_01", "wrong"), default);
 
         Assert.True(result.IsFailure);
-        Assert.Equal("Auth.InvalidPassword", result.Error.Code);
+        Assert.Equal("Auth.InvalidCredentials", result.Error.Code);
         Assert.Empty(account.RefreshTokens);
         _jwt.DidNotReceiveWithAnyArgs().GenerateToken(default, default, default, default!);
     }

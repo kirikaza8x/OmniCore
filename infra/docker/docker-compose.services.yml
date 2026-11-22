@@ -97,6 +97,11 @@ services:
       Jwt__PrivateKeyPem: ${JWT_PRIVATE_KEY_PEM:-}
       Jwt__PreviousPublicKeyPem: ${JWT_PREVIOUS_PUBLIC_KEY_PEM:-}
       Jwt__ExpiryMinutes: ${JWT_EXPIRY_MINUTES:-60}
+      # First administrator (A15): created once on a fresh database when all three are set and no admin exists.
+      # Password: 12+ characters. Remove these three lines from .env after the first start if you like.
+      Admin__Email: ${ADMIN_EMAIL:-}
+      Admin__Username: ${ADMIN_USERNAME:-}
+      Admin__Password: ${ADMIN_PASSWORD:-}
       GoogleAuth__ServerClientId: ${GOOGLE_AUTH_SERVER_CLIENT_ID}
       GoogleAuth__ClientId: ${GOOGLE_AUTH_CLIENT_ID}
 
