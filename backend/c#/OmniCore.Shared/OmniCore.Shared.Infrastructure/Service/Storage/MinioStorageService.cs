@@ -251,20 +251,39 @@ public sealed class MinioStorageService : IStorageService, IDisposable
         }
     }
 
-    private static string GenerateObjectKey(string fileName, string? folder)
+    // The key is built from a random id plus a cleaned-up copy of the client's file name; the folder is cleaned
+    // segment by segment, so neither can climb out of the intended prefix or smuggle odd characters into the URL.
+    internal static string GenerateObjectKey(string fileName, string? folder)
     {
-        var sanitizedFileName = SanitizeFileName(fileName);
-        var uniqueFileName = $"{Guid.NewGuid():N}_{sanitizedFileName}";
+        var uniqueFileName = $"{Guid.NewGuid():N}_{SanitizeFileName(fileName)}";
+        var cleanFolder = SanitizeFolder(folder);
 
-        return string.IsNullOrWhiteSpace(folder)
-            ? uniqueFileName
-            : $"{folder.Trim('/')}/{uniqueFileName}";
+        return cleanFolder.Length == 0 ? uniqueFileName : $"{cleanFolder}/{uniqueFileName}";
     }
 
-    private static string SanitizeFileName(string fileName)
+    internal static string SanitizeFileName(string fileName)
     {
-        var invalidChars = Path.GetInvalidFileNameChars();
-        return string.Join("_", fileName.Split(invalidChars, StringSplitOptions.RemoveEmptyEntries));
+        // keep only the last path part, letters, digits, dot, dash, underscore; no leading dots; at most 100 chars
+        var name = fileName.Replace('\\', '/');
+        name = name[(name.LastIndexOf('/') + 1)..];
+
+        var cleaned = new string(name.Select(c => char.IsAsciiLetterOrDigit(c) || c is '.' or '-' or '_' ? c : '_').ToArray())
+            .TrimStart('.');
+        while (cleaned.Contains("..", StringComparison.Ordinal)) cleaned = cleaned.Replace("..", ".");
+
+        if (cleaned.Length > 100) cleaned = cleaned[^100..];
+        return cleaned.Length == 0 ? "file" : cleaned;
+    }
+
+    internal static string SanitizeFolder(string? folder)
+    {
+        if (string.IsNullOrWhiteSpace(folder)) return string.Empty;
+
+        var segments = folder.Replace('\\', '/').Split('/', StringSplitOptions.RemoveEmptyEntries)
+            .Select(seg => new string(seg.Where(c => char.IsAsciiLetterOrDigit(c) || c is '-' or '_').ToArray()))
+            .Where(seg => seg.Length > 0);
+
+        return string.Join('/', segments);
     }
 
     private string ExtractObjectKeyFromUrl(string fileUrl)
