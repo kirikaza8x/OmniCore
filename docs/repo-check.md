@@ -155,4 +155,12 @@ Read: the whole Domain and Application projects, `Program.cs`, the csproj refere
 | U8 | low | `GetUserProfileByIdQuery` is `ICacheableQuery` but `CachingBehavior` is not registered (S6), so it is never cached; the invalidation handler is correct | open (S6) |
 | U9 | low | `Username` value object is duplicated between Auth and User (and email uses the Shared one) | open, phase 7 |
 | U10 | low | Swagger title said "Auth API" | **fixed** |
+| UD1 | medium | `UserProfile` incomplete: no update/remove address, settings changed outside the aggregate, no add tenant profile, no e-mail/username/deactivate | open |
+| UD2 | medium | E-mail and username copied from Auth with no sync; no deactivation when the account is disabled/deleted | open, decide with ADR |
+| UD3 | low | `UpdatePersonalInformation` overwrites all fields, no length/format rules | open |
+| UD4 | low | `Theme`/`Language` are free strings; settings could be an owned type | open |
+| UD5 | low | `SetPrimary` public, no address limit or duplicate check, no one-primary guarantee | open |
+| UD6 | low | `GamerTag` is game-specific naming; `UserTenantProfile` is tenant-scoped while its parent is not | open, entity review |
+| UD7 | low | `SoftDelete` raises no event; identifier specification ignores `IsDeleted` and is case-sensitive | open |
+| UD8 | low | `GetWithSpecificationAsync` duplicates the Shared repository method | open |
 
