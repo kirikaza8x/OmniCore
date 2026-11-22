@@ -92,12 +92,20 @@ change that still needs `dotnet build` and a smoke test by the owner. Status: **
 | AC2 | low | `AccountRegisteredIntegrationEvent` carries `FirstName`/`LastName` that Auth does not store (filled with username / empty) | open |
 | AI1 | medium | Usernames are case-sensitive (`Alice` and `alice` both allowed), e-mail is lower-cased | open, needs ADR + migration |
 | AI2 | low | `SessionRepository` / `UserSession` / `user_sessions` unused (refresh tokens are the sessions) | open, entity review |
-| AI3 | medium | Soft-delete query filters commented out, repositories return soft-deleted accounts | open, with D1 |
+| AI3 | low | Soft-delete query filters commented out, repositories return soft-deleted accounts (login still refused: `SoftDelete` sets `IsActive=false`) | open, with D1/AD3 |
 | AI4 | low | `GoogleAuth__ServerClientId` is required at startup although no endpoint uses Google login | open |
 | AI5 | low | BCrypt cost hard-coded (12), no rehash on login | open |
 | AI6 | low | Every account lookup includes tokens, roles and role rows | open, watch |
 | AI7 | low | Role name check uses `ToLower()` in SQL, the unique index is case-sensitive | open |
 | AI8 | low | Migrations named by timestamp only; plain token columns remain | open (A6) |
+| AD1 | medium | System roles identified by string literals and renamable via `UpdateRole`; renaming `Admin`/`User` breaks authorization and default role | open, needs migration (`IsSystem`) |
+| AD2 | medium | `Deactivate`, `SoftDelete`, `AttachEmail` raise no events and ignore their actor parameters | open, with AC1 |
+| AD3 | low | Soft delete half done: username/e-mail stay reserved, no restore/purge/query filter | open, with D1/AI3 |
+| AD4 | low | Entities use `DateTime.UtcNow` directly (no fake clock in tests) | open |
+| AD5 | low | Inconsistent collection encapsulation; `Role` not audited | open, entity review |
+| AD6 | low | Unused/duplicate: `UserSession`, identifier specification, `ISessionRepository`; MFA secret "encrypted" with no encryption | open, entity review |
+| AD7 | low | `Username` has no reserved names and is case-sensitive; `PasswordHash` has no format check | open, with AI1 |
+| AD8 | low | `AccountCreatedDomainEvent` has empty-string e-mail and unused names | open, with AC2 |
 
 ## 2b. OmniCore.Services.Auth review
 
