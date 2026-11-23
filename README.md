@@ -2,11 +2,9 @@
 
 OmniCore is a modular, service-oriented backend with Docker infrastructure and a Next.js web client
 (`frontend/web`, see its README). **Only the C# (.NET 9) backend exists today**; services in other languages (for example the Python `owl_editor` service) are planned, see
-[docs/integrations/owl-editor.md](docs/integrations/owl-editor.md). There is no shared contracts folder yet.
+[docs/integrations/owl-editor.md](docs/integrations/owl-editor.md).
 
-**Status:** working prototype, not production-ready. Nothing has been built or run in the last documentation review
-(no .NET SDK available), and there are no automated tests. See [docs/repo-check.md](docs/repo-check.md) for the
-numbered findings and [docs/roadmap.md](docs/roadmap.md) for the plan.
+**Status:** working prototype, not production-ready. All three backend services (Auth, User, Notification) build in CI and have automated unit and integration tests; integration tests use Postgres and RabbitMQ testcontainers. The full compose stack has not been smoke-tested with real service containers. See [docs/repo-check.md](docs/repo-check.md) for the numbered findings and [docs/roadmap.md](docs/roadmap.md) for the plan.
 
 ## Documentation
 | Doc | What is in it |
@@ -27,12 +25,14 @@ backend/c#/
     .Api  .Application  .Domain  .Infrastructure  .Contracts
   OmniCore.Services.User/            user profiles (+ avatar), settings, tenant profiles
     .Api  .Application  .Domain  .Infrastructure  .Contracts
+  OmniCore.Services.Notification/    e-mail delivery, templates, retries, deduplication
+    .Api  .Application  .Domain  .Infrastructure  .Contracts
   scripts/shells/                    scaffold_service.ps1, add-migration.ps1, remove_service.ps1, run.ps1
 infra/docker/                        docker-compose.{database,infra,services,gateway}.yml, nginx/, scripts/init-dbs.sql
 docs/                                documentation (see the table above)
 ```
-Planned, **not in the repo yet** (git does not track empty folders): `shared/contracts/` and
-language folders for Python / Rust / Go / Java / C++.
+Planned, **not in the repo yet** (git does not track empty folders): language folders for
+Python / Rust / Go / Java / C++. Shared contracts live in `backend/c#/OmniCore.Shared/OmniCore.Shared.Contracts`.
 
 ## Tech stack
 .NET 9 / ASP.NET Core, Carter (endpoints), MediatR, FluentValidation, AutoMapper, Entity Framework Core with

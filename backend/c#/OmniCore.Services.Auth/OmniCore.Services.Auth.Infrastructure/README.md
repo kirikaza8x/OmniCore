@@ -33,7 +33,7 @@ Everything in the Auth service that touches the outside world: the PostgreSQL da
 | Class | Implements | Notes |
 |---|---|---|
 | `PasswordHasherService` | `IPasswordHasherService` | BCrypt.Net, work factor 12 hard-coded. |
-| `JwtTokenService` | `IJwtTokenService` | Signs access tokens with RS256 (key from `JwtKeySet`, `kid` header) or HS256 while `Jwt__Secret` is set; claims: id, e-mail, name, roles, jti. See [docs/auth-tokens.md](../../../docs/auth-tokens.md). |
+| `JwtTokenService` | `IJwtTokenService` | Signs access tokens with RS256 (key from `JwtKeySet`, `kid` header) or HS256 while `Jwt__Secret` is set; claims: id, e-mail, name, roles, jti. See [docs/auth-tokens.md](../../../../docs/auth-tokens.md). |
 | `RefreshTokenService` | `IRefreshTokenService` | 64 random bytes (Base64), lifetime and `MaxActiveSessions` (session cap, default 10) from `JwtConfig`. |
 | `GooglePayloadValidatorService` | `IGooglePayloadValidatorService` | Validates a Google ID token against `GoogleAuth__ServerClientId`. No caller yet. |
 

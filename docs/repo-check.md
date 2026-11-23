@@ -10,6 +10,11 @@ tested). Building found three things the read-through missed (A19 below, a synta
 missing xunit usings in the test projects), which is why review without a build is not enough. Docker-related items
 (F3, F4, F7) are still only checked with `docker compose config`.
 
+**Update 2026-11-23:** Auth, User and Notification all build and have unit and integration tests in CI. Notification's
+missing initial migration and dedup race were found and fixed (NT1/NT2). Stale doc claims were corrected across the
+service READMEs, architecture, layer index, ADR 0002 and this file; missing Notification READMEs and ADR 0006 were
+written. The full compose stack is still not smoke-tested.
+
 | # | Finding | Why it matters | Phase |
 |---|---|---|---|
 | 1 | **No automated tests and no CI**: no `tests/`, no `.github/`, and `OmniCore.slnx` has no test project | A broken build or a regression is only found by hand | 1 |
@@ -58,11 +63,11 @@ change that still needs `dotnet build` and a smoke test by the owner. Status: **
 | AP1 | medium | `CachingBehavior` could never work even if registered: its constraint `TRequest : ICacheableQuery<TResponse>` (with `TResponse : Result`) cannot match a query that is `ICacheableQuery<AccountResponse>` (its pipeline response is `Result<AccountResponse>`); caching a `Result<T>` object also has no deserialization path | open, with S6 |
 | AP2 | medium | Cache invalidation keys differ from query keys (`GetAccountByIdQuery:<id>` vs `auth:account:id:<id>`) | open, fix together with S6/AP1 |
 | AP3 | low | `PerformanceBehavior` keeps an instance `Stopwatch` that is never reset (correct only while transient) | open |
-| AP4 | low | Unused: `IEmailSender` (no implementation), `IOutboxService`, `IStreamCommand*`, `PagedRequest` family (`PageNumber` not clamped), `BaseDto`/`AuditableDto`, `SlugHelper` | open |
+| AP4 | low | Unused: `IEmailSender` (no implementation), `IOutboxService`, `IStreamCommand*`, `PagedRequest` family (`PageNumber` not clamped), `BaseDto`/`AuditableDto`, `SlugHelper` | `IEmailSender` now has `SmtpEmailSender` in Notification; the rest remain unused |
 | AP5 | low | Unused `Serilog` package in Shared.Application; AutoMapper profiles and hand-written mapping extensions coexist | open |
 | I1 | medium (latent) | `ApplyDynamicFilters` / `ApplyDynamicSorting` paste client `Field` and `Logic` into a Dynamic LINQ string: filter/sort on any property (e.g. `PasswordHash.Value`) and `or` injection; parse errors return the unfiltered query. No endpoint exposes it yet | open, fix with a per-query field allow-list before any endpoint uses `AdvancedPagedQuery` / `PagedQuery.SortColumn` |
 | I2 | low | `CacheService.RemoveByPrefixAsync` scans `<prefix>*` but Redis keys are stored as `<InstanceName><key>`, so it matches nothing (no caller yet) | open |
-| I3 | medium (when a 2nd consumer appears) | RabbitMQ queue names and Kafka group ids (`<topic>-consumer`) are not service-scoped: two services handling the same event would split messages instead of both receiving them | open, before User consumes `AccountRegisteredIntegrationEvent` |
+| I3 | medium (when a 2nd consumer appears) | RabbitMQ queue names and Kafka group ids (`<topic>-consumer`) were not service-scoped: two services handling the same event would split messages instead of both receiving them | **fixed**: `KebabCaseEndpointNameFormatter(serviceName, ...)` prefixes queues and Kafka group ids; User and Notification consume events |
 | I4 | low | Dead/unwired: correlation-id middleware + accessor (accessor unregistered), `UseDeviceId`, `AddSignalRLogger`, `AddCacheServices`, duplicate `EventBus`, commented-out health checks and resilience, `QdrantConfig` | open |
 | I5 | low | `AddControllers()` registered although every endpoint is a Carter module | open |
 | I6 | low | Handlers of one integration event run in parallel and are all retried when one fails (must be idempotent); the Kafka path has no retry or outbox | open |
@@ -163,13 +168,13 @@ Read: the whole Domain and Application projects, `Program.cs`, the csproj refere
 | UD6 | low | `GamerTag` is game-specific naming; `UserTenantProfile` is tenant-scoped while its parent is not | open, entity review |
 | UD7 | low | `SoftDelete` raises no event; identifier specification ignores `IsDeleted` and is case-sensitive | **fixed** (ADR 0004, CI green 2026-11-22) |
 | UD8 | low | `GetWithSpecificationAsync` duplicates the Shared repository method | **fixed** (ADR 0004, CI green 2026-11-22) |
-| UC1 | low | `User.Contracts` is empty (no outgoing events, project has no reference to `Shared.Contracts`); the Auth event is not consumed (U6) | open |
+| UC1 | low | `User.Contracts` is empty (no outgoing events, project has no reference to `Shared.Contracts`). The Auth event **is** consumed by `User.Application` (U6 fixed) | open for outgoing events only |
 | UA1 | high (verify) | `AddUserAddress` / `UpdateUserSettings` load with no-tracking specs then call `Update`: new child entities would be saved as UPDATE, failing with a concurrency exception | **fixed** (ADR 0004, CI green 2026-11-22) |
 | UA2 | medium | No `AddUserApplication`, no wiring, no tests: layer unproven | **fixed** (ADR 0004, CI green 2026-11-22) |
 | UA3 | low | Avatar upload before save can orphan files; old-file delete swallows exceptions silently | **fixed** (ADR 0004, CI green 2026-11-22) |
 | UA4 | low | Thin validation (names, phone, language, tenant avatar URL) | **fixed** (ADR 0004, CI green 2026-11-22) |
 | UA5 | low | Namespaces do not match folders; tenant feature has no queries | open |
-| UA6 | low | Missing use cases: list/update/delete address, delete/deactivate profile; profile query returns phone/e-mail so needs owner/admin restriction | **fixed** (ADR 0004, CI green 2026-11-22) |
+| UA6 | low | Missing use cases: list/update/delete address, delete/deactivate profile; profile query returns phone/e-mail so needs owner/admin restriction | address use cases and query restriction **fixed** (ADR 0004, CI green 2026-11-22); profile delete/deactivate still open |
 | UI1 | medium | `User.Infrastructure` references EF Core Tools 10.0.11 while the backend uses EF Core 9.0.9 | **fixed** (ADR 0004, CI green 2026-11-22) |
 | UI2 | low | No design-time context factory, so `dotnet ef` could not run | **fixed** (ADR 0004, CI green 2026-11-22) |
 | UP1 | medium | Compose service `user-api` and gateway route exist for a service that cannot start | service now starts in tests; **still to verify in the real compose stack** |

@@ -21,7 +21,9 @@ The open question in the roadmap was whether the gateway or each service validat
      a stricter pattern would let `/Login` or `/login/` skip the limit (found while testing)
 2. **JWTs stay validated by each service**, not by the gateway. The gateway only routes and limits.
 3. The gateway routes the User service prefix `/api/v1/users/` (with a 6 MB body limit for avatars) and
-   `/specs/user.json`. The User service has no endpoints yet (U1), so these answer 502 until it does.
+   `/specs/user.json`. The User service now has endpoints and a Swagger spec (U1 fixed); the full compose stack is
+   still not smoke-tested (UP1). The gateway also routes `/api/v1/notifications/` and `/specs/notification.json` to
+   the Notification service.
 
 ## Why
 

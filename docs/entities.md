@@ -1,6 +1,6 @@
 # Entity design review
 
-Scope: the domain models of Auth and User (Shared has only base types, see its README). Written 2026-11-22 against the code on `docs/readme-and-roadmap`. Finding ids (`AD#`, `UD#`) are in [repo-check.md](repo-check.md). Verdict per entity: **keep**, **change**, **remove**, **defer**.
+Scope: the domain models of Auth and User (Shared has only base types, see its README). The Notification aggregate is not reviewed here; see the [Notification.Domain README](../backend/c%23/OmniCore.Services.Notification/OmniCore.Services.Notification.Domain/README.md). Written 2026-11-22 against the code on `docs/readme-and-roadmap`. Finding ids (`AD#`, `UD#`) are in [repo-check.md](repo-check.md). Verdict per entity: **keep**, **change**, **remove**, **defer**.
 
 ## 1. The big picture
 ```

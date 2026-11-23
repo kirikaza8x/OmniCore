@@ -20,9 +20,8 @@ Nothing else. `User.Application` references this project but uses none of it.
 Same as [Auth.Contracts](../../OmniCore.Services.Auth/OmniCore.Services.Auth.Contracts/README.md): immutable `record`s deriving from `IntegrationEvent`, past-tense names ending in `IntegrationEvent`, no domain types, additive changes only, no secrets.
 
 ## How to ...
-**Add the first event:** add a project reference to `Shared.Contracts`, create `Events/UserProfileUpdatedIntegrationEvent.cs`, and publish it from a domain-event handler in `User.Application` through `IEventBus` (the existing `UserProfileCacheInvalidationEventHandler` shows where such a handler goes). Check queue/consumer names first (I3).
+**Add the first event:** add a project reference to `Shared.Contracts`, create `Events/UserProfileUpdatedIntegrationEvent.cs`, and publish it from a domain-event handler in `User.Application` through `IEventBus`. There are no outgoing events today and no User cache-invalidation handler; `Features/Profiles/IntegrationEvents/AccountRegisteredIntegrationEventHandler.cs` shows where an event consumer goes. Check queue/consumer names first (I3).
 
 ## Known gaps
 New ids (`UC1`) are added to `docs/repo-check.md` in the same commit.
-- **UC1 (new, low)** No contracts yet. Besides outgoing events, the User service must **consume** Auth's `AccountRegisteredIntegrationEvent` to create profiles (U6), which means referencing `Auth.Contracts`, not the other way round. Decide which profile changes other services need (display name, avatar) before inventing events.
-- **U6** nothing consumes the Auth event, so no profile is ever created automatically.
+- **UC1 (low)** No outgoing contracts yet. Decide which profile changes other services need (display name, avatar) before inventing events. Consuming Auth's `AccountRegisteredIntegrationEvent` is handled in `User.Application` through `Auth.Contracts` (U6 fixed); Auth does not reference User.

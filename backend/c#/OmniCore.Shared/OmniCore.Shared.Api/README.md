@@ -38,7 +38,7 @@ The web layer every service host reuses: one call to wire Carter endpoints, JWT 
 ## Depends on / used by
 - Packages: `Carter` 9.0.0, `Swashbuckle.AspNetCore` 10.2.3, `Microsoft.EntityFrameworkCore.Design` (design-time only, `PrivateAssets=all`), ASP.NET Core shared framework.
 - Projects: `Shared.Application`, `Shared.Infrastructure` (and through it `Shared.Domain`).
-- Used by: the Api project of each service (today `OmniCore.Services.Auth.Api` calls `AddApi`; the User service has no Api yet).
+- Used by: the Api projects of Auth, User and Notification; each calls `AddApi` from its own `DependencyInjection.cs`.
 
 ## Rules for this layer
 - Endpoints are Carter modules in the service's Api project; they send a MediatR command or query and turn the `Result` into a response with `ToOk` / `ToCreated` / `ToNoContent`. No business logic and no repository access in an endpoint.

@@ -1,59 +1,83 @@
 # OmniCore.Services.User (master overview)
 
-> **Status: rebuilt and running (2026-11-22), built and tested by CI** (25 domain + 22 application unit tests, 6 integration tests with Postgres and RabbitMQ). Design decisions are in [ADR 0004](../../../docs/decisions/0004-user-service-design.md). The layer READMEs below still describe the earlier design-only state and are being updated; where they disagree with this page, this page and the code win. Not yet run as a compose stack.
-
-## What the service is for
-Auth answers "who are you and may you in". User answers "what do we know about you": display name, bio, avatar, phone, preferences, addresses, and (after the multi-tenancy decision) a profile per tenant. A user profile has the **same id as the Auth account**; that id is the only link between the two services, and no database foreign key crosses the boundary.
+The profile service: display name, bio, avatar, phone, preferences and addresses. Auth owns identity and credentials;
+User owns "what we know about you". A profile has the **same id as the Auth account** — that id is the only link between
+the two databases, with no cross-service foreign key. Profiles are created only from Auth's registration event.
+Design decisions are in [ADR 0004](../../../docs/decisions/0004-user-service-design.md); tenancy waits for ADR 0001.
 
 ## The five projects
 
-| Project | One-line role | State | Details |
-|---|---|---|---|
-| `OmniCore.Services.User.Domain` | `UserProfile` aggregate with settings, addresses, tenant profiles; value objects; events; repository interface | model exists, incomplete, no tests | [README](OmniCore.Services.User.Domain/README.md) |
-| `OmniCore.Services.User.Contracts` | public integration events | empty | [README](OmniCore.Services.User.Contracts/README.md) |
-| `OmniCore.Services.User.Application` | 7 use cases, validators, cache-invalidation handler | drafted, unwired, unproven | [README](OmniCore.Services.User.Application/README.md) |
-| `OmniCore.Services.User.Infrastructure` | EF context, repository, migrations, broker wiring | **empty shell** | [README](OmniCore.Services.User.Infrastructure/README.md) |
-| `OmniCore.Services.User.Api` | endpoints and host | **skeleton, crashes at start** | [README](OmniCore.Services.User.Api/README.md) |
+| Project | One-line role | Details |
+|---|---|---|
+| `OmniCore.Services.User.Domain` | `UserProfile` aggregate with settings and addresses, value objects, domain events, repository interface | [README](OmniCore.Services.User.Domain/README.md) |
+| `OmniCore.Services.User.Contracts` | placeholder for future public integration events (empty today) | [README](OmniCore.Services.User.Contracts/README.md) |
+| `OmniCore.Services.User.Application` | 11 use cases, validators, DTOs, mapping, Auth-event consumer | [README](OmniCore.Services.User.Application/README.md) |
+| `OmniCore.Services.User.Infrastructure` | EF Core context, repository, `InitialUser` migration, MassTransit wiring | [README](OmniCore.Services.User.Infrastructure/README.md) |
+| `OmniCore.Services.User.Api` | 10 Carter endpoints, host, health check, Dockerfile | [README](OmniCore.Services.User.Api/README.md) |
 
-## How they depend on each other (as designed, same shape as Auth)
+Tests: `backend/c#/tests/OmniCore.Services.User.Domain.Tests` (25), `...Application.Tests` (22) and
+`...IntegrationTests` (6, Testcontainers with PostgreSQL and RabbitMQ, need Docker). All green in CI on 2026-11-22.
+Not yet run as a full compose stack (UP1).
+
+## How they depend on each other
+
 ```
 User.Api --> User.Infrastructure --> User.Application --> User.Domain --> Shared.Domain
-   |               |                       |
-   |               |                       +--> User.Contracts
-   |               +--> Shared.Infrastructure
+   |              |                       |
+   |              |                       +--> User.Contracts, Auth.Contracts (event only)
+   |              +--> Shared.Infrastructure
    +--> Shared.Api
 ```
-User may reference only `Auth.Contracts` from the Auth service (to consume `AccountRegisteredIntegrationEvent`), never its other projects.
 
-## Intended flow: a new account gets a profile
-1. Auth registers an account and, in the same transaction, stores `AccountRegisteredIntegrationEvent` in its outbox; the broker delivers it.
-2. A User consumer (not written, U6) sends `CreateUserProfileCommand` with the event's `AccountId` as the profile id, plus username and e-mail.
-3. `UserProfile.Create` makes the profile with default settings; the cache-invalidation handler runs; the profile is saved.
-4. From then on the signed-in user reads and updates **their own** profile through `/api/v1/users/me/...`, the id always from the token.
+Arrows point inward. User may reference only `Auth.Contracts` from Auth, never its other projects.
 
-## What exists now
-- Profiles are created **only** from `AccountRegisteredIntegrationEvent` (idempotent `ProvisionUserProfileCommand`); there is no public create endpoint.
-- Endpoints under `/api/v1/users` (all need a token): `GET/PUT /me`, `PUT /me/settings`, `POST /me/avatar` (checked by file signature: JPEG/PNG/WebP, 5 MB), `GET/POST /me/addresses`, `PUT/DELETE /me/addresses/{id}`, `GET /{id}` (public fields only), `GET /{id}/details` (Admin/SuperAdmin).
-- The aggregate enforces: theme `Light|Dark|System`, language format, max 10 addresses, exactly one primary, soft delete with event.
-- Schema `users` (`user_profiles`, `user_settings`, `user_addresses` + outbox/inbox), first migration `InitialUser` generated by CI.
+## How a new account gets a profile
 
-## Still open
-1. Tenant profiles are not mapped or built (ADR 0001 pending).
-2. No profile deletion endpoint or reaction to Auth account deactivation (UD2); username/e-mail are display copies without sync.
-3. Compose/gateway: `user-api` has not been started in the real stack; published port bypasses the gateway like Auth.
-4. Layer READMEs need the rewrite; `Contracts` is still empty (no outgoing events).
+1. Auth registers an account and writes `AccountRegisteredIntegrationEvent` to its outbox in the same transaction.
+2. `AccountRegisteredIntegrationEventHandler` (User.Application) consumes it and sends
+   `ProvisionUserProfileCommand`; a name equal to the username is dropped as a placeholder (AC2).
+3. The idempotent handler creates `UserProfile` with default settings. Duplicate delivery is a success.
+4. Failures throw, so MassTransit retries and then dead-letters. There is no public create endpoint.
+
+## What the service offers (HTTP, base `/api/v1/users`)
+
+| Area | Endpoints | Access |
+|---|---|---|
+| Caller | `GET /me`, `PUT /me`, `PUT /me/settings` | signed in |
+| Avatar | `POST /me/avatar` (multipart, JPEG/PNG/WebP by signature, max 5 MB) | signed in |
+| Addresses | `GET/POST /me/addresses`, `PUT/DELETE /me/addresses/{id}` | signed in |
+| Other users | `GET /{id}` (public fields only) | signed in |
+| Admin | `GET /{id}/details` | `Admin`, `SuperAdmin` |
+| Health | `GET /health` | anonymous |
+
+The caller's id always comes from the token, never from a request body.
+
+## Storage at a glance
+
+Schema `users` in its own database (`USER_DB_NAME`): `user_profiles`, `user_settings`, `user_addresses`, plus the
+MassTransit outbox/inbox tables. The first migration, `InitialUser`, is generated with `dotnet ef`, not hand-written.
+Username and e-mail are display copies, not unique; Auth stays the source of truth. `UserTenantProfile` exists in the
+Domain only and is not mapped (ADR 0001 pending).
 
 ## Rules that hold across the service
-Layers point inward; Domain knows no framework; failures are `Result`/`Error`; the caller's id comes from the token; Auth is the source of truth for e-mail and username; tenancy is not built before ADR 0001; an entity change and its migration go in one commit.
+
+- Layers point inward; Domain knows no framework; expected failures are `Result`/`Error`, not exceptions.
+- Children change only through `UserProfile` methods: theme `Light|Dark|System`, language format, max 10 addresses,
+  one primary, soft delete with a domain event.
+- Caller identity comes from the token. Never trust an id in a request body.
+- Auth owns username and e-mail; do not sync them here without a new Auth event.
+- Tenancy is not built before ADR 0001. An entity change and its migration go in one commit.
 
 ## Known problems, by project (full text in `docs/repo-check.md`)
+
 | Project | Ids | Headlines |
 |---|---|---|
-| Domain | UD1-UD8, U7, U9 | incomplete aggregate; copies of Auth data with no sync; duplicate `Username` type; game-specific `GamerTag` |
-| Contracts | UC1 | empty; Auth event not consumed (U6) |
-| Application | UA1-UA6, U2-U5, U8 | no-tracking `Update` bug (UA1); tenant profile never saved (U2); ids from the body (U3); unwired |
-| Infrastructure | UI1-UI2, U1 | empty; EF Tools 10 vs EF 9 version clash |
-| Api | UP1-UP2, U1 | skeleton crashes at start; compose service and gateway route point at it |
+| Domain | UD1-UD8, U7, U9 | copied Auth data with no sync; duplicate `Username` type; game-specific `GamerTag`; tenant aggregate unused |
+| Contracts | UC1 | still empty; the "Auth event not consumed" part of the finding is stale |
+| Application | UA5, U2-U5 | namespace/folder mismatch; no tenant queries; fixed: wiring, no-tracking `Update`, ids from token |
+| Infrastructure | UI1-UI2, U1 | fixed: EF Tools version aligned, design-time factory added, migrations applied |
+| Api | UP1, AA1 | compose stack unverified; no fallback authorization policy; all endpoints opt in |
 
-## Decision needed from the owner
-Keep the User service in compose and CI now, or take it out until Infrastructure and Api exist (a failing container in `docker compose up`, UP1). Related: what the profile should store (UD2), and the tenancy question (ADR 0001).
+Other open items: ADR 0001 (tenancy), ADR 0004 follow-ups (profile deletion/deactivation and Auth lifecycle events),
+I6 (all handlers of one event retry together), S11 (settings come from compose environment variables; no committed
+`appsettings*.json`).

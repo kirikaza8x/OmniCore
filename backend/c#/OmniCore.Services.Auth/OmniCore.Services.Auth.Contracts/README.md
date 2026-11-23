@@ -13,7 +13,7 @@ How the event is produced: `Account.Create` raises `AccountCreatedDomainEvent`; 
 
 ## Depends on / used by
 - Projects: `Shared.Contracts` only.
-- Used by: `Auth.Application` (publisher). **No consumer exists yet**: `Auth.Application` is the only project referencing it, and the User service has no handler for it (U1/U2).
+- Used by: `Auth.Application` (publisher), `User.Application` and `Notification.Application` (consumers). Both consume the event to create a profile and send a welcome e-mail; U1/U2 are fixed.
 
 ## Rules for this layer
 - Only immutable `record`s that derive from `IntegrationEvent`; primitive types, Guids, strings, enums owned by this project. No value objects or entities from the domain.

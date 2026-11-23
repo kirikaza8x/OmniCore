@@ -21,7 +21,7 @@ off as they land; the status here is also mirrored in `CLAUDE.md`.
 - [ ] Still open from this phase: `appsettings.Development.json.example` (S11), health check with DB/broker probes and migrations not run in every replica (A18), TLS in front of the gateway
 
 ## Phase 3: gateway (F2, F6)
-- [x] Route the User service and its spec (`/api/v1/users/...` with a 6 MB body limit, `/specs/user.json`); they answer 502 until the User service runs (U1)
+- [x] Route the User service and its spec (`/api/v1/users/...` with a 6 MB body limit, `/specs/user.json`); U1 fixed, the service has endpoints (full compose stack still not smoke-tested, UP1)
 - [x] Rate limiting in the gateway (`limit_req`: credential endpoints 10/min burst 5, rest of `/api/` 20/s burst 20, JSON 429); JWTs stay validated by each service: [ADR 0002](decisions/0002-gateway-auth-and-rate-limits.md)
 - [x] CI job `infra-config`: compose renders, pinned image tags exist in their registries, `nginx -t` with the real image
 - [ ] Still open from this phase: close the published service ports 5001/5002 in the prod override (they bypass the gateway), real client IP behind a TLS proxy (`set_real_ip_from`), per-account lockout (A8)
@@ -80,3 +80,10 @@ Candidates, effort and order: [services-plan.md](services-plan.md). Each new ser
 - [ ] Apply the theme setting, edit/promote addresses, show other users' public profiles
 - [ ] Password reset and e-mail verification screens (after Notification service + AA4)
 - [ ] Admin screens (roles, accounts) once the admin endpoints are settled
+
+## Phase 15: Notification service (2026-11-23)
+- [x] Delivery through e-mail and named webhooks, built-in `welcome`/`test` templates, admin delivery log, initial EF migration, dedup claim before send (NT1/NT2). Local: application tests 20/20, integration tests 8/8, full solution builds
+- [x] Documentation: service and five layer READMEs, [ADR 0006](decisions/0006-notification-channels.md), layer index and architecture update
+- [ ] Add production publishers for confirmation and reset mails (AC1, after Phase 10 AA4)
+- [ ] Start `notification-api` in the real compose stack and add it to the smoke check
+- [ ] Pin Dockerfile base images by digest (IF5)
