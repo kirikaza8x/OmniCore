@@ -6,6 +6,7 @@
 #   - forces Production, Swagger off, no sensitive data logging, no detailed DB errors
 #   - turns "any origin" CORS off and requires an explicit allowed origin
 #   - requires AllowedHosts instead of defaulting to "*"
+#   - requires JWT_PRIVATE_KEY_PEM on Auth, so production signs with RS256 (legacy JWT_SECRET may still validate old tokens)
 #   - stops publishing the data stores (Postgres, Redis, RabbitMQ, Kafka, Kafka UI) on the host; services still reach
 #     them over the compose network. Use `docker exec` or an SSH tunnel for admin access.
 #
@@ -14,33 +15,30 @@
 # Written without a Docker daemon: validated with `docker compose config` only, never started.
 
 x-prod-env: &prod-env
-  - ASPNETCORE_ENVIRONMENT=Production
-  - EnableSwagger=false
-  - AllowedHosts=${ALLOWED_HOSTS:?set ALLOWED_HOSTS to the public host name(s), e.g. api.example.com}
-  - Database__EnableDetailedErrors=false
-  - Database__EnableSensitiveDataLogging=false
-  - Cors__AllowAnyOrigin=false
-  - Cors__AllowedOrigins__0=${CORS_ALLOWED_ORIGIN:?set CORS_ALLOWED_ORIGIN to the front-end origin, e.g. https://app.example.com}
+  ASPNETCORE_ENVIRONMENT: Production
+  EnableSwagger: "false"
+  AllowedHosts: ${ALLOWED_HOSTS:?set ALLOWED_HOSTS to the public host name(s), e.g. api.example.com}
+  Database__EnableDetailedErrors: "false"
+  Database__EnableSensitiveDataLogging: "false"
+  Cors__AllowAnyOrigin: "false"
+  Cors__AllowedOrigins__0: ${CORS_ALLOWED_ORIGIN:?set CORS_ALLOWED_ORIGIN to the front-end origin, e.g. https://app.example.com}
 
 services:
   auth-api:
-    environment: *prod-env
+    environment:
+      <<: *prod-env
+      # Auth signs tokens. Production must use RS256; the legacy JWT_SECRET may still validate old tokens until cut-over.
+      Jwt__PrivateKeyPem: ${JWT_PRIVATE_KEY_PEM:?set JWT_PRIVATE_KEY_PEM to an RSA private key, see .env.example}
 
   user-api:
     environment: *prod-env
 
   notification-api:
     environment:
-      - ASPNETCORE_ENVIRONMENT=Production
-      - EnableSwagger=false
-      - AllowedHosts=${ALLOWED_HOSTS:?set ALLOWED_HOSTS to the public host name(s), e.g. api.example.com}
-      - Database__EnableDetailedErrors=false
-      - Database__EnableSensitiveDataLogging=false
-      - Cors__AllowAnyOrigin=false
-      - Cors__AllowedOrigins__0=${CORS_ALLOWED_ORIGIN:?set CORS_ALLOWED_ORIGIN to the front-end origin, e.g. https://app.example.com}
+      <<: *prod-env
       # Production must not send through the dev Mailpit: a real relay is required.
-      - Smtp__Host=${SMTP_HOST:?set SMTP_HOST to a real SMTP relay (Mailpit is for development)}
-      - Smtp__FromAddress=${SMTP_FROM_ADDRESS:?set SMTP_FROM_ADDRESS to a verified sender}
+      Smtp__Host: ${SMTP_HOST:?set SMTP_HOST to a real SMTP relay (Mailpit is for development)}
+      Smtp__FromAddress: ${SMTP_FROM_ADDRESS:?set SMTP_FROM_ADDRESS to a verified sender}
 
   mailpit:
     profiles: !override [dev-only]

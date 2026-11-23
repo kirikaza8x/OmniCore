@@ -2,9 +2,12 @@
 
 Plain-language companion to [ADR 0003](decisions/0003-auth-token-hardening.md). Written because the owner delegated
 the decisions ("your call") and asked for the reasons. Status of each part is marked **done** (built and green in CI,
-2026-11-20) or **planned**.
+2026-11-20) or **planned**. Updated 2026-11-23.
 
-(All four steps below are now done; the follow-up migration that drops the plain `token` columns is the one open item.)
+All four steps below are done in code. Still open: the owner must generate `JWT_PRIVATE_KEY_PEM` and remove
+`JWT_SECRET` to finish the cut-over; a follow-up migration must drop the old plain `token` columns (A6); and the full
+compose stack has not been started with RS256. The production override now **requires** `JWT_PRIVATE_KEY_PEM` (added
+2026-11-23), so production cannot start in the legacy HS256-only mode.
 
 ## The two tokens
 - **Access token** (a JWT): short-lived proof of who you are. Sent with every API call. Services check its signature.
@@ -77,9 +80,10 @@ as secret, and `alg=none` all get 401. Unit-level: modes (legacy / cut-over / RS
 `\n` PEMs, remote fetch from a local server, unreachable Auth does not throw, startup validation (short secret, public key
 as private, 1024-bit key, junk PEM).
 **Owner action:** generate the key and put it in your secret store as `JWT_PRIVATE_KEY_PEM`; never commit it. The repo
-defaults still start in the legacy HS256 mode until you do. **Not done:** `docker-compose.prod.yml` does not yet *require*
-the private key (so prod can still run on HS256), and the compose stack with RS256 has not been started for real
-(CI covers the API in-process with Testcontainers only).
+defaults still start in the legacy HS256 mode until you do, but `docker-compose.prod.yml` now *requires* the private
+key (2026-11-23). **Not done:** the owner cut-over and a real compose-stack start with RS256; CI covers the API
+in-process with Testcontainers only.
 
 ## Not covered here
-Account lockout (A8), generic login error (A9) and the first admin account (A15) are separate findings.
+Account lockout (A8) is still open. Generic login errors (A9) and the first admin account (A15) were fixed on
+2026-11-23; see [repo-check.md](repo-check.md).

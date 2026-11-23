@@ -116,7 +116,7 @@ jobs:
         working-directory: infra/docker
         run: |
           docker compose --env-file .env.example config --quiet
-          sed -e 's/^ALLOWED_HOSTS=$/ALLOWED_HOSTS=api.example.com/' -e 's#^CORS_ALLOWED_ORIGIN=$#CORS_ALLOWED_ORIGIN=https://app.example.com#' .env.example > "$RUNNER_TEMP/prod.env"
+          sed -e 's/^ALLOWED_HOSTS=$/ALLOWED_HOSTS=api.example.com/' -e 's#^CORS_ALLOWED_ORIGIN=$#CORS_ALLOWED_ORIGIN=https://app.example.com#' -e 's#^JWT_PRIVATE_KEY_PEM=$#JWT_PRIVATE_KEY_PEM=dummy-for-config-render#' .env.example > "$RUNNER_TEMP/prod.env"
           docker compose -f docker-compose.yml -f docker-compose.prod.yml --env-file "$RUNNER_TEMP/prod.env" config --quiet
           docker compose -f docker-compose.yml -f docker-compose.prod.yml -f docker-compose.cloud-sim.yml --env-file "$RUNNER_TEMP/prod.env" config --quiet
           bash -n scripts/cloud-sim.sh
