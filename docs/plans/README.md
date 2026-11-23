@@ -11,6 +11,7 @@ One Markdown plan per non-trivial change. The workflow is in [../workflow.md](..
 | [0001-ci-scoped-runs.md](0001-ci-scoped-runs.md) | done | path-filtered backend CI, selective jobs, plan-first workflow docs |
 | [0002-copilot-junior-agent.md](0002-copilot-junior-agent.md) | done | Copilot instructions, custom junior agent, setup steps, docs |
 | [0003-claude-handoff-docs.md](0003-claude-handoff-docs.md) | in progress | Claude catch-up and task handoff to OpenCode or Copilot |
+| [0004-password-reset-email-verification.md](0004-password-reset-email-verification.md) | in progress | password reset and e-mail verification across Auth and Notification (ADR 0009) |
 
 Statuses: `planned`, `in progress`, `blocked`, `done`, `abandoned`.
 
