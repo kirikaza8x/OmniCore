@@ -41,6 +41,16 @@ services:
       replicas: ${SIM_API_REPLICAS:-2}
       <<: *limits-api
 
+  notification-api:
+    <<: *hardening
+    container_name: !reset null
+    ports: !reset []
+    networks: !override [backend]
+    logging: *logging
+    deploy:
+      replicas: ${SIM_API_REPLICAS:-2}
+      <<: *limits-api
+
   gateway:
     networks: !override [edge, backend]
     logging: *logging

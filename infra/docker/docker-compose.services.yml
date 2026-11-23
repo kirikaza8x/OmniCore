@@ -1,7 +1,7 @@
 # Application services. Everything the services share is defined once in the x- blocks below; a service only lists
 # what is different about it (its image, port, database, and its own JWT settings).
 #
-# To add a service: copy `user-api`, change the build path, container name, port, database name and Redis
+# To add a service: run backend/c#/scripts/scaffold.py (docs/new-service.md), or copy `user-api`, change the build path, container name, port, database name and Redis
 # instance name; add its database to scripts/init-dbs.sql and a route in nginx/nginx.conf.
 
 # Settings every service reads (all come from .env; defaults are the safe values).
@@ -119,3 +119,29 @@ services:
       Redis__InstanceName: ${USER_REDIS_INSTANCE_NAME:-OmniCore_User_}
       # User only validates tokens issued by Auth: it fetches the public keys from Auth's JWKS endpoint.
       Jwt__JwksUrl: ${JWT_JWKS_URL:-http://auth-api:8080/.well-known/jwks.json}
+
+  notification-api:
+    <<: *service-base
+    build:
+      context: ../../
+      dockerfile: backend/c#/OmniCore.Services.Notification/OmniCore.Services.Notification.Api/Dockerfile
+    container_name: omnicore-notification-api
+    ports:
+      - "${NOTIFICATION_SERVICE_PORT:-5003}:8080"
+    environment:
+      <<: *service-env
+      Database__ConnectionString: Host=postgres;Port=5432;Database=${NOTIFICATION_DB_NAME};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
+      Redis__InstanceName: ${NOTIFICATION_REDIS_INSTANCE_NAME:-OmniCore_Notification_}
+      Jwt__JwksUrl: ${JWT_JWKS_URL:-http://auth-api:8080/.well-known/jwks.json}
+      # E-mail: Mailpit in dev (nothing leaves the machine, read it at http://localhost:8025). Production: set SMTP_* to a real relay.
+      Smtp__Host: ${SMTP_HOST:-mailpit}
+      Smtp__Port: ${SMTP_PORT:-1025}
+      Smtp__Security: ${SMTP_SECURITY:-None}
+      Smtp__Username: ${SMTP_USERNAME:-}
+      Smtp__Password: ${SMTP_PASSWORD:-}
+      Smtp__FromAddress: ${SMTP_FROM_ADDRESS:-no-reply@omnicore.local}
+      Smtp__FromName: ${SMTP_FROM_NAME:-OmniCore}
+      # Named webhook endpoint "ops" (Slack/Discord/ntfy incoming-webhook URL). A request names the endpoint, never a URL.
+      Webhooks__Endpoints__ops: ${WEBHOOK_OPS_URL:-}
+    depends_on:
+      mailpit: { condition: service_started, required: false }

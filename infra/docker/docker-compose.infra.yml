@@ -42,6 +42,20 @@ services:
       - omnicore-network
 
   # ---------------------------------------------------------------
+  # Mailpit: a fake SMTP server with a web inbox, for development. Nothing is delivered outside.
+  # SMTP on 1025 (inside the network: mailpit:1025), inbox UI on http://localhost:8025.
+  # ---------------------------------------------------------------
+  mailpit:
+    image: axllent/mailpit:v1.21.8
+    container_name: omnicore-mailpit
+    restart: always
+    ports:
+      - "${MAILPIT_UI_PORT:-8025}:8025"
+      - "${MAILPIT_SMTP_PORT:-1025}:1025"
+    networks:
+      - omnicore-network
+
+  # ---------------------------------------------------------------
   # MinIO object storage
   # ---------------------------------------------------------------
   minio:

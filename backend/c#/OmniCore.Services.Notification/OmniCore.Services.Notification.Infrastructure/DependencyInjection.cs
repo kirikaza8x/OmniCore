@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using OmniCore.Services.Notification.Application.Abstractions;
 using OmniCore.Services.Notification.Infrastructure.Channels;
@@ -83,6 +84,18 @@ public static class DependencyInjection
         this IApplicationBuilder app,
         bool seedData = true)
     {
+        // Production must not point at the development mail catcher: mail would "send" fine and reach nobody.
+        var provider = app.ApplicationServices;
+        if (provider.GetRequiredService<IHostEnvironment>().IsProduction())
+        {
+            var host = provider.GetRequiredService<IOptions<SmtpConfig>>().Value.Host.Trim().ToLowerInvariant();
+            if (host is "mailpit" or "localhost" or "127.0.0.1" or "::1")
+            {
+                throw new InvalidOperationException(
+                    $"Smtp:Host is '{host}', a development mail catcher. Set SMTP_HOST to a real SMTP relay in production.");
+            }
+        }
+
         await app.ApplyMigrationsAsync<NotificationDbContext>(seedData);
         return app;
     }

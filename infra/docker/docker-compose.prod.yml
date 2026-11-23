@@ -29,6 +29,22 @@ services:
   user-api:
     environment: *prod-env
 
+  notification-api:
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - EnableSwagger=false
+      - AllowedHosts=${ALLOWED_HOSTS:?set ALLOWED_HOSTS to the public host name(s), e.g. api.example.com}
+      - Database__EnableDetailedErrors=false
+      - Database__EnableSensitiveDataLogging=false
+      - Cors__AllowAnyOrigin=false
+      - Cors__AllowedOrigins__0=${CORS_ALLOWED_ORIGIN:?set CORS_ALLOWED_ORIGIN to the front-end origin, e.g. https://app.example.com}
+      # Production must not send through the dev Mailpit: a real relay is required.
+      - Smtp__Host=${SMTP_HOST:?set SMTP_HOST to a real SMTP relay (Mailpit is for development)}
+      - Smtp__FromAddress=${SMTP_FROM_ADDRESS:?set SMTP_FROM_ADDRESS to a verified sender}
+
+  mailpit:
+    profiles: !override [dev-only]
+
   postgres:
     ports: !reset []
 

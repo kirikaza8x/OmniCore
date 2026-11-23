@@ -76,7 +76,9 @@ public sealed class SendNotificationCommandHandler(
             "Notification {NotificationId} on {Channel}, attempt {Attempts}: {Status} ({Error})",
             message.Id.Value, message.Channel, message.Attempts, message.Status, message.LastError);
 
-        // The behaviour saves only on success, and the failed attempt must be kept either way (CLAUDE.md).
+        // The behaviour saves only on success, and the failed attempt must be kept either way (CLAUDE.md). Inside a broker
+        // consumer with the EF inbox this save belongs to the consumer's transaction, which rolls back when the caller then
+        // throws to get a redelivery: the retried attempt itself is guaranteed in the log, the failed ones only over HTTP.
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
         return message.Status == NotificationStatus.Failed
