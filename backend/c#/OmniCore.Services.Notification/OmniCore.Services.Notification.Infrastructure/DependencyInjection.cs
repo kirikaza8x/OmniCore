@@ -6,7 +6,11 @@ using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using OmniCore.Services.Notification.Application.Abstractions;
+using OmniCore.Services.Notification.Infrastructure.Channels;
+using OmniCore.Services.Notification.Infrastructure.Configs;
 using OmniCore.Services.Notification.Infrastructure.Persistence.Contexts;
+using OmniCore.Shared.Application.Abstractions.Notifications;
 using OmniCore.Shared.Domain.Repositories;
 using OmniCore.Shared.Infrastructure;
 using OmniCore.Shared.Infrastructure.Configs.Database;
@@ -61,6 +65,15 @@ public static class DependencyInjection
             .WithScopedLifetime());
 
         services.AddDataSeeders(InfrastructureAssemblyReference.Assembly);
+
+        // Channels: one INotificationChannel per way of delivering (ADR 0006). To add one, implement the interface and
+        // register it here; nothing else changes.
+        services.AddConfig<SmtpConfig>();
+        services.AddConfig<WebhooksConfig>();
+        services.AddSingleton<IEmailSender, SmtpEmailSender>();
+        services.AddHttpClient(WebhookChannel.HttpClientName);
+        services.AddScoped<INotificationChannel, EmailChannel>();
+        services.AddScoped<INotificationChannel, WebhookChannel>();
 
         return services;
     }

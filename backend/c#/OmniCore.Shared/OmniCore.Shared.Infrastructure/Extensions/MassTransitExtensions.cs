@@ -1,4 +1,4 @@
-﻿namespace OmniCore.Shared.Infrastructure.Extensions;
+namespace OmniCore.Shared.Infrastructure.Extensions;
 
 using System.Reflection;
 using MassTransit;
@@ -39,6 +39,8 @@ public static class MassTransitExtensions
 
         ValidateBrokerConfig(brokerConfig);
 
+        var serviceName = ResolveServiceName(brokerConfig, typeof(TDbContext));
+
         bool isKafka = brokerConfig.Provider.Equals("Kafka", StringComparison.OrdinalIgnoreCase);
 
         // 1. DI Event Bus Registration
@@ -54,7 +56,9 @@ public static class MassTransitExtensions
         // 2. Transport Configuration
         services.AddMassTransit(busConfigurator =>
         {
-            busConfigurator.SetKebabCaseEndpointNameFormatter();
+            // Every queue is prefixed with the service name: without it, User and Notification would share one queue for
+            // AccountRegisteredIntegrationEvent and each message would reach only one of them (repo-check IF6).
+            busConfigurator.SetKebabCaseEndpointNameFormatter(serviceName, includeNamespace: false);
 
             if (!isKafka)
             {
@@ -63,11 +67,25 @@ public static class MassTransitExtensions
             }
             else
             {
-                busConfigurator.ConfigureKafkaBus(brokerConfig, assemblies);
+                busConfigurator.ConfigureKafkaBus(brokerConfig, assemblies, serviceName);
             }
         });
 
         return services;
+    }
+
+    /// <summary>The configured name, else the service part of the assembly name: OmniCore.Services.User.Infrastructure gives "user".</summary>
+    internal static string ResolveServiceName(MessageBrokerConfig brokerConfig, Type serviceType)
+    {
+        if (!string.IsNullOrWhiteSpace(brokerConfig.ServiceName))
+        {
+            return brokerConfig.ServiceName.Trim().ToLowerInvariant();
+        }
+
+        var parts = (serviceType.Assembly.GetName().Name ?? "service").Split('.');
+        var index = Array.IndexOf(parts, "Services");
+        var name = index >= 0 && index + 1 < parts.Length ? parts[index + 1] : parts[0];
+        return name.ToLowerInvariant();
     }
 
     private static void ValidateBrokerConfig(MessageBrokerConfig brokerConfig)

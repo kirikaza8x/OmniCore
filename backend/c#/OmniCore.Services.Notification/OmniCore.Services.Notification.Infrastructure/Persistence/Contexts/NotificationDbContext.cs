@@ -2,6 +2,7 @@ namespace OmniCore.Services.Notification.Infrastructure.Persistence.Contexts;
 
 using MassTransit;
 using Microsoft.EntityFrameworkCore;
+using OmniCore.Services.Notification.Domain.Entities;
 
 public class NotificationDbContext : DbContext
 {
@@ -9,7 +10,7 @@ public class NotificationDbContext : DbContext
 
     public NotificationDbContext(DbContextOptions<NotificationDbContext> options) : base(options) { }
 
-    // public DbSet<Thing> Things => Set<Thing>();
+    public DbSet<NotificationMessage> NotificationMessages => Set<NotificationMessage>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

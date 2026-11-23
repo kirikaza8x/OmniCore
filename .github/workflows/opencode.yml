@@ -1,0 +1,320 @@
+name: opencode
+
+# A free-model OpenCode agent as a junior developer (ADR 0007, docs/opencode.md).
+#
+#   agent   : read-only token, no secrets. Runs OpenCode, then screens the result (guard.sh) and builds/tests it
+#             (validate.sh). Its only output is a patch + a report (artifact). It cannot push.
+#   publish : applies the screened patch, pushes branch opencode/<run>, opens a DRAFT pull request, starts backend/frontend CI
+#             on that branch. Never merges anything.
+#   notify  : says what happened (job summary; plus a comment on the issue when started from one).
+#
+# If OpenCode cannot be installed, no free model answers, the guard rejects the patch or validation fails, nothing is
+# published and the other workflows are untouched ("fall back to standard behaviour"): the task is simply done by hand.
+#
+# Start it: Actions -> opencode -> Run workflow, or comment "/oc [role] task" on an ISSUE (owners/members/collaborators only).
+# GitHub only runs issue_comment and lists workflow_dispatch for workflow files on the default branch (main).
+
+on:
+  workflow_dispatch:
+    inputs:
+      role:
+        description: What the agent does (review and repo-scan are read-only)
+        type: choice
+        options: [implement, tests, docs, review, repo-scan]
+        default: implement
+      task:
+        description: The task. Be specific; name the files.
+        type: string
+        required: true
+      models:
+        description: "Comma-separated candidate models, first available wins (default: repo variable OPENCODE_MODELS, else the built-in list)"
+        type: string
+        required: false
+  issue_comment:
+    types: [created]
+
+permissions: {}
+
+concurrency:
+  group: opencode
+  cancel-in-progress: false
+
+env:
+  # Pinned: a floating "latest" would run new, unreviewed code. Bump on purpose.
+  OPENCODE_VERSION: "1.19.6"
+  # Free OpenCode models whose ids exist in the pinned version (checked with `opencode models opencode`). The free list
+  # changes often, so every run re-checks the catalogue and skips ids that are gone.
+  DEFAULT_MODELS: opencode/deepseek-v4.1-flash-free,opencode/hy4-flash-free,opencode/glm-5.3-flash-free
+
+jobs:
+  agent:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'issue_comment' &&
+       !github.event.issue.pull_request &&
+       contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association) &&
+       (startsWith(github.event.comment.body, '/oc ') || startsWith(github.event.comment.body, '/opencode ')))
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: read
+    outputs:
+      role: ${{ steps.parse.outputs.role }}
+      base: ${{ steps.parse.outputs.base }}
+      base_sha: ${{ steps.sha.outputs.base_sha }}
+      has_patch: ${{ steps.decide.outputs.has_patch }}
+      has_report: ${{ steps.decide.outputs.has_report }}
+      reason: ${{ steps.decide.outputs.reason }}
+      model: ${{ steps.decide.outputs.model }}
+      touches_frontend: ${{ steps.decide.outputs.touches_frontend }}
+    steps:
+      - name: Paths
+        run: echo "OC_OUT=$RUNNER_TEMP/oc" >> "$GITHUB_ENV"
+
+      - name: Parse the request
+        id: parse
+        env:
+          EVENT: ${{ github.event_name }}
+          INPUT_ROLE: ${{ github.event.inputs.role }}
+          INPUT_TASK: ${{ github.event.inputs.task }}
+          COMMENT: ${{ github.event.comment.body }}
+          REF_NAME: ${{ github.ref_name }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          # Untrusted text only ever arrives through env, never spliced into the script.
+          set -euo pipefail
+          mkdir -p "$OC_OUT"
+          if [ "$EVENT" = workflow_dispatch ]; then
+            role="$INPUT_ROLE"; task="$INPUT_TASK"; base="$REF_NAME"
+          else
+            body="${COMMENT#/opencode}"; body="${body#/oc}"
+            body="$(printf '%s' "$body" | sed 's/^[[:space:]]*//')"
+            role=implement
+            first="${body%%[[:space:]]*}"; first="${first%:}"
+            case "$first" in
+              implement|tests|docs|review|repo-scan) role="$first"; body="${body#"${body%%[[:space:]]*}"}" ;;
+            esac
+            task="$(printf '%s' "$body" | sed 's/^[[:space:]:]*//')"; base="$DEFAULT_BRANCH"
+          fi
+          case "$role" in implement|tests|docs|review|repo-scan) ;; *) echo "::error::unknown role"; exit 1 ;; esac
+          printf '%s' "$base" | grep -Eq '^[A-Za-z0-9._/-]+$' || { echo "::error::odd base branch name"; exit 1; }
+          [ -n "$(printf '%s' "$task" | tr -d '[:space:]')" ] || { echo "::error::empty task"; exit 1; }
+          printf '%s' "$task" | head -c 4000 > "$OC_OUT/task.txt"
+          { echo "role=$role"; echo "base=$base"; } >> "$GITHUB_OUTPUT"
+
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.parse.outputs.base }}
+          persist-credentials: false   # the agent's workspace holds no token
+
+      - name: Record the base commit
+        id: sha
+        run: echo "base_sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 9.0.x
+
+      - name: Install OpenCode
+        id: install
+        continue-on-error: true
+        run: |
+          npm install -g "opencode-ai@${OPENCODE_VERSION}"
+          opencode --version
+
+      - name: Run the agent
+        id: agent
+        if: steps.install.outcome == 'success'
+        continue-on-error: true
+        env:
+          ROLE: ${{ steps.parse.outputs.role }}
+          MODELS: ${{ github.event.inputs.models || vars.OPENCODE_MODELS || env.DEFAULT_MODELS }}
+          AGENT_TIMEOUT_MIN: "25"
+        run: bash .github/opencode/run-agent.sh "$ROLE"
+
+      - name: Screen the result (guard)
+        id: guard
+        if: steps.agent.outcome == 'success'
+        continue-on-error: true
+        env:
+          ROLE: ${{ steps.parse.outputs.role }}
+        run: |
+          set +e
+          bash .github/opencode/guard.sh "$ROLE"
+          echo "rc=$?" >> "$GITHUB_OUTPUT"
+
+      - name: Build and test the change
+        id: validate
+        if: steps.guard.outputs.rc == '0' && steps.parse.outputs.role != 'review' && steps.parse.outputs.role != 'repo-scan'
+        continue-on-error: true
+        run: bash .github/opencode/validate.sh
+
+      - name: Decide
+        id: decide
+        if: always()
+        env:
+          ROLE: ${{ steps.parse.outputs.role }}
+          INSTALL: ${{ steps.install.outcome }}
+          AGENT: ${{ steps.agent.outcome }}
+          GUARD_RC: ${{ steps.guard.outputs.rc }}
+          VALIDATE: ${{ steps.validate.outcome }}
+        run: |
+          set +e
+          has_patch=false; has_report=false; reason=""
+          readonly_role=false; { [ "$ROLE" = review ] || [ "$ROLE" = repo-scan ]; } && readonly_role=true
+          if [ "$INSTALL" != success ]; then reason="OpenCode could not be installed (npm opencode-ai@$OPENCODE_VERSION)"
+          elif [ "$AGENT" != success ]; then reason="$(cat "$OC_OUT/reason.txt" 2>/dev/null)"; [ -n "$reason" ] || reason="the agent step failed"
+          elif [ "$GUARD_RC" != 0 ]; then reason="$(cat "$OC_OUT/reason.txt" 2>/dev/null)"; [ -n "$reason" ] || reason="the guard step failed"
+          elif $readonly_role; then has_report=true
+          elif [ "$VALIDATE" != success ]; then reason="$(cat "$OC_OUT/reason.txt" 2>/dev/null)"; [ -n "$reason" ] || reason="validation failed"
+          else has_patch=true
+          fi
+          reason="$(printf '%s' "$reason" | tr '\n\r' '  ' | head -c 400)"
+          touches_frontend=false; grep -q '^frontend/' "$OC_OUT/changed.txt" 2>/dev/null && touches_frontend=true
+          {
+            echo "has_patch=$has_patch"; echo "has_report=$has_report"; echo "reason=$reason"
+            echo "model=$(cat "$OC_OUT/model.txt" 2>/dev/null)"; echo "touches_frontend=$touches_frontend"
+          } >> "$GITHUB_OUTPUT"
+          {
+            echo "## opencode: $ROLE"
+            echo "model: \`$(cat "$OC_OUT/model.txt" 2>/dev/null || echo none)\`  |  patch: $has_patch  |  report: $has_report"
+            [ -n "$reason" ] && echo "> not published: $reason"
+            echo; cat "$OC_OUT/validation.md" 2>/dev/null; echo; cat "$OC_OUT/agent-report.md" 2>/dev/null
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit 0
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: opencode-result
+          path: |
+            ${{ runner.temp }}/oc/task.txt
+            ${{ runner.temp }}/oc/agent-report.md
+            ${{ runner.temp }}/oc/opencode.patch
+            ${{ runner.temp }}/oc/changed.txt
+            ${{ runner.temp }}/oc/validation.md
+            ${{ runner.temp }}/oc/reason.txt
+            ${{ runner.temp }}/oc/model.txt
+          if-no-files-found: ignore
+          retention-days: 14
+
+  publish:
+    needs: agent
+    if: needs.agent.outputs.has_patch == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write        # push the opencode/<run> branch
+      pull-requests: write   # open the draft PR
+      actions: write         # start backend/frontend CI on that branch (pushes by GITHUB_TOKEN do not trigger workflows)
+    env:
+      GH_TOKEN: ${{ github.token }}
+      TOUCHES_FRONTEND: ${{ needs.agent.outputs.touches_frontend }}
+      BASE: ${{ needs.agent.outputs.base }}
+      ROLE: ${{ needs.agent.outputs.role }}
+      MODEL: ${{ needs.agent.outputs.model }}
+      BRANCH: opencode/${{ github.run_id }}-${{ github.run_attempt }}
+    outputs:
+      pr_url: ${{ steps.pr.outputs.pr_url }}
+    steps:
+      - name: Paths
+        run: echo "OC_OUT=$RUNNER_TEMP/oc" >> "$GITHUB_ENV"
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.agent.outputs.base_sha }}
+      - uses: actions/download-artifact@v4
+        with:
+          name: opencode-result
+          path: ${{ runner.temp }}/oc
+
+      - name: Apply the screened patch and push
+        run: |
+          set -euo pipefail
+          git apply --check "$OC_OUT/opencode.patch"
+          git apply --index "$OC_OUT/opencode.patch"
+          git config user.name "opencode-junior"
+          git config user.email "opencode-junior@users.noreply.github.com"
+          title="$(head -n1 "$OC_OUT/task.txt" | tr -cd '[:alnum:] ._-' | cut -c1-60)"
+          git switch -c "$BRANCH"
+          git commit -q -m "opencode($ROLE): ${title:-change}" \
+                     -m "Generated by OpenCode ($MODEL) in run ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}. Not human-reviewed yet."
+          git push origin "$BRANCH"
+
+      - name: Open the draft pull request and start CI
+        id: pr
+        run: |
+          set +e
+          zw="$(printf '\xe2\x80\x8b')"   # zero-width space: an @mention in model output must not ping anyone
+          {
+            echo "> **Generated by OpenCode (\`$MODEL\`), role \`$ROLE\`. Draft: not merged until reviewed.**"
+            echo
+            sed "s/@/@${zw}/g" "$OC_OUT/agent-report.md"
+            echo; echo "## Automatic checks (before publishing)"; cat "$OC_OUT/validation.md"
+            echo; echo "## Review gate"
+            echo "- [ ] Diff read line by line by a human or Claude (green CI alone is not enough)"
+            echo "- [ ] backend / frontend runs on branch \`$BRANCH\` are green (started by the opencode run)"
+            echo "- [ ] Integration tests passed (the agent only ran unit tests)"
+          } > "$RUNNER_TEMP/pr-body.md"
+          title="$(head -n1 "$OC_OUT/task.txt" | tr -cd '[:alnum:] ._-' | cut -c1-60)"
+          gh label create opencode --color 5319e7 --description "Generated by the OpenCode agent" 2>/dev/null
+          gh label create needs-review --color d93f0b --description "Not reviewed yet" 2>/dev/null
+          url="$(gh pr create --draft --base "$BASE" --head "$BRANCH" --title "opencode($ROLE): ${title:-change}" \
+                   --body-file "$RUNNER_TEMP/pr-body.md" --label opencode --label needs-review 2>"$RUNNER_TEMP/pr.err")"
+          if [ -z "$url" ]; then
+            echo "::warning::could not open the PR ($(head -c 300 "$RUNNER_TEMP/pr.err")). Enable 'Allow GitHub Actions to create and approve pull requests' in repo settings."
+            url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/compare/${BASE}...${BRANCH}"
+          fi
+          echo "pr_url=$url" >> "$GITHUB_OUTPUT"
+          gh workflow run backend.yml --ref "$BRANCH" || echo "::warning::could not start backend CI on $BRANCH"
+          if [ "$TOUCHES_FRONTEND" = true ]; then
+            gh workflow run frontend.yml --ref "$BRANCH" || echo "::warning::could not start frontend CI on $BRANCH"
+          fi
+          exit 0
+
+  notify:
+    needs: [agent, publish]
+    if: always() && needs.agent.result != 'skipped'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      issues: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      ROLE: ${{ needs.agent.outputs.role }}
+      REASON: ${{ needs.agent.outputs.reason }}
+      PR_URL: ${{ needs.publish.outputs.pr_url }}
+      HAS_REPORT: ${{ needs.agent.outputs.has_report }}
+      AGENT_RESULT: ${{ needs.agent.result }}
+      ISSUE: ${{ github.event.issue.number }}
+    steps:
+      - name: Paths
+        run: echo "OC_OUT=$RUNNER_TEMP/oc" >> "$GITHUB_ENV"
+      - uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: opencode-result
+          path: ${{ runner.temp }}/oc
+      - name: Say what happened
+        run: |
+          set +e
+          zw="$(printf '\xe2\x80\x8b')"
+          {
+            if [ -n "$PR_URL" ]; then
+              echo "OpenCode ($ROLE) opened a **draft** for review: $PR_URL"
+              echo "It is not merged and not reviewed. Read the diff before merging."
+            elif [ "$HAS_REPORT" = true ]; then
+              echo "OpenCode ($ROLE) report (read-only, nothing was changed):"; echo
+              sed "s/@/@${zw}/g" "$OC_OUT/agent-report.md"
+            elif [ "$AGENT_RESULT" != success ]; then
+              echo "The opencode workflow failed before the agent finished. Nothing was changed; see the run log."
+            else
+              echo "OpenCode ($ROLE) did not produce a usable change: ${REASON:-unknown reason}."
+              echo "Nothing was changed or published and the normal CI is unaffected. Do this task by hand."
+            fi
+          } > "$RUNNER_TEMP/message.md"
+          cat "$RUNNER_TEMP/message.md" >> "$GITHUB_STEP_SUMMARY"
+          if [ -n "$ISSUE" ]; then gh issue comment "$ISSUE" --repo "$GITHUB_REPOSITORY" --body-file "$RUNNER_TEMP/message.md"; fi
+          exit 0

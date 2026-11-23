@@ -1,4 +1,4 @@
-﻿namespace OmniCore.Shared.Infrastructure.Configs.MessageBroker;
+namespace OmniCore.Shared.Infrastructure.Configs.MessageBroker;
 
 using System.ComponentModel.DataAnnotations;
 
@@ -12,6 +12,13 @@ public sealed class MessageBrokerConfig : ConfigBase, IValidatableObject
     public string Host { get; set; } = "localhost";
     public string Username { get; set; } = "guest";
     public string Password { get; set; } = "guest";
+
+    /// <summary>
+    /// Prefix of this service's queue names (RabbitMQ) and consumer groups (Kafka), so two services that consume the same
+    /// event each get their own copy instead of competing for one. Default: derived from the service's assembly name
+    /// (<c>OmniCore.Services.User.Infrastructure</c> gives <c>user</c>).
+    /// </summary>
+    public string? ServiceName { get; set; }
 
     public string KafkaBootstrapServers { get; set; } = "localhost:9092";
 

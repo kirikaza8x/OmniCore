@@ -5,6 +5,11 @@
     <ProjectReference Include="..\..\OmniCore.Shared\OmniCore.Shared.Infrastructure\OmniCore.Shared.Infrastructure.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- SMTP client for the e-mail channel (MimeKit comes with it). -->
+    <PackageReference Include="MailKit" Version="4.9.0" />
+  </ItemGroup>
+
   <PropertyGroup>
     <TargetFramework>net9.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>

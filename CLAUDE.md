@@ -63,6 +63,11 @@ takes about a minute.
   `docs/decisions/NNNN-title.md` **before** a risky change (rename, schema or token-format change, removing a layer).
   Update the docs and the progress section below after each piece of work.
 
+## OpenCode junior agent
+`.github/workflows/opencode.yml` runs a free-model OpenCode agent for routine tasks (ADR 0007, `docs/opencode.md`). It only produces **draft PRs** `opencode/<run>`;
+read every line of one before merging (green CI is not enough; integration tests run on the branch). It cannot touch `.github/`, `CLAUDE.md`, secrets or prod compose.
+Built and linted (actionlint) but **not yet run on GitHub**; do not describe it as working until a run has shown it.
+
 ## Do not
 - Do not claim tests or builds pass without running them. Mark code written without a build as unbuilt.
 - Do not commit secrets. Example values must be obviously fake (`CHANGE_ME`).

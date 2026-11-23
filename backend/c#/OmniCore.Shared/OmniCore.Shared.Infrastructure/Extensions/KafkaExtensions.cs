@@ -10,7 +10,8 @@ internal static class KafkaExtensions
     public static void ConfigureKafkaBus(
         this IBusRegistrationConfigurator busConfigurator,
         MessageBrokerConfig brokerConfig,
-        Assembly[] assemblies)
+        Assembly[] assemblies,
+        string serviceName)
     {
         busConfigurator.AddRider(rider =>
         {
@@ -21,7 +22,7 @@ internal static class KafkaExtensions
             rider.UsingKafka((context, k) =>
             {
                 k.Host(brokerConfig.KafkaBootstrapServers);
-                RegisterKafkaTopicEndpoints(k, context, assemblies);
+                RegisterKafkaTopicEndpoints(k, context, assemblies, serviceName);
             });
         });
 
@@ -69,7 +70,7 @@ internal static class KafkaExtensions
             "Ensure the 'MassTransit.Kafka' package is referenced in your project.");
     }
 
-    private static void RegisterKafkaTopicEndpoints(IKafkaFactoryConfigurator k, IRiderRegistrationContext context, Assembly[] assemblies)
+    private static void RegisterKafkaTopicEndpoints(IKafkaFactoryConfigurator k, IRiderRegistrationContext context, Assembly[] assemblies, string serviceName)
     {
         var configureMethod = typeof(KafkaExtensions)
             .GetMethod(nameof(ConfigureTopicEndpoint), BindingFlags.NonPublic | BindingFlags.Static)
@@ -79,7 +80,7 @@ internal static class KafkaExtensions
         {
             var consumerType = typeof(IntegrationEventConsumer<>).MakeGenericType(eventType);
             var topicName = eventType.Name.ToKebabCase();
-            var groupId = $"{topicName}-consumer";
+            var groupId = $"{serviceName}-{topicName}-consumer"; // one group per service, or services would split the events
 
             var genericMethod = configureMethod.MakeGenericMethod(eventType, consumerType);
             genericMethod.Invoke(null, new object[] { k, context, groupId });
