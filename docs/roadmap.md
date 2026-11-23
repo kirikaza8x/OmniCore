@@ -84,7 +84,7 @@ Candidates, effort and order: [services-plan.md](services-plan.md). Each new ser
 - [ ] Admin screens (roles, accounts) once the admin endpoints are settled
 
 ## Phase 15: Notification service (2026-11-23)
-- [x] Delivery through e-mail and named webhooks, built-in `welcome`/`test` templates, admin delivery log, initial EF migration, dedup claim before send (NT1/NT2). Local: application tests 20/20, integration tests 8/8, full solution builds
+- [x] Delivery through e-mail and named webhooks, built-in `welcome`/`test` templates, admin delivery log, initial EF migration, dedup claim before send (NT1/NT2). Junior reported local application and integration tests green; CI result awaited
 - [x] Documentation: service and five layer READMEs, [ADR 0006](decisions/0006-notification-channels.md), layer index and architecture update
 - [ ] Add production publishers for confirmation and reset mails (AC1, after Phase 10 AA4)
 - [ ] Start `notification-api` in the real compose stack and add it to the smoke check

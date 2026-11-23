@@ -79,6 +79,9 @@ jobs:
             case "$file" in
               backend/c#/OmniCore.Shared/*|backend/c#/tests/OmniCore.Shared.Tests/*)
                 shared=true; backend=true ;;
+              backend/c#/OmniCore.Services.Auth/OmniCore.Services.Auth.Contracts/*)
+                # Auth integration events are consumed by User and Notification
+                auth=true; user=true; notification=true; backend=true ;;
               backend/c#/OmniCore.Services.Auth/*|backend/c#/tests/OmniCore.Services.Auth.*)
                 auth=true; backend=true ;;
               backend/c#/OmniCore.Services.User/*|backend/c#/tests/OmniCore.Services.User.*)
