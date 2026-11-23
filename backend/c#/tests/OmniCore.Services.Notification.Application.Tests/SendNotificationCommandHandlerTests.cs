@@ -57,7 +57,7 @@ public sealed class SendNotificationCommandHandlerTests
 
         Assert.True(result.IsFailure);
         Assert.Equal("Notification.DeliveryFailed", result.Error.Code);
-        await _uow.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>()); // the pipeline saves only on success
+        await _uow.Received(2).SaveChangesAsync(Arg.Any<CancellationToken>()); // first claims the dedup key, then records the failure (the pipeline saves only on success)
     }
 
     [Fact]
@@ -70,7 +70,7 @@ public sealed class SendNotificationCommandHandlerTests
         Assert.True(result.IsSuccess);
         Assert.Equal("Failed", result.Value.Status);
         Assert.Equal("550 no such user", result.Value.LastError);
-        await _uow.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
+        await _uow.Received(2).SaveChangesAsync(Arg.Any<CancellationToken>()); // claim + failure log
     }
 
     [Fact]

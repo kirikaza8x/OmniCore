@@ -191,6 +191,13 @@ New findings from re-reading the Shared infrastructure, storage, gateway and com
 | IF1 | high | Gateway upstreams used container names (`omnicore-auth-api`); a deployment with replicas has no fixed container name, so the gateway could not reach them | **fixed**: compose service names, round robin through Docker DNS |
 | IF2 | low | Gateway sent no basic security headers | **fixed** (`nosniff`, `X-Frame-Options`, `Referrer-Policy`); locations with their own `add_header` do not inherit them |
 | IF3 | low | GitHub Actions are pinned by tag (`@v4`), not by commit SHA | open |
-| IF4 | info | `init-dbs.sql` already creates `omnicore_notification_db` for a service that does not exist (the planned Notification service) | note |
+| IF4 | info | `init-dbs.sql` creates `omnicore_notification_db` for the Notification service, which now exists (was planned when this row was written) | note |
 | IF5 | low | Base images (`dotnet/sdk:9.0`, `aspnet:9.0`) are not pinned by digest | open |
+
+## Notification integration failures, 2026-11-23
+
+| Id | Severity | Finding | Status |
+|---|---|---|---|
+| NT1 | high | The Notification service had no EF migrations. `Database.MigrateAsync()` reported success with zero migrations, so `notification.notification_messages`, the outbox/inbox tables and the history table were never created. Every admin endpoint returned 500 (`42P01: relation "notification.notification_messages" does not exist`) and event consumers timed out. | **fixed**: generated `InitialNotification` migration with the domain table plus MassTransit outbox/inbox tables. Local integration suite: 8/8 pass. |
+| NT2 | medium | Deduplication checked the database before delivery, but two concurrent consumers of the same `AccountRegisteredIntegrationEvent` could both see no row and both send. Only the later `INSERT` failed on the unique index, after the duplicate mail had gone out. | **fixed**: `SendNotificationCommandHandler` saves a new deduplicated message before the send, so the unique index claims the key first. Loser retries and reads the committed row. Duplicate-mail test passed 5/5 local runs; 20/20 application tests pass. |
 

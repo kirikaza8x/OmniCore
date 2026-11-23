@@ -60,6 +60,13 @@ public sealed class SendNotificationCommandHandler(
 
             message = created.Value;
             messages.Add(message);
+
+            if (request.DeduplicationKey is not null)
+            {
+                // Claim the key before the side effect. Without this save, two consumers can both see no row, both send,
+                // and only the later INSERT fails on the unique index - after the duplicate mail has already gone out.
+                await unitOfWork.SaveChangesAsync(cancellationToken);
+            }
         }
 
         var outgoing = new OutgoingNotification(message.Recipient, rendered.Value.Subject, rendered.Value.Body, rendered.Value.IsHtml);
