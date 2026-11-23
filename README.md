@@ -12,7 +12,9 @@ OmniCore is a modular, service-oriented backend with Docker infrastructure and a
 | [docs/architecture.md](docs/architecture.md) | services, layers, request path, messaging, runtime layout (with a diagram) |
 | [docs/repo-check.md](docs/repo-check.md) | numbered findings from a repo check, each tagged with the roadmap phase that fixes it |
 | [docs/roadmap.md](docs/roadmap.md) | the phased checklist (the coding path) |
-| [docs/ci-cd.md](docs/ci-cd.md) | workflows, jobs, and the agent push-and-hand-off rule (no CI polling) |
+| [docs/ci-cd.md](docs/ci-cd.md) | path-filtered workflows, selective jobs, and the agent push-and-hand-off rule (no CI polling) |
+| [docs/workflow.md](docs/workflow.md) | plan-first change workflow: plan, code, docs in the same change |
+| [docs/plans/](docs/plans/README.md) | one Markdown plan per non-trivial change |
 | [docs/integrations/owl-editor.md](docs/integrations/owl-editor.md) | how the Python `owl_editor` service would plug in |
 | `docs/decisions/` | architecture decision records (ADRs), added when a risky change needs one |
 

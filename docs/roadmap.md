@@ -7,12 +7,12 @@ off as they land; the status here is also mirrored in `CLAUDE.md`.
 - [x] README, architecture, repo-check, roadmap, owl-editor integration split and checked against the code (F5 of the old list)
 
 ## Phase 1: safety net (F1)
-- [x] GitHub Actions `backend.yml`: restore, build, unit tests on every PR and on `develop`/`main`/`docs/**`/`fix/**` pushes (**green 2026-11-20**)
+- [x] GitHub Actions `backend.yml`: path-filtered restore, build and selective unit/integration tests (**green 2026-11-20**; scoped by changed area 2026-11-23, see [ci-cd.md](ci-cd.md))
 - [x] `tests/` projects in `OmniCore.slnx`: Auth domain unit tests (**compile and pass in CI**)
 - [x] One integration test (Testcontainers: Postgres + RabbitMQ): register -> login -> refresh -> reuse rejected (**passes in CI, 2026-11-20**; found the unregistered password hasher; `continue-on-error` removed)
 - [x] Both CI jobs pass on GitHub
 - [x] Handler tests for register, login and refresh (`tests/OmniCore.Services.Auth.Application.Tests`, 13 tests, NSubstitute); they found A20
-- [ ] Make `build-and-unit-test` (and integration) a required check in branch protection (repo setting, owner)
+- [ ] Make `ci-gate` the required check in branch protection when `backend.yml` runs (repo setting, owner); docs-only PRs do not produce it and need an exemption or an always-on docs check
 
 ## Phase 2: dev vs prod configuration (F3, F4, F7)
 - [x] `docker-compose.prod.yml` override: Production, Swagger off, sensitive logging / detailed errors / any-origin CORS off, `ALLOWED_HOSTS` and `CORS_ALLOWED_ORIGIN` required, data-store ports not published; compose defaults for the three dev switches are now safe (`false`), and `.env.example` turns them on for local dev (**validated with `docker compose config` only, never started**)
@@ -23,7 +23,7 @@ off as they land; the status here is also mirrored in `CLAUDE.md`.
 ## Phase 3: gateway (F2, F6)
 - [x] Route the User service and its spec (`/api/v1/users/...` with a 6 MB body limit, `/specs/user.json`); U1 fixed, the service has endpoints (full compose stack still not smoke-tested, UP1)
 - [x] Rate limiting in the gateway (`limit_req`: credential endpoints 10/min burst 5, rest of `/api/` 20/s burst 20, JSON 429); JWTs stay validated by each service: [ADR 0002](decisions/0002-gateway-auth-and-rate-limits.md)
-- [x] CI job `infra-config`: compose renders, pinned image tags exist in their registries, `nginx -t` with the real image
+- [x] CI job `infra-config` (runs only for infra or workflow changes): compose renders, pinned image tags exist in their registries, `nginx -t` with the real image
 - [ ] Still open from this phase: close the published service ports 5001/5002 in the prod override (they bypass the gateway), real client IP behind a TLS proxy (`set_real_ip_from`), per-account lockout (A8)
 
 ## Phase 4: auth hardening (F5)

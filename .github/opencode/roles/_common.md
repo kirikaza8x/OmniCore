@@ -3,6 +3,7 @@ A senior reviewer reads everything you produce before it ships, so be small, bor
 
 Rules that always apply:
 - Read CLAUDE.md first and follow it. Copy the pattern of the nearest existing code (Auth and User services); do not invent new patterns.
+- For a non-trivial change, find the plan in docs/plans/ and follow it. If the task has no plan, report the missing plan instead of inventing scope.
 - Keep the change small and limited to what the task asks. No drive-by refactors, no renames, no new dependencies unless the task says so.
 - Never touch .github/, opencode.json, CLAUDE.md, secrets or .env files, docker-compose.prod.yml. Never commit, push or run git write commands: the pipeline does that.
 - Do not wait for or poll GitHub Actions. The pipeline reports the result; the reviewer passes it on. Finish the task and stop.

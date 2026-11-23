@@ -8,13 +8,43 @@ while it waits.
 
 | Workflow | Runs on | Jobs |
 |---|---|---|
-| `backend.yml` | PRs; pushes to `develop`, `main`, `docs/**`, `fix/**` | `build-and-unit-test`, `integration-test`, `infra-config` |
+| `backend.yml` | PRs and pushes changing `backend/c#/**`, `infra/docker/**` or its own workflow | `changes`, `build-and-unit-test`, `integration-test`, `infra-config`, `ci-gate` |
 | `frontend.yml` | PRs and pushes touching `frontend/**` or its workflow | `web` (lint, typecheck, test, build, Docker image) |
 | `opencode.yml` | manual dispatch or `/oc` issue comment | `agent` (read-only), `publish` (draft PR + start CI), `notify` |
 
-`backend.yml` integration tests use Testcontainers (Postgres + RabbitMQ) and run one project after the other because
-RabbitMQ binds port 5672. `infra-config` renders the dev, prod and cloud-sim compose files, checks every pinned image
-tag, runs `nginx -t`, and smoke-starts the data stores.
+## Scoped runs
+
+A docs-only or frontend-only change does not start `backend.yml`. When it does run, a `changes` job classifies the diff
+and the expensive jobs run only for the affected area:
+
+| Changed files | Unit tests | Integration tests | `infra-config` |
+|---|---|---|---|
+| `backend/c#/OmniCore.Shared/**` | all | all | no |
+| one service (`Auth`, `User` or `Notification`) | that service | that service | no |
+| service tests only | that service | that service | no |
+| solution/global build files | all | all | no |
+| `infra/docker/**` | no | no | yes |
+| `*.md` under `backend/c#/` or `infra/docker/` | no | no | no (no workflow run) |
+| `.github/workflows/backend.yml` | all | all | yes |
+| manual dispatch, new branch, empty diff | all | all | yes |
+
+The solution is built in full for every backend change, so a compile break in another project is still caught. Tests
+are selective because they are the slow part; integration tests are the most expensive and use Testcontainers
+(Postgres + RabbitMQ), one project after the other because RabbitMQ binds port 5672.
+
+`infra-config` renders the dev, prod and cloud-sim compose files, checks every pinned image tag, runs `nginx -t`, and
+smoke-starts the data stores. It runs only when infra or the workflow changed.
+
+`ci-gate` is the stable check when `backend.yml` runs: it passes when every selected job passed or was skipped, and
+fails when a selected job failed or was cancelled. A docs-only change does not start the workflow, so `ci-gate` is not
+produced for it. If branch protection requires a check on every PR, either exempt docs-only PRs or add a separate
+always-on docs check; do not require individual backend jobs, because the scoped jobs are skipped on purpose.
+
+## Plan first, then code and docs
+
+Every non-trivial change starts with a Markdown plan under [`docs/plans/`](plans/README.md); the workflow is in
+[workflow.md](workflow.md). Agents read the plan before editing, update it when scope changes, and update the affected
+docs in the same change. This keeps parallel sessions from inventing different designs.
 
 ## Agent rule: push, then hand off
 

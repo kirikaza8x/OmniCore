@@ -1,15 +1,28 @@
 name: backend
 
 # Restore, build and test the C# backend on every pull request and push to develop/main.
-# First green run: 2026-11-20 (build, unit tests, integration test). Failures are written to the log and emitted as
-# annotations, which are readable through the public API (the job summary is not).
+# Path filters keep docs-only and frontend-only changes out. The changes job selects the affected projects; a shared
+# or workflow change runs everything. First green run: 2026-11-20 (build, unit tests, integration test). Failures are
+# written to the log and emitted as annotations, which are readable through the public API (the job summary is not).
 
 on:
   pull_request:
+    paths:
+      - 'backend/c#/**'
+      - '!backend/c#/**/*.md'
+      - 'infra/docker/**'
+      - '!infra/docker/**/*.md'
+      - '.github/workflows/backend.yml'
   workflow_dispatch:
   push:
     # docs/** and fix/** so a feature branch gets a build without opening a PR first
     branches: [develop, main, 'docs/**', 'fix/**']
+    paths:
+      - 'backend/c#/**'
+      - '!backend/c#/**/*.md'
+      - 'infra/docker/**'
+      - '!infra/docker/**/*.md'
+      - '.github/workflows/backend.yml'
 
 permissions:
   contents: read
@@ -19,7 +32,89 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # Classifies the diff so the expensive jobs run only for the area that changed. A shared, solution or workflow
+  # change means "all"; an unknown backend path still builds the solution.
+  changes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      backend: ${{ steps.diff.outputs.backend }}
+      shared: ${{ steps.diff.outputs.shared }}
+      auth: ${{ steps.diff.outputs.auth }}
+      user: ${{ steps.diff.outputs.user }}
+      notification: ${{ steps.diff.outputs.notification }}
+      infra: ${{ steps.diff.outputs.infra }}
+      workflow: ${{ steps.diff.outputs.workflow }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Classify the changed files
+        id: diff
+        shell: bash
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+
+          all=false
+          changed=""
+          if [ "$EVENT" = workflow_dispatch ]; then
+            all=true
+          elif [ -z "${BASE_SHA:-}" ] || ! git cat-file -e "$BASE_SHA^{commit}" 2>/dev/null; then
+            # New branch or force push: there is no usable base, so run everything.
+            all=true
+          else
+            changed="$(git diff --name-only "$BASE_SHA" "$HEAD_SHA")"
+            [ -n "$changed" ] || all=true
+          fi
+
+          backend=false; shared=false; auth=false; user=false; notification=false; infra=false; workflow=false
+          all_backend=false
+
+          while IFS= read -r file; do
+            [ -n "$file" ] || continue
+            case "$file" in
+              backend/c#/OmniCore.Shared/*|backend/c#/tests/OmniCore.Shared.Tests/*)
+                shared=true; backend=true ;;
+              backend/c#/OmniCore.Services.Auth/*|backend/c#/tests/OmniCore.Services.Auth.*)
+                auth=true; backend=true ;;
+              backend/c#/OmniCore.Services.User/*|backend/c#/tests/OmniCore.Services.User.*)
+                user=true; backend=true ;;
+              backend/c#/OmniCore.Services.Notification/*|backend/c#/tests/OmniCore.Services.Notification.*)
+                notification=true; backend=true ;;
+              backend/c#/OmniCore.slnx|backend/c#/Directory.*|backend/c#/global.json|backend/c#/NuGet.config)
+                all_backend=true; backend=true ;;
+              backend/c#/*)
+                backend=true ;;
+              infra/docker/*)
+                infra=true ;;
+              .github/workflows/backend.yml)
+                workflow=true; all=true ;;
+            esac
+          done <<< "$changed"
+
+          if [ "$all" = true ]; then
+            backend=true; shared=true; auth=true; user=true; notification=true; infra=true; workflow=true
+          elif [ "$all_backend" = true ]; then
+            backend=true; shared=true; auth=true; user=true; notification=true
+          fi
+
+          {
+            echo "backend=$backend"
+            echo "shared=$shared"
+            echo "auth=$auth"
+            echo "user=$user"
+            echo "notification=$notification"
+            echo "infra=$infra"
+            echo "workflow=$workflow"
+          } >> "$GITHUB_OUTPUT"
+
   build-and-unit-test:
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     defaults:
@@ -38,9 +133,32 @@ jobs:
         run: set -o pipefail; dotnet build OmniCore.slnx --no-restore -c Release 2>&1 | tee "$RUNNER_TEMP/build.log"
       - name: Unit tests
         shell: bash
+        env:
+          SHARED: ${{ needs.changes.outputs.shared }}
+          AUTH: ${{ needs.changes.outputs.auth }}
+          USER: ${{ needs.changes.outputs.user }}
+          NOTIFICATION: ${{ needs.changes.outputs.notification }}
         run: |
           set -o pipefail
-          for p in tests/OmniCore.Services.Auth.Domain.Tests tests/OmniCore.Services.Auth.Application.Tests tests/OmniCore.Services.User.Domain.Tests tests/OmniCore.Services.User.Application.Tests tests/OmniCore.Services.Notification.Domain.Tests tests/OmniCore.Services.Notification.Application.Tests tests/OmniCore.Shared.Tests; do
+          : > "$RUNNER_TEMP/unit.log"
+          projects=()
+          if [ "$SHARED" = true ]; then
+            projects+=(tests/OmniCore.Shared.Tests)
+          fi
+          if [ "$SHARED" = true ] || [ "$AUTH" = true ]; then
+            projects+=(tests/OmniCore.Services.Auth.Domain.Tests tests/OmniCore.Services.Auth.Application.Tests)
+          fi
+          if [ "$SHARED" = true ] || [ "$USER" = true ]; then
+            projects+=(tests/OmniCore.Services.User.Domain.Tests tests/OmniCore.Services.User.Application.Tests)
+          fi
+          if [ "$SHARED" = true ] || [ "$NOTIFICATION" = true ]; then
+            projects+=(tests/OmniCore.Services.Notification.Domain.Tests tests/OmniCore.Services.Notification.Application.Tests)
+          fi
+          if [ ${#projects[@]} -eq 0 ]; then
+            echo "No unit test project matches this change."
+            exit 0
+          fi
+          for p in "${projects[@]}"; do
             dotnet test "$p" --no-build -c Release --logger "trx;LogFileName=$(basename "$p").trx" 2>&1 | tee -a "$RUNNER_TEMP/unit.log"
           done
       - name: Annotate unit test failures
@@ -70,6 +188,8 @@ jobs:
           if-no-files-found: ignore
 
   integration-test:
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
     # Uses Testcontainers (Postgres + RabbitMQ) on the runner's Docker.
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -83,13 +203,34 @@ jobs:
           dotnet-version: 9.0.x
       - name: Integration tests
         shell: bash
+        env:
+          SHARED: ${{ needs.changes.outputs.shared }}
+          AUTH: ${{ needs.changes.outputs.auth }}
+          USER: ${{ needs.changes.outputs.user }}
+          NOTIFICATION: ${{ needs.changes.outputs.notification }}
         run: |
           set -o pipefail
-          # One project after the other: both bind RabbitMQ to port 5672.
-          for p in tests/OmniCore.Services.Auth.IntegrationTests tests/OmniCore.Services.User.IntegrationTests tests/OmniCore.Services.Notification.IntegrationTests; do
+          : > "$RUNNER_TEMP/integration.log"
+          projects=()
+          if [ "$SHARED" = true ] || [ "$AUTH" = true ]; then
+            projects+=(tests/OmniCore.Services.Auth.IntegrationTests)
+          fi
+          if [ "$SHARED" = true ] || [ "$USER" = true ]; then
+            projects+=(tests/OmniCore.Services.User.IntegrationTests)
+          fi
+          if [ "$SHARED" = true ] || [ "$NOTIFICATION" = true ]; then
+            projects+=(tests/OmniCore.Services.Notification.IntegrationTests)
+          fi
+          if [ ${#projects[@]} -eq 0 ]; then
+            echo "No integration test project matches this change."
+            exit 0
+          fi
+          rc=0
+          # One project after the other: each binds RabbitMQ to port 5672.
+          for p in "${projects[@]}"; do
             dotnet test "$p" -c Release --logger "trx;LogFileName=$(basename "$p").trx" 2>&1 | tee -a "$RUNNER_TEMP/integration.log" || rc=1
           done
-          exit ${rc:-0}
+          exit $rc
       # Failure text is emitted as an annotation: unlike the job summary, annotations are readable through the public API.
       - name: Annotate failures
         if: always()
@@ -106,8 +247,10 @@ jobs:
           if-no-files-found: ignore
 
   # Checks that need no .NET: compose renders, the pinned image tags really exist in their registries, and the
-  # gateway config is valid for the image it runs in.
+  # gateway config is valid for the image it runs in. Only infra or workflow changes can affect these checks.
   infra-config:
+    needs: changes
+    if: needs.changes.outputs.infra == 'true' || needs.changes.outputs.workflow == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -162,3 +305,30 @@ jobs:
           docker compose ps
       - name: Gateway config is valid
         run: docker run --rm -v "$PWD/infra/docker/nginx/nginx.conf:/etc/nginx/nginx.conf:ro" nginx:1.27-alpine nginx -t
+
+  # One stable check when this workflow runs. Skipped jobs are fine; a failed or cancelled selected job is not.
+  # A docs-only change does not start the workflow at all, so do not require this check globally unless docs-only
+  # PRs are exempt from the rule.
+  ci-gate:
+    needs: [changes, build-and-unit-test, integration-test, infra-config]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Require the selected jobs to pass
+        shell: bash
+        env:
+          CHANGES: ${{ needs.changes.result }}
+          BUILD: ${{ needs.build-and-unit-test.result }}
+          INTEGRATION: ${{ needs.integration-test.result }}
+          INFRA: ${{ needs.infra-config.result }}
+        run: |
+          set -euo pipefail
+          for entry in "changes:$CHANGES" "build-and-unit-test:$BUILD" "integration-test:$INTEGRATION" "infra-config:$INFRA"; do
+            name="${entry%%:*}"
+            result="${entry#*:}"
+            case "$result" in
+              success|skipped) ;;
+              *) echo "::error::$name ended with '$result'"; exit 1 ;;
+            esac
+          done

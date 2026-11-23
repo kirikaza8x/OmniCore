@@ -60,6 +60,13 @@ and **stop there**. Do not wait, sleep, poll or re-check the run.
 
 See [docs/ci-cd.md](docs/ci-cd.md) for the workflows, jobs and the full hand-off.
 
+## Change workflow: plan first
+Every non-trivial change starts with a Markdown plan in `docs/plans/NNNN-short-title.md`; the full workflow is in
+[docs/workflow.md](docs/workflow.md). Read the plan before editing, update it when scope changes, and update the
+affected docs in the same change. Do not let parallel sessions invent separate designs. Risky changes (schema, token
+format, rename, new service, new dependency) write the ADR first, per the conventions below. Trivial fixes may skip
+the plan file but still update the docs they invalidate.
+
 ## Conventions
 - Layers point inward: Api -> Application -> Domain; Infrastructure implements Domain/Application interfaces.
   Domain must not reference EF or infrastructure. `Shared` holds only generic code, not service logic.
@@ -117,5 +124,6 @@ Reflects branch `docs/readme-and-roadmap`, 2026-11-20, last code/doc commit befo
 - [x] 2026-11-23: fixed Notification integration failures (repo-check NT1/NT2). Added the missing initial EF migration (notification messages + MassTransit outbox/inbox); `Database.MigrateAsync()` had previously applied zero migrations and every endpoint returned 500. Fixed a deduplication race: the handler claims a new dedup key with a save before sending, and skips a fresh `Pending` row with zero attempts, so a duplicate event in the claim-to-send window cannot send a second welcome mail (CI run #66). Abandoned claims are retried after `ClaimLease` (1 minute). Local: full solution builds; Notification application tests 22/22, integration tests 8/8, six full-suite repeat runs green. Branch `docs/readme-and-roadmap-fix`; CI run #67 pushed, result awaited from the developer (no polling).
 - [x] 2026-11-23: prod override requires `JWT_PRIVATE_KEY_PEM` (RS256 in production); dev defaults stay legacy HS256 until cut-over. CI prod/cloud-sim render uses a placeholder key; local dev/prod/cloud-sim `docker compose config --quiet` green, missing key fails as intended. Corrected `docs/auth-tokens.md`, ADR-era statuses, repo-check finding 5 and roadmap Phase 4.
 - [x] 2026-11-23: documented the agent CI hand-off in `docs/ci-cd.md` and `CLAUDE.md`: push, then stop; the developer reports the result. Polling costs tokens and is no longer part of the workflow. OpenCode role prompts and `docs/opencode.md` aligned.
-- [ ] Next: owner makes `build-and-unit-test` + integration required checks (repo setting), more handler tests (logout, roles), owner generates `JWT_PRIVATE_KEY_PEM` and does the cut-over, then drop the plain token columns, close ports 5001/5002 in the prod override
+- [x] 2026-11-23: scoped `backend.yml` to `backend/c#/**`, `infra/docker/**` and its own workflow; a `changes` job runs only the affected service tests, `infra-config` only for infra/workflow changes, and `ci-gate` is the gate when the workflow runs (docs-only changes do not produce it). Added the plan-first workflow (`docs/workflow.md`, `docs/plans/`) so agents share one plan and update docs with the code.
+- [ ] Next: owner makes `ci-gate` the required check (repo setting), more handler tests (logout, roles), owner generates `JWT_PRIVATE_KEY_PEM` and does the cut-over, then drop the plain token columns, close ports 5001/5002 in the prod override
 - [ ] Owner decisions pending: MinIO image (F7: keep the coollabsio fork, build from source, or switch store), ADR 0001 questions, keep or drop the User service in compose
