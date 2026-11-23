@@ -58,7 +58,7 @@ public static class MassTransitExtensions
         {
             // Every queue is prefixed with the service name: without it, User and Notification would share one queue for
             // AccountRegisteredIntegrationEvent and each message would reach only one of them (repo-check IF6).
-            busConfigurator.SetKebabCaseEndpointNameFormatter(serviceName, includeNamespace: false);
+            busConfigurator.SetEndpointNameFormatter(new KebabCaseEndpointNameFormatter(serviceName, includeNamespace: false));
 
             if (!isKafka)
             {
