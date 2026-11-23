@@ -39,8 +39,8 @@ public sealed class SmtpEmailSender(IOptions<SmtpConfig> options) : IEmailSender
         var mime = new MimeMessage();
         mime.From.Add(new MailboxAddress(config.FromName, config.FromAddress));
         foreach (var to in message.To) mime.To.Add(MailboxAddress.Parse(to));
-        foreach (var cc in message.Cc ?? []) mime.Cc.Add(MailboxAddress.Parse(cc));
-        foreach (var bcc in message.Bcc ?? []) mime.Bcc.Add(MailboxAddress.Parse(bcc));
+        foreach (var cc in message.Cc ?? Array.Empty<string>()) mime.Cc.Add(MailboxAddress.Parse(cc));
+        foreach (var bcc in message.Bcc ?? Array.Empty<string>()) mime.Bcc.Add(MailboxAddress.Parse(bcc));
         mime.Subject = message.Subject;
 
         mime.Body = message.IsHtml

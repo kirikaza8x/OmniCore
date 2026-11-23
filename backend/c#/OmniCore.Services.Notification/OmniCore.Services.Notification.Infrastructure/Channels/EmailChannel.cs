@@ -1,7 +1,7 @@
 namespace OmniCore.Services.Notification.Infrastructure.Channels;
 
-using MailKit;
 using MailKit.Net.Smtp;
+using MimeKit;
 using Microsoft.Extensions.Logging;
 using OmniCore.Services.Notification.Application.Abstractions;
 using OmniCore.Services.Notification.Domain.Enums;
@@ -25,21 +25,19 @@ public sealed class EmailChannel(IEmailSender sender, ILogger<EmailChannel> logg
         {
             throw; // shutting down: let the broker redeliver
         }
-        catch (SmtpCommandException ex) when ((int)ex.StatusCode is >= 500 and < 600 && (int)ex.StatusCode != 535)
+        catch (SmtpCommandException ex) when ((int)ex.StatusCode is >= 500 and < 600)
         {
             // 5xx = the server refused this message (mailbox unknown, rejected). Trying again will not change that.
-            // 535 (authentication failed) is a configuration problem: it stays retryable, so the message waits in the
-            // error queue until the credentials are fixed.
             return DeliveryResult.Permanent($"SMTP {(int)ex.StatusCode}: {ex.Message}");
         }
         catch (ParseException ex)
         {
             return DeliveryResult.Permanent($"Invalid address: {ex.Message}");
         }
-        catch (Exception ex) when (ex is ServiceNotConnectedException or ServiceNotAuthenticatedException or SmtpProtocolException
-                                       or IOException or System.Net.Sockets.SocketException or TimeoutException
-                                       or OperationCanceledException or SmtpCommandException or ProtocolException)
+        catch (Exception ex)
         {
+            // Connection refused, timeout, TLS or login problem (a wrong password is fixed by configuration, so it stays
+            // retryable: the message waits in the error queue), 4xx replies. Trying again can help.
             logger.LogWarning(ex, "E-mail delivery failed temporarily");
             return DeliveryResult.Transient($"{ex.GetType().Name}: {ex.Message}");
         }
