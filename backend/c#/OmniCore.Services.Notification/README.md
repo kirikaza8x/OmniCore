@@ -60,8 +60,10 @@ the Auth or User service projects; other services may reference only `Notificati
 - Templates are built in code: `welcome` (HTML e-mail) and `test`. `{{placeholder}}` values are HTML-encoded for e-mail;
   the subject has CR/LF stripped. Missing placeholders become empty strings.
 - The rendered body and the template model are **not** stored: they can contain reset links and tokens.
-- A new message with a dedup key is saved **before** the send. The unique index on `deduplication_key` claims the key;
-  a concurrent loser retries, reads the committed row and does not send again (NT2).
+- A new message with a dedup key is saved **before** the send. The unique index on `deduplication_key` claims the key.
+  A duplicate event that reads the fresh claim (`Pending`, zero attempts) returns without sending. A failed attempt
+  (`Attempts > 0`) continues the same message; an unattempted claim older than `ClaimLease` (1 minute) is abandoned
+  and can be retried (NT2).
 - Success → `MarkSent`. Permanent failure or 5 attempts → `MarkFailed`, acknowledged. Transient failure → the command
   returns a retryable error, so the broker redelivers. Attempts that roll back with the broker transaction may not
   reach the log; only committed attempts are guaranteed (S12).

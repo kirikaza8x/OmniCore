@@ -88,6 +88,34 @@ public sealed class SendNotificationCommandHandlerTests
     }
 
     [Fact]
+    public async Task A_duplicate_event_does_not_send_while_the_first_attempt_is_claimed()
+    {
+        var claimed = NotificationMessage.Create(NotificationChannel.Email, "ann@example.com", "welcome", "welcome:1", Now).Value;
+        _messages.GetByDeduplicationKeyAsync("welcome:1", Arg.Any<CancellationToken>()).Returns(claimed);
+
+        var result = await _handler.Handle(Command(), CancellationToken.None);
+
+        Assert.True(result.IsSuccess);
+        await _email.DidNotReceive().SendAsync(Arg.Any<OutgoingNotification>(), Arg.Any<CancellationToken>());
+        _messages.DidNotReceive().Add(Arg.Any<NotificationMessage>());
+    }
+
+    [Fact]
+    public async Task An_abandoned_claim_is_retried_after_the_lease_expires()
+    {
+        var stale = NotificationMessage.Create(
+            NotificationChannel.Email, "ann@example.com", "welcome", "welcome:1",
+            Now - NotificationMessage.ClaimLease - TimeSpan.FromSeconds(1)).Value;
+        _messages.GetByDeduplicationKeyAsync("welcome:1", Arg.Any<CancellationToken>()).Returns(stale);
+        _email.SendAsync(Arg.Any<OutgoingNotification>(), Arg.Any<CancellationToken>()).Returns(DeliveryResult.Ok);
+
+        var result = await _handler.Handle(Command(), CancellationToken.None);
+
+        Assert.Equal("Sent", result.Value.Status);
+        await _email.Received(1).SendAsync(Arg.Any<OutgoingNotification>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
     public async Task A_redelivered_request_for_a_pending_message_continues_the_same_message()
     {
         var pending = NotificationMessage.Create(NotificationChannel.Email, "ann@example.com", "welcome", "welcome:1", Now).Value;

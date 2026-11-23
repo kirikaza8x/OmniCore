@@ -15,10 +15,11 @@ It also consumes integration events and translates channel failures into retryab
 | `.../SendNotificationCommandHandler` | finds an existing delivery, renders, creates the message, claims the dedup key, sends, records the outcome |
 | `.../SendNotificationCommandValidator` | channel in enum, recipient ≤ 256, template key ≤ 64, dedup key ≤ 128, model ≤ 50 entries and values ≤ 2000 chars |
 
-Delivery sequence: `GetByDeduplicationKeyAsync` → render → `NotificationMessage.Create` → `SaveChangesAsync` for a new
-deduplicated message (claim the unique key before the side effect) → `INotificationChannel.SendAsync` →
-`MarkSent` / `MarkAttemptFailed`. The shared `UnitOfWorkBehavior` saves successful commands; the handler saves
-explicitly for the dedup claim and for failed attempts.
+Delivery sequence: `GetByDeduplicationKeyAsync` → skip a finished message or a fresh unattempted claim → render →
+`NotificationMessage.Create` → `SaveChangesAsync` for a new deduplicated message (claim the unique key before the
+side effect) → `INotificationChannel.SendAsync` → `MarkSent` / `MarkAttemptFailed`. The shared `UnitOfWorkBehavior`
+saves successful commands; the handler saves explicitly for the dedup claim and for failed attempts. A claim with
+zero attempts is owned for `ClaimLease` (1 minute); after that it is treated as abandoned and may be retried.
 
 - Transient failure returns `Notification.DeliveryFailed`, so the broker retries.
 - Permanent failure or 5 attempts returns success with status `Failed`, so the broker acknowledges and drops it.

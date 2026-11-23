@@ -19,6 +19,9 @@ public class NotificationMessage : AggregateRoot<NotificationMessageId>
     public const int MaxErrorLength = 500;
     public const int MaxDeduplicationKeyLength = 128;
 
+    /// <summary>How long a pending first attempt stays owned by the consumer that claimed it.</summary>
+    public static readonly TimeSpan ClaimLease = TimeSpan.FromMinutes(1);
+
     private static readonly Regex TemplateKeyRegex = new("^[a-z0-9][a-z0-9.-]{0,63}$", RegexOptions.Compiled);
     private static readonly Regex WebhookNameRegex = new("^[a-z0-9][a-z0-9-]{0,49}$", RegexOptions.Compiled);
 
@@ -90,6 +93,13 @@ public class NotificationMessage : AggregateRoot<NotificationMessageId>
             _ => false,
         };
     }
+
+    /// <summary>
+    /// True while another consumer owns a fresh claim: it inserted the row but has not made a send attempt yet.
+    /// A duplicate event in that window must not send a second mail (CI run #66).
+    /// </summary>
+    public bool HasActiveClaim(DateTime nowUtc) =>
+        Status == NotificationStatus.Pending && Attempts == 0 && nowUtc - CreatedAt < ClaimLease;
 
     public Result MarkSent(string subject, DateTime nowUtc)
     {

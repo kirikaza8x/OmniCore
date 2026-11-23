@@ -30,9 +30,12 @@ public sealed class SendNotificationCommandHandler(
         if (request.DeduplicationKey is not null)
         {
             message = await messages.GetByDeduplicationKeyAsync(request.DeduplicationKey, cancellationToken);
-            if (message is { Status: not NotificationStatus.Pending })
+            if (message is not null)
             {
-                return message.ToResponse();
+                // A finished message is never sent twice. A fresh claim belongs to the consumer that inserted it:
+                // without this guard a duplicate event in the claim-to-send window sees Pending and sends again.
+                if (message.Status is not NotificationStatus.Pending || message.HasActiveClaim(now))
+                    return message.ToResponse();
             }
         }
 

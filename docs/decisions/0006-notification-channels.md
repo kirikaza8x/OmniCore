@@ -29,8 +29,10 @@ tell the caller and the broker whether a failure is temporary, so a mail outage 
 6. **Templates are built in code and rendered before persistence.** `welcome` and `test` are the current templates.
    Placeholder values are HTML-encoded for e-mail; subjects have CR/LF stripped. The rendered body and template model
    are not stored, because they can carry reset links and tokens.
-7. **A deduplicated message is saved before the send.** The unique index on `deduplication_key` claims the key first;
-   a concurrent consumer retries and reads the committed row instead of sending a duplicate (NT2).
+7. **A deduplicated message is saved before the send.** The unique index on `deduplication_key` claims the key first.
+   A fresh `Pending` row with zero attempts is owned by the consumer that claimed it; a duplicate event that reads
+   that row returns without sending. After `ClaimLease` (1 minute) an unattempted claim is treated as abandoned and
+   may be retried. A failed attempt (`Attempts > 0`) always continues the same message (NT2).
 
 ## Consequences
 
