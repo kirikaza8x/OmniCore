@@ -15,9 +15,10 @@ infrastructure (`infra/docker/`). Other backend languages are planned, not in th
 |---|---|
 | `OmniCore.Services.Auth` | Accounts (register, login, logout, refresh-token rotation, current user), roles, JWT issuing. Own database. A Google token validator exists but no endpoint uses it. |
 | `OmniCore.Services.User` | Profiles, settings, addresses (ADR 0004). Profile id = Auth account id, created from `AccountRegisteredIntegrationEvent`; `/api/v1/users/me/...`. Own database (schema `users`). Tenant profiles not built (ADR 0001). Built and tested by CI 2026-11-22; not run as a compose stack. |
+| `OmniCore.Services.Notification` | E-mail (SMTP/Mailpit) and named-webhook delivery behind `INotificationChannel`, built-in templates, dedup, admin delivery log; consumes `AccountRegisteredIntegrationEvent`. Own database (schema `notification`). Pattern for new services: `docs/new-service.md`. CI result for the latest fix awaited from the developer. |
 | `OmniCore.Shared` | Shared library: Domain (DDD base types, `Result`, `Error`), Application (MediatR behaviours), Infrastructure (EF, MassTransit + outbox, Redis, MinIO, config), Api (Carter, JWT bearer, CORS, rate limiting, Swagger), Contracts (integration events). |
 | `frontend/web` | Next.js 16 web client: BFF route handlers keep tokens in httpOnly cookies, features `auth` and `profile`, layer rules enforced by ESLint. See `frontend/web/README.md`. |
-| nginx gateway | `infra/docker/` : routes `/api/v1/auth/` and `/api/v1/users/` (User not running yet), per-IP `limit_req`, no JWT validation (ADR 0002). |
+| nginx gateway | `infra/docker/` : routes `/api/v1/auth/`, `/api/v1/users/` and `/api/v1/notifications/` (compose stack never started), per-IP `limit_req`, no JWT validation (ADR 0002). |
 
 Each service has layers `Api / Application / Domain / Infrastructure / Contracts`. Stack: Carter, MediatR,
 FluentValidation, EF Core + PostgreSQL (snake_case), MassTransit (RabbitMQ; Kafka also supported), Redis, MinIO, Quartz, Serilog.
@@ -105,12 +106,12 @@ but **not yet run on GitHub**.
 
 ## Known issues (full list in docs/repo-check.md)
 `AllowedHosts` still defaults to `*` in the base compose file (the prod override requires it) (F3);
-the in-service rate limiter sees only the nginx address (S2, mitigated by the gateway limits); published service ports 5001/5002 bypass the gateway;
+the in-service rate limiter sees only the nginx address (S2, mitigated by the gateway limits); published service ports 5001-5003 bypass the gateway in dev (the prod override closes them);
 old plain `token` column still present until the follow-up migration drops it (A6); RS256 is available and the prod override now requires `JWT_PRIVATE_KEY_PEM`, but dev defaults still allow legacy HS256 until the owner sets it and removes `JWT_SECRET` (finding 5; cut-over steps in `.env.example`); no account lockout (A8, only the gateway IP limit); full compose stack not smoke-tested; the Auth and Shared fixes
 below now compile and pass CI, but only the register/login/refresh/reuse path is exercised by a test.
 
 ## Current progress
-Reflects branch `docs/readme-and-roadmap-fix`, 2026-11-23. Last pushed commit before this docs update: `d3722f5`.
+Reflects branch `docs/readme-and-roadmap` (same as `main` after the 2026-11-23 merge of the junior's fix branch), 2026-11-23; see `git log -1`.
 
 - [x] Phase 0 docs refactor (README, architecture, repo-check, roadmap, integrations/owl-editor, decisions)
 - [x] Review 2a Shared, 2b Auth, 2c User (findings S1-S13, A1-A18, U1-U10)
@@ -137,5 +138,6 @@ Reflects branch `docs/readme-and-roadmap-fix`, 2026-11-23. Last pushed commit be
 - [x] 2026-11-23: scoped `backend.yml` to `backend/c#/**`, `infra/docker/**` and its own workflow; a `changes` job runs only the affected service tests, `infra-config` only for infra/workflow changes, and `ci-gate` is the gate when the workflow runs (docs-only changes do not produce it). Added the plan-first workflow (`docs/workflow.md`, `docs/plans/`) so agents share one plan and update docs with the code.
 - [x] 2026-11-23: added GitHub Copilot as a second junior agent: repository instructions, `OmniCore Junior` custom agent, setup steps for .NET 9 and Node 22, ADR 0008 and `docs/copilot.md`. Configured and linted locally; no GitHub run reported yet.
 - [x] 2026-11-23: documented Claude-to-junior handoff in `docs/copilot.md`: plan first, one task issue, one agent, draft PR, human review, no polling. Refreshed `CLAUDE.md` read-first pointers and progress header so the next Claude session starts from the latest state.
-- [ ] Next: owner makes `ci-gate` the required check (repo setting), run one small OpenCode task and one small Copilot task on GitHub after merge to `main`, more handler tests (logout, roles), owner generates `JWT_PRIVATE_KEY_PEM` and does the cut-over, then drop the plain token columns, close ports 5001/5002 in the prod override
+- [x] 2026-11-23: prod override closes the service ports (gateway only); `infra/docker/scripts/gen-jwt-key.sh` makes throwaway RS256 keys; `docs/new-service.md`; `Auth.Contracts` changes now fan out to User and Notification CI. Not yet reported by CI.
+- [ ] Next: owner makes `ci-gate` the required check (repo setting), run one small OpenCode task and one small Copilot task on GitHub after merge to `main`, more handler tests (logout, roles), owner generates `JWT_PRIVATE_KEY_PEM` and does the cut-over, then drop the plain token columns
 - [ ] Owner decisions pending: MinIO image (F7: keep the coollabsio fork, build from source, or switch store), ADR 0001 questions, keep or drop the User service in compose

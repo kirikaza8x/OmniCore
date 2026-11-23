@@ -7,6 +7,7 @@
 #   - turns "any origin" CORS off and requires an explicit allowed origin
 #   - requires AllowedHosts instead of defaulting to "*"
 #   - requires JWT_PRIVATE_KEY_PEM on Auth, so production signs with RS256 (legacy JWT_SECRET may still validate old tokens)
+#   - stops publishing the service ports (5001-5003); traffic enters through the gateway only
 #   - stops publishing the data stores (Postgres, Redis, RabbitMQ, Kafka, Kafka UI) on the host; services still reach
 #     them over the compose network. Use `docker exec` or an SSH tunnel for admin access.
 #
@@ -25,15 +26,18 @@ x-prod-env: &prod-env
 
 services:
   auth-api:
+    ports: !reset []   # reachable only through the gateway
     environment:
       <<: *prod-env
       # Auth signs tokens. Production must use RS256; the legacy JWT_SECRET may still validate old tokens until cut-over.
       Jwt__PrivateKeyPem: ${JWT_PRIVATE_KEY_PEM:?set JWT_PRIVATE_KEY_PEM to an RSA private key, see .env.example}
 
   user-api:
+    ports: !reset []
     environment: *prod-env
 
   notification-api:
+    ports: !reset []
     environment:
       <<: *prod-env
       # Production must not send through the dev Mailpit: a real relay is required.
