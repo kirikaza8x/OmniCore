@@ -40,15 +40,25 @@ cd infra/docker && docker compose --env-file .env.example config             # v
 pwsh backend/c#/scripts/shells/add-migration.ps1                             # new EF migration (UNVERIFIED)
 pwsh backend/c#/scripts/shells/scaffold_service.ps1                          # new service (UNVERIFIED)
 ```
-Do **not** state that the build or tests pass until a run (local or the GitHub Actions run) has shown it.
+Do **not** state that the build or tests pass until a run (local or the GitHub Actions run) has shown it. A developer
+saying "CI passed" counts as shown; the agent does not have to see the run itself.
 
-## Building (agent sessions)
+## Building and CI hand-off (agent sessions)
 No .NET SDK or NuGet access in the agent sandbox (the egress policy answers 403 for nuget.org and dot.net; do not route
-around it). Use GitHub Actions as the build machine: push the branch (`backend.yml` also runs on `docs/**` and `fix/**`),
-then read the result without a token from the public API: `GET https://api.github.com/repos/kirikaza8x/OmniCore/actions/runs?head_sha=<sha>`,
-then `/actions/runs/<id>/jobs` and `/check-runs/<job id>/annotations`. Compiler errors and the integration-test failure
-text arrive as annotations (job summaries and raw logs are **not** readable without a token). A push-and-poll cycle
-takes about a minute.
+around it). Use GitHub Actions as the build machine: push the branch (`backend.yml` also runs on `docs/**` and `fix/**`)
+and **stop there**. Do not wait, sleep, poll or re-check the run.
+
+- The developer (or reviewer) reports the result. If they say it failed, read the failure; otherwise treat the pipeline
+  as accepted and continue. A silent pipeline is not a reason to poll.
+- On a reported failure, read the public annotations: `GET https://api.github.com/repos/kirikaza8x/OmniCore/actions/runs?head_sha=<sha>`,
+  then `/actions/runs/<id>/jobs` and `/check-runs/<job id>/annotations`. Compiler errors and integration-test failure
+  text arrive as annotations (job summaries and raw logs are **not** readable without a token).
+- Every poll is a tool call whose result is added to the context and billed on later turns. Repeated waiting wastes
+  tokens; one push plus one reported result is the intended path.
+- Do not describe a pipeline the developer has not reported as "verified"; say "pushed, CI result awaited from the
+  developer" and finish the turn.
+
+See [docs/ci-cd.md](docs/ci-cd.md) for the workflows, jobs and the full hand-off.
 
 ## Conventions
 - Layers point inward: Api -> Application -> Domain; Infrastructure implements Domain/Application interfaces.
@@ -104,7 +114,8 @@ Reflects branch `docs/readme-and-roadmap`, 2026-11-20, last code/doc commit befo
 - [x] Full scan 2026-11-22 (repo-check SH1-SH8, IF1-IF5): fixed SH1-SH4 (paging clamp, dynamic filter/sort field validation, device id, storage keys; 37 tests in `tests/OmniCore.Shared.Tests`), IF1/IF2 (gateway uses compose service names, headers). Optional AWS emulator profile (Floci / LocalStack) in `infra/docker/docker-compose.aws.yml`. **CI green**
 - [x] Compose reorganised 2026-11-22: shared service env/base defined once in `docker-compose.services.yml`, documented master file, `infra/docker/README.md`; rendered config identical (dev, prod, cloud-sim), **CI green**
 - [x] 2026-11-23: A9 (generic login failure, constant-cost check) and A15 (first admin from `ADMIN_EMAIL`/`ADMIN_USERNAME`/`ADMIN_PASSWORD`, only when no admin exists, never promotes an existing account); web client `frontend/web` (ADR 0005) built, linted, 13 tests, BFF smoke-tested against a fake gateway; Docker image and compose profile `web` **not built here** (no Docker daemon; CI builds the image)
-- [x] 2026-11-23: fixed Notification integration failures (repo-check NT1/NT2). Added the missing initial EF migration (notification messages + MassTransit outbox/inbox); `Database.MigrateAsync()` had previously applied zero migrations and every endpoint returned 500. Fixed a deduplication race: the handler claims a new dedup key with a save before sending, and skips a fresh `Pending` row with zero attempts, so a duplicate event in the claim-to-send window cannot send a second welcome mail (CI run #66). Abandoned claims are retried after `ClaimLease` (1 minute). Local: full solution builds; Notification application tests 22/22, integration tests 8/8, duplicate-mail test 5/5 repeats. Branch `docs/readme-and-roadmap-fix`; CI verification pending.
+- [x] 2026-11-23: fixed Notification integration failures (repo-check NT1/NT2). Added the missing initial EF migration (notification messages + MassTransit outbox/inbox); `Database.MigrateAsync()` had previously applied zero migrations and every endpoint returned 500. Fixed a deduplication race: the handler claims a new dedup key with a save before sending, and skips a fresh `Pending` row with zero attempts, so a duplicate event in the claim-to-send window cannot send a second welcome mail (CI run #66). Abandoned claims are retried after `ClaimLease` (1 minute). Local: full solution builds; Notification application tests 22/22, integration tests 8/8, six full-suite repeat runs green. Branch `docs/readme-and-roadmap-fix`; CI run #67 pushed, result awaited from the developer (no polling).
 - [x] 2026-11-23: prod override requires `JWT_PRIVATE_KEY_PEM` (RS256 in production); dev defaults stay legacy HS256 until cut-over. CI prod/cloud-sim render uses a placeholder key; local dev/prod/cloud-sim `docker compose config --quiet` green, missing key fails as intended. Corrected `docs/auth-tokens.md`, ADR-era statuses, repo-check finding 5 and roadmap Phase 4.
+- [x] 2026-11-23: documented the agent CI hand-off in `docs/ci-cd.md` and `CLAUDE.md`: push, then stop; the developer reports the result. Polling costs tokens and is no longer part of the workflow. OpenCode role prompts and `docs/opencode.md` aligned.
 - [ ] Next: owner makes `build-and-unit-test` + integration required checks (repo setting), more handler tests (logout, roles), owner generates `JWT_PRIVATE_KEY_PEM` and does the cut-over, then drop the plain token columns, close ports 5001/5002 in the prod override
 - [ ] Owner decisions pending: MinIO image (F7: keep the coollabsio fork, build from source, or switch store), ADR 0001 questions, keep or drop the User service in compose

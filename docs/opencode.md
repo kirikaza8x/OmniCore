@@ -6,7 +6,7 @@ Design and reasons: [ADR 0007](decisions/0007-opencode-junior-agent.md). Status:
 1. One-time: merge `.github/workflows/opencode.yml` to `main` (GitHub only runs `issue_comment` and lists "Run workflow" from the default branch). In Settings > Actions > General enable "Allow GitHub Actions to create and approve pull requests". No secrets are needed.
 2. Actions > opencode > Run workflow: pick a role, write the task (name the files, say what "done" is). Or comment on an **issue**: `/oc tests: add handler tests for Logout in Auth.Application.Tests` (role optional, default `implement`).
 3. Result: a **draft PR** `opencode/<run>` (labels `opencode`, `needs-review`) with the agent's report, the automatic check results and a review checklist; `backend.yml` (and `frontend.yml` if the web client changed) start on the branch. Read-only roles post their findings in the run summary / issue instead.
-4. Review the diff line by line, wait for the integration tests, then merge or close. Never merge on green CI alone.
+4. Review the diff line by line. The reviewer reports the CI result when it finishes; the agent does not poll. Merge or close after that, and never merge on green CI alone. See [ci-cd.md](ci-cd.md).
 
 ## Roles
 | Role | Edits? | Good for |
