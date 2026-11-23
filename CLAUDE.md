@@ -3,6 +3,10 @@
 **Read first:** [README.md](README.md), [docs/architecture.md](docs/architecture.md), [docs/repo-check.md](docs/repo-check.md)
 (numbered findings), [docs/roadmap.md](docs/roadmap.md) (the plan), [docs/decisions/](docs/decisions/) (ADRs).
 
+**Agent handoff:** [docs/workflow.md](docs/workflow.md), [docs/ci-cd.md](docs/ci-cd.md),
+[docs/opencode.md](docs/opencode.md), [docs/copilot.md](docs/copilot.md) and [docs/plans/](docs/plans/README.md). The
+Claude-to-junior task protocol is in [docs/copilot.md](docs/copilot.md#claude-to-junior-agent-handoff).
+
 ## What this is
 **OmniCore** is a .NET 9 service-oriented backend (`backend/c#/`), a Next.js web client (`frontend/web/`, ADR 0005) and Docker
 infrastructure (`infra/docker/`). Other backend languages are planned, not in the repo.
@@ -106,7 +110,7 @@ old plain `token` column still present until the follow-up migration drops it (A
 below now compile and pass CI, but only the register/login/refresh/reuse path is exercised by a test.
 
 ## Current progress
-Reflects branch `docs/readme-and-roadmap`, 2026-11-20, last code/doc commit before this section: see `git log -1`.
+Reflects branch `docs/readme-and-roadmap-fix`, 2026-11-23. Last pushed commit before this docs update: `d3722f5`.
 
 - [x] Phase 0 docs refactor (README, architecture, repo-check, roadmap, integrations/owl-editor, decisions)
 - [x] Review 2a Shared, 2b Auth, 2c User (findings S1-S13, A1-A18, U1-U10)
@@ -132,5 +136,6 @@ Reflects branch `docs/readme-and-roadmap`, 2026-11-20, last code/doc commit befo
 - [x] 2026-11-23: documented the agent CI hand-off in `docs/ci-cd.md` and `CLAUDE.md`: push, then stop; the developer reports the result. Polling costs tokens and is no longer part of the workflow. OpenCode role prompts and `docs/opencode.md` aligned.
 - [x] 2026-11-23: scoped `backend.yml` to `backend/c#/**`, `infra/docker/**` and its own workflow; a `changes` job runs only the affected service tests, `infra-config` only for infra/workflow changes, and `ci-gate` is the gate when the workflow runs (docs-only changes do not produce it). Added the plan-first workflow (`docs/workflow.md`, `docs/plans/`) so agents share one plan and update docs with the code.
 - [x] 2026-11-23: added GitHub Copilot as a second junior agent: repository instructions, `OmniCore Junior` custom agent, setup steps for .NET 9 and Node 22, ADR 0008 and `docs/copilot.md`. Configured and linted locally; no GitHub run reported yet.
-- [ ] Next: owner makes `ci-gate` the required check (repo setting), more handler tests (logout, roles), owner generates `JWT_PRIVATE_KEY_PEM` and does the cut-over, then drop the plain token columns, close ports 5001/5002 in the prod override
+- [x] 2026-11-23: documented Claude-to-junior handoff in `docs/copilot.md`: plan first, one task issue, one agent, draft PR, human review, no polling. Refreshed `CLAUDE.md` read-first pointers and progress header so the next Claude session starts from the latest state.
+- [ ] Next: owner makes `ci-gate` the required check (repo setting), run one small OpenCode task and one small Copilot task on GitHub after merge to `main`, more handler tests (logout, roles), owner generates `JWT_PRIVATE_KEY_PEM` and does the cut-over, then drop the plain token columns, close ports 5001/5002 in the prod override
 - [ ] Owner decisions pending: MinIO image (F7: keep the coollabsio fork, build from source, or switch store), ADR 0001 questions, keep or drop the User service in compose

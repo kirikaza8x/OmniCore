@@ -47,6 +47,9 @@ Every non-trivial change starts with a Markdown plan under [`docs/plans/`](plans
 [workflow.md](workflow.md). Agents read the plan before editing, update it when scope changes, and update the affected
 docs in the same change. This keeps parallel sessions from inventing different designs.
 
+Claude hands junior work to OpenCode or Copilot through a task issue, not by chat polling. The shared protocol and agent
+start commands are in [copilot.md](copilot.md#claude-to-junior-agent-handoff).
+
 ## Agent rule: push, then hand off
 
 After a push the agent **stops**. It does not wait, sleep, poll or re-check the run.

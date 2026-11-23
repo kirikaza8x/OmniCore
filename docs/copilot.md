@@ -18,6 +18,34 @@ Copilot is a second junior agent beside [OpenCode](opencode.md). Both follow the
    finishes; the agent does not poll. Never merge on green CI alone. Agent pull requests still need the normal
    `backend.yml` / `frontend.yml` checks from [ci-cd.md](ci-cd.md).
 
+## Claude-to-junior-agent handoff
+
+Neither junior agent listens to Claude's chat session. Claude hands off work through GitHub:
+
+1. Write and push the plan in `docs/plans/NNNN-short-title.md`. Both agents refuse non-trivial work without a plan.
+2. Create one issue containing the plan link, role, scope, named files, definition of done, checks and protected paths.
+3. Start exactly one agent. One agent owns one task; do not run both on the same diff.
+4. Stop. The agent returns a draft PR. The human reviews it and the developer reports CI.
+
+Start OpenCode from the issue with `/oc implement: task` or `/oc tests: task`. The comment author must be an OWNER,
+MEMBER or COLLABORATOR. Manual `Actions > opencode > Run workflow` is the fallback. See [opencode.md](opencode.md).
+
+Start Copilot from the Agents tab, by assigning the issue to `copilot-swe-agent[bot]` with
+`custom_agent: "OmniCore Junior"`, or through the agent tasks API:
+
+```text
+POST /agents/repos/{owner}/{repo}/tasks
+{
+  "prompt": "...",
+  "base_ref": "main",
+  "create_pull_request": true
+}
+```
+
+The agent tasks API is public preview. It needs a user-to-server token (PAT, OAuth or GitHub App user token);
+`GITHUB_TOKEN` is not supported. Issue assignment is also available through REST and GraphQL and accepts
+`custom_agent`, `custom_instructions`, `base_branch` and `target_repo`.
+
 ## What the agent follows
 
 | Source | Purpose |
