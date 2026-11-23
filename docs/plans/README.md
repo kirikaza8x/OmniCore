@@ -9,6 +9,7 @@ One Markdown plan per non-trivial change. The workflow is in [../workflow.md](..
 | Plan | Status | Scope |
 |---|---|---|
 | [0001-ci-scoped-runs.md](0001-ci-scoped-runs.md) | done | path-filtered backend CI, selective jobs, plan-first workflow docs |
+| [0002-copilot-junior-agent.md](0002-copilot-junior-agent.md) | done | Copilot instructions, custom junior agent, setup steps, docs |
 
 Statuses: `planned`, `in progress`, `blocked`, `done`, `abandoned`.
 

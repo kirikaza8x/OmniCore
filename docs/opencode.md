@@ -1,6 +1,8 @@
 # OpenCode junior developer
 
 Design and reasons: [ADR 0007](decisions/0007-opencode-junior-agent.md). Status: **built, not yet run on GitHub.**
+GitHub Copilot is a second junior agent with the same plan-first rules; see [copilot.md](copilot.md) and
+[ADR 0008](decisions/0008-copilot-junior-agent.md).
 
 ## Use it
 1. One-time: merge `.github/workflows/opencode.yml` to `main` (GitHub only runs `issue_comment` and lists "Run workflow" from the default branch). In Settings > Actions > General enable "Allow GitHub Actions to create and approve pull requests". No secrets are needed.

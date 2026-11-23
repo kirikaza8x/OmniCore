@@ -11,6 +11,7 @@ while it waits.
 | `backend.yml` | PRs and pushes changing `backend/c#/**`, `infra/docker/**` or its own workflow | `changes`, `build-and-unit-test`, `integration-test`, `infra-config`, `ci-gate` |
 | `frontend.yml` | PRs and pushes touching `frontend/**` or its workflow | `web` (lint, typecheck, test, build, Docker image) |
 | `opencode.yml` | manual dispatch or `/oc` issue comment | `agent` (read-only), `publish` (draft PR + start CI), `notify` |
+| `copilot-setup-steps.yml` | manual dispatch or a change to its own file | `copilot-setup-steps` (environment prep for Copilot cloud agent; not a code gate) |
 
 ## Scoped runs
 

@@ -80,10 +80,16 @@ the plan file but still update the docs they invalidate.
   `docs/decisions/NNNN-title.md` **before** a risky change (rename, schema or token-format change, removing a layer).
   Update the docs and the progress section below after each piece of work.
 
-## OpenCode junior agent
+## Junior agents
 `.github/workflows/opencode.yml` runs a free-model OpenCode agent for routine tasks (ADR 0007, `docs/opencode.md`). It only produces **draft PRs** `opencode/<run>`;
 read every line of one before merging (green CI is not enough; integration tests run on the branch). It cannot touch `.github/`, `CLAUDE.md`, secrets or prod compose.
 Built and linted (actionlint) but **not yet run on GitHub**; do not describe it as working until a run has shown it.
+
+GitHub Copilot is a second junior agent (ADR 0008, `docs/copilot.md`). `.github/copilot-instructions.md` gives it repo-wide
+rules, `.github/agents/omnicore-junior.agent.md` is the custom agent profile, and `.github/workflows/copilot-setup-steps.yml`
+installs .NET 9 and Node 22 for GitHub Actions-based sessions. It also produces draft PRs only and must not merge or approve.
+Copilot's instructions are guidance, not the OpenCode patch guard; read every draft line by line. Configured and linted locally,
+but **not yet run on GitHub**.
 
 ## Do not
 - Do not claim tests or builds pass without running them. Mark code written without a build as unbuilt.
@@ -125,5 +131,6 @@ Reflects branch `docs/readme-and-roadmap`, 2026-11-20, last code/doc commit befo
 - [x] 2026-11-23: prod override requires `JWT_PRIVATE_KEY_PEM` (RS256 in production); dev defaults stay legacy HS256 until cut-over. CI prod/cloud-sim render uses a placeholder key; local dev/prod/cloud-sim `docker compose config --quiet` green, missing key fails as intended. Corrected `docs/auth-tokens.md`, ADR-era statuses, repo-check finding 5 and roadmap Phase 4.
 - [x] 2026-11-23: documented the agent CI hand-off in `docs/ci-cd.md` and `CLAUDE.md`: push, then stop; the developer reports the result. Polling costs tokens and is no longer part of the workflow. OpenCode role prompts and `docs/opencode.md` aligned.
 - [x] 2026-11-23: scoped `backend.yml` to `backend/c#/**`, `infra/docker/**` and its own workflow; a `changes` job runs only the affected service tests, `infra-config` only for infra/workflow changes, and `ci-gate` is the gate when the workflow runs (docs-only changes do not produce it). Added the plan-first workflow (`docs/workflow.md`, `docs/plans/`) so agents share one plan and update docs with the code.
+- [x] 2026-11-23: added GitHub Copilot as a second junior agent: repository instructions, `OmniCore Junior` custom agent, setup steps for .NET 9 and Node 22, ADR 0008 and `docs/copilot.md`. Configured and linted locally; no GitHub run reported yet.
 - [ ] Next: owner makes `ci-gate` the required check (repo setting), more handler tests (logout, roles), owner generates `JWT_PRIVATE_KEY_PEM` and does the cut-over, then drop the plain token columns, close ports 5001/5002 in the prod override
 - [ ] Owner decisions pending: MinIO image (F7: keep the coollabsio fork, build from source, or switch store), ADR 0001 questions, keep or drop the User service in compose

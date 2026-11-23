@@ -1,0 +1,47 @@
+name: Copilot Setup Steps
+
+# Environment preparation for GitHub Actions-based Copilot cloud agent sessions. Copilot reads this file only from the
+# default branch. It is not a code gate: backend.yml and frontend.yml decide CI status. Run on its own changes or by
+# hand to verify the toolchain before a real agent task.
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/copilot-setup-steps.yml'
+  pull_request:
+    paths:
+      - '.github/workflows/copilot-setup-steps.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  # Job name is fixed by Copilot. Only steps, permissions, runs-on, services, snapshot and timeout-minutes are honored.
+  copilot-setup-steps:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 9.0.x
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/web/package-lock.json
+      - name: Restore backend dependencies
+        shell: bash
+        run: dotnet restore backend/c#/OmniCore.slnx
+      - name: Install web dependencies
+        shell: bash
+        run: npm ci --prefix frontend/web
+      - name: Show installed tools
+        shell: bash
+        run: |
+          dotnet --version
+          node --version
+          npm --version

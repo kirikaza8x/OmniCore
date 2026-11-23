@@ -5,6 +5,7 @@ off as they land; the status here is also mirrored in `CLAUDE.md`.
 
 ## Phase 0: documentation
 - [x] README, architecture, repo-check, roadmap, owl-editor integration split and checked against the code (F5 of the old list)
+- [x] Junior-agent docs and config: OpenCode ([ADR 0007](decisions/0007-opencode-junior-agent.md), [opencode.md](opencode.md)) and GitHub Copilot ([ADR 0008](decisions/0008-copilot-junior-agent.md), [copilot.md](copilot.md)); both configured and linted locally, first GitHub runs still unverified
 
 ## Phase 1: safety net (F1)
 - [x] GitHub Actions `backend.yml`: path-filtered restore, build and selective unit/integration tests (**green 2026-11-20**; scoped by changed area 2026-11-23, see [ci-cd.md](ci-cd.md))
