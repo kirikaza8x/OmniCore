@@ -1,0 +1,10 @@
+namespace OmniCore.Services.__Service__.Api.Routing;
+
+using OmniCore.Shared.Api.Routing;
+
+/// <summary>Gives <c>/api/v1/__route__</c>. Add one property per route string; endpoints use them instead of literals.</summary>
+public sealed class __Service__Routes : BaseRouteModule
+{
+    protected override string? ServiceName => "__route__";
+    protected override string? ResourceName => null;
+}

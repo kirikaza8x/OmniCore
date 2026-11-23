@@ -1,0 +1,37 @@
+#syntax=docker/dockerfile:1
+# 1. Build Stage
+FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
+WORKDIR /src
+
+# Copy ONLY the __Service__ microservice, the Contracts of services it consumes (--consumes), and Shared
+# (csproj first for restore caching)
+COPY --parents backend/c#/OmniCore.Services.__Service__/**/*.csproj ./
+COPY --parents backend/c#/OmniCore.Services.__Consumed__/OmniCore.Services.__Consumed__.Contracts/**/*.csproj ./
+COPY --parents backend/c#/OmniCore.Shared/**/*.csproj ./
+
+RUN --mount=type=cache,target=/root/.nuget/packages \
+    dotnet restore "backend/c#/OmniCore.Services.__Service__/OmniCore.Services.__Service__.Api/OmniCore.Services.__Service__.Api.csproj"
+
+COPY backend/c#/OmniCore.Services.__Service__/ backend/c#/OmniCore.Services.__Service__/
+COPY backend/c#/OmniCore.Services.__Consumed__/OmniCore.Services.__Consumed__.Contracts/ backend/c#/OmniCore.Services.__Consumed__/OmniCore.Services.__Consumed__.Contracts/
+COPY backend/c#/OmniCore.Shared/ backend/c#/OmniCore.Shared/
+
+WORKDIR "/src/backend/c#/OmniCore.Services.__Service__/OmniCore.Services.__Service__.Api"
+RUN --mount=type=cache,target=/root/.nuget/packages \
+    dotnet publish "OmniCore.Services.__Service__.Api.csproj" -c Release -o /app/publish /p:UseAppHost=false --no-restore
+
+# 2. Final Runtime Stage
+FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS final
+WORKDIR /app
+
+# curl needed for container healthchecks
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    apt-get update && apt-get install -y --no-install-recommends curl
+
+RUN adduser --disabled-password --gecos "" appuser
+USER appuser
+
+EXPOSE 8080
+COPY --from=build /app/publish .
+ENTRYPOINT ["dotnet", "OmniCore.Services.__Service__.Api.dll"]

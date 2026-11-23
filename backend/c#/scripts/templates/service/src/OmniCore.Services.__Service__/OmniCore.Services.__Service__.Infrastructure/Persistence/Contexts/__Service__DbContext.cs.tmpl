@@ -1,0 +1,24 @@
+namespace OmniCore.Services.__Service__.Infrastructure.Persistence.Contexts;
+
+using MassTransit;
+using Microsoft.EntityFrameworkCore;
+
+public class __Service__DbContext : DbContext
+{
+    public const string SchemaName = "__schema__";
+
+    public __Service__DbContext(DbContextOptions<__Service__DbContext> options) : base(options) { }
+
+    // public DbSet<Thing> Things => Set<Thing>();
+
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        base.OnModelCreating(modelBuilder);
+
+        modelBuilder.HasDefaultSchema(SchemaName);
+        modelBuilder.ApplyConfigurationsFromAssembly(typeof(__Service__DbContext).Assembly);
+
+        // MassTransit outbox and inbox tables (consumers are deduplicated by the inbox).
+        modelBuilder.AddTransactionalOutboxEntities();
+    }
+}

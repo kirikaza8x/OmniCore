@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\OmniCore.Services.Notification.Domain\OmniCore.Services.Notification.Domain.csproj" />
+    <ProjectReference Include="..\OmniCore.Services.Notification.Contracts\OmniCore.Services.Notification.Contracts.csproj" />
+    <ProjectReference Include="..\..\OmniCore.Services.Auth\OmniCore.Services.Auth.Contracts\OmniCore.Services.Auth.Contracts.csproj" />
+    <ProjectReference Include="..\..\OmniCore.Shared\OmniCore.Shared.Application\OmniCore.Shared.Application.csproj" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+</Project>

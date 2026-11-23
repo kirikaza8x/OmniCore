@@ -1,0 +1,10 @@
+namespace OmniCore.Services.__Service__.Infrastructure.Persistence.Contexts;
+
+using OmniCore.Shared.Infrastructure.Persistence.Factories;
+
+/// <summary>Used by <c>dotnet ef</c> (design time) to build the context without starting the API.</summary>
+public class __Service__DbContextFactory : DesignTimeDbContextFactoryBase<__Service__DbContext>
+{
+    protected override string ApiProjectName => "OmniCore.Services.__Service__.Api";
+    protected override string SchemaName => __Service__DbContext.SchemaName;
+}

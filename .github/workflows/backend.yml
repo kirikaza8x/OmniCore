@@ -40,7 +40,7 @@ jobs:
         shell: bash
         run: |
           set -o pipefail
-          for p in tests/OmniCore.Services.Auth.Domain.Tests tests/OmniCore.Services.Auth.Application.Tests tests/OmniCore.Services.User.Domain.Tests tests/OmniCore.Services.User.Application.Tests tests/OmniCore.Shared.Tests; do
+          for p in tests/OmniCore.Services.Auth.Domain.Tests tests/OmniCore.Services.Auth.Application.Tests tests/OmniCore.Services.User.Domain.Tests tests/OmniCore.Services.User.Application.Tests tests/OmniCore.Services.Notification.Domain.Tests tests/OmniCore.Services.Notification.Application.Tests tests/OmniCore.Shared.Tests; do
             dotnet test "$p" --no-build -c Release --logger "trx;LogFileName=$(basename "$p").trx" 2>&1 | tee -a "$RUNNER_TEMP/unit.log"
           done
       - name: Annotate unit test failures
@@ -86,7 +86,7 @@ jobs:
         run: |
           set -o pipefail
           # One project after the other: both bind RabbitMQ to port 5672.
-          for p in tests/OmniCore.Services.Auth.IntegrationTests tests/OmniCore.Services.User.IntegrationTests; do
+          for p in tests/OmniCore.Services.Auth.IntegrationTests tests/OmniCore.Services.User.IntegrationTests tests/OmniCore.Services.Notification.IntegrationTests; do
             dotnet test "$p" -c Release --logger "trx;LogFileName=$(basename "$p").trx" 2>&1 | tee -a "$RUNNER_TEMP/integration.log" || rc=1
           done
           exit ${rc:-0}

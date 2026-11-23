@@ -13,6 +13,13 @@
     <Project Path="OmniCore.Services.User/OmniCore.Services.User.Domain/OmniCore.Services.User.Domain.csproj" />
     <Project Path="OmniCore.Services.User/OmniCore.Services.User.Infrastructure/OmniCore.Services.User.Infrastructure.csproj" />
   </Folder>
+  <Folder Name="/OmniCore.Services.Notification/">
+    <Project Path="OmniCore.Services.Notification/OmniCore.Services.Notification.Api/OmniCore.Services.Notification.Api.csproj" />
+    <Project Path="OmniCore.Services.Notification/OmniCore.Services.Notification.Application/OmniCore.Services.Notification.Application.csproj" />
+    <Project Path="OmniCore.Services.Notification/OmniCore.Services.Notification.Contracts/OmniCore.Services.Notification.Contracts.csproj" />
+    <Project Path="OmniCore.Services.Notification/OmniCore.Services.Notification.Domain/OmniCore.Services.Notification.Domain.csproj" />
+    <Project Path="OmniCore.Services.Notification/OmniCore.Services.Notification.Infrastructure/OmniCore.Services.Notification.Infrastructure.csproj" />
+  </Folder>
   <Folder Name="/OmniCore.Shared/">
     <Project Path="OmniCore.Shared/OmniCore.Shared.Api/OmniCore.Shared.Api.csproj" />
     <Project Path="OmniCore.Shared/OmniCore.Shared.Application/OmniCore.Shared.Application.csproj" />
@@ -28,5 +35,8 @@
     <Project Path="tests/OmniCore.Services.User.Application.Tests/OmniCore.Services.User.Application.Tests.csproj" />
     <Project Path="tests/OmniCore.Services.User.Domain.Tests/OmniCore.Services.User.Domain.Tests.csproj" />
     <Project Path="tests/OmniCore.Services.User.IntegrationTests/OmniCore.Services.User.IntegrationTests.csproj" />
+    <Project Path="tests/OmniCore.Services.Notification.Application.Tests/OmniCore.Services.Notification.Application.Tests.csproj" />
+    <Project Path="tests/OmniCore.Services.Notification.Domain.Tests/OmniCore.Services.Notification.Domain.Tests.csproj" />
+    <Project Path="tests/OmniCore.Services.Notification.IntegrationTests/OmniCore.Services.Notification.IntegrationTests.csproj" />
   </Folder>
 </Solution>

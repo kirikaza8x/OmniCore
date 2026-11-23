@@ -1,0 +1,19 @@
+namespace OmniCore.Services.__Service__.Api;
+
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using OmniCore.Shared.Api.Extensions;
+
+public static class DependencyInjection
+{
+    public static IServiceCollection Add__Service__Api(this IServiceCollection services, IConfiguration configuration)
+    {
+        services.AddApi(
+            moduleAssemblies: [typeof(DependencyInjection).Assembly],
+            configuration: configuration,
+            apiTitle: "OmniCore __Service__ API");
+
+        services.AddHttpContextAccessor();
+        return services;
+    }
+}

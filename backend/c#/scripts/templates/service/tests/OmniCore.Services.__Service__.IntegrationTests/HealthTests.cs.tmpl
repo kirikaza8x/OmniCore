@@ -1,0 +1,15 @@
+namespace OmniCore.Services.__Service__.IntegrationTests;
+
+[Collection(__Service__ApiCollection.Name)]
+public sealed class HealthTests(__Service__ApiFactory factory)
+{
+    [Fact]
+    public async Task Service_starts_applies_migrations_and_reports_healthy()
+    {
+        var client = factory.CreateClient();
+
+        var response = await client.GetAsync("/health");
+
+        Assert.True(response.IsSuccessStatusCode, $"/health answered {(int)response.StatusCode}");
+    }
+}

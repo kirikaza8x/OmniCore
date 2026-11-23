@@ -1,0 +1,8 @@
+namespace OmniCore.Services.__Service__.IntegrationTests;
+
+/// <summary>One API + Postgres + RabbitMQ for all test classes (RabbitMQ is bound to port 5672).</summary>
+[CollectionDefinition(Name)]
+public sealed class __Service__ApiCollection : ICollectionFixture<__Service__ApiFactory>
+{
+    public const string Name = "__service__-api";
+}

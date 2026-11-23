@@ -1,0 +1,26 @@
+using OmniCore.Services.__Service__.Api;
+using OmniCore.Services.__Service__.Application;
+using OmniCore.Services.__Service__.Infrastructure;
+using OmniCore.Shared.Api.Extensions;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services
+    .Add__Service__Application()
+    .Add__Service__Infrastructure(builder.Configuration)
+    .Add__Service__Api(builder.Configuration);
+
+builder.Services.AddHealthChecks();
+
+var app = builder.Build();
+
+app.UseApi(apiTitle: "OmniCore __Service__ API");
+app.MapHealthChecks("/health");
+app.MapCarter();
+
+await app.Use__Service__InfrastructureAsync();
+
+app.Run();
+
+// Lets WebApplicationFactory<Program> reach the entry point from the integration tests.
+public partial class Program { }
