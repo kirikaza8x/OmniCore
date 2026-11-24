@@ -1,6 +1,6 @@
 # 0005: Require a verified e-mail at login (optional)
 
-- Status: code written 2026-11-24 on `develop`, unbuilt (CI result awaited)
+- Status: done 2026-11-24 on `develop`, CI green (developer reported)
 - Date: 2026-11-24
 - Related: ADR 0010, ADR 0009
 

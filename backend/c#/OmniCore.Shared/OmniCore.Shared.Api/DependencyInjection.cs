@@ -34,6 +34,8 @@ public static class ApiExtensions
         // Registers Swagger DI services
         services.AddSwaggerDocumentation(title: apiTitle); 
 
+        services.AddObservability(configuration);
+
         services.AddProblemDetails();
         services.AddExceptionHandler<GlobalExceptionHandler>();
 
