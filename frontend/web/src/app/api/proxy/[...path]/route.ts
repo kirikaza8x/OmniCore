@@ -8,7 +8,7 @@ import { clearSession, setSession, type Tokens } from "@/shared/server/session";
 
 // The browser calls /api/proxy/<path>; this handler adds the bearer token from the httpOnly cookie, refreshes it
 // once when it has expired, and forwards to the gateway. Only these backend areas can be reached through it.
-const ALLOWED = [/^users(\/|$)/, /^auth\/me$/];
+const ALLOWED = [/^users(\/|$)/, /^auth\/me$/, /^auth\/email\/verify\/request$/];
 
 type Context = { params: Promise<{ path: string[] }> };
 

@@ -91,7 +91,7 @@ new request of the same type voids the older one. A token of one type is rejecte
 expired tokens give the same `Auth.InvalidToken` error. A successful reset revokes every refresh token.
 `POST /api/v1/auth/password/forgot` answers the same whether or not the e-mail exists. The raw code travels once in the
 integration event (it sits in the outbox until cleanup) and is never logged or stored by Notification. The links point at
-`PUBLIC_WEB_URL` (`/reset-password?token=`, `/verify-email?token=`); the web pages are not built yet.
+`PUBLIC_WEB_URL` (`/reset-password?token=`, `/verify-email?token=`); the web pages (`/reset-password`, `/verify-email`, `/forgot-password`) are built; verification is confirmed by a button press so link scanners cannot use up the token.
 
 ## Not covered here
 Account lockout (A8) is still open. Generic login errors (A9) and the first admin account (A15) were fixed on

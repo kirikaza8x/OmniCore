@@ -80,7 +80,7 @@ Candidates, effort and order: [services-plan.md](services-plan.md). Each new ser
 - [x] `frontend/web`: Next.js, BFF cookies, sign in / register / profile, Dockerfile, compose profile `web`, CI workflow
 - [ ] Run it against the real stack (compose `--profile web`), then add Playwright smoke tests
 - [ ] Apply the theme setting, edit/promote addresses, show other users' public profiles
-- [ ] Password reset and e-mail verification screens: pages `/forgot-password`, `/reset-password?token=`, `/verify-email?token=` and BFF routes (Auth endpoints exist, ADR 0009)
+- [x] Password reset and e-mail verification screens: `/forgot-password`, `/reset-password?token=`, `/verify-email?token=`, BFF routes, button on the profile page (2026-11-24; lint, typecheck, 20 tests, build and a fake-gateway smoke green locally; ADR 0009)
 - [ ] Admin screens (roles, accounts) once the admin endpoints are settled
 
 ## Phase 15: Notification service (2026-11-23)

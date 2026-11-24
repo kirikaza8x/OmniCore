@@ -42,6 +42,9 @@ export function LoginForm() {
         Sign in
       </Button>
       <p className="text-sm text-zinc-500">
+        <Link className="underline" href="/forgot-password">Forgot your password?</Link>
+      </p>
+      <p className="text-sm text-zinc-500">
         No account? <Link className="underline" href="/register">Create one</Link>
       </p>
     </form>

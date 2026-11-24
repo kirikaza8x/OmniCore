@@ -1,6 +1,6 @@
 # 0004: Password reset and e-mail verification
 
-- Status: code written 2026-11-24, unbuilt (CI result awaited); front-end pages and enforcement at login not started
+- Status: code written 2026-11-24, unbuilt (CI result awaited); front-end pages built 2026-11-24 (CI green for the backend, per the developer); enforcement at login not started
 - Date: 2026-11-23
 - Owner: Claude session
 - Related: ADR 0009, repo-check AA4, roadmap Phase 10
