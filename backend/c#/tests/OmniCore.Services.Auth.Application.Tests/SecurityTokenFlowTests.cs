@@ -47,7 +47,7 @@ public class SecurityTokenFlowTests
             .Handle(new RequestPasswordResetCommand("nobody@example.com"), default);
 
         Assert.True(result.IsSuccess);
-        await _bus.DidNotReceiveWithAnyArgs().PublishAsync<PasswordResetRequestedIntegrationEvent>(default!, default);
+        await _bus.DidNotReceive().PublishAsync(Arg.Any<PasswordResetRequestedIntegrationEvent>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -202,7 +202,7 @@ public class SecurityTokenFlowTests
 
         Assert.True(result.IsSuccess);
         Assert.Empty(account.SecurityTokens);
-        await _bus.DidNotReceiveWithAnyArgs().PublishAsync<EmailVerificationRequestedIntegrationEvent>(default!, default);
+        await _bus.DidNotReceive().PublishAsync(Arg.Any<EmailVerificationRequestedIntegrationEvent>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
