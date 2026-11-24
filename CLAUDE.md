@@ -111,7 +111,7 @@ old plain `token` column still present until the follow-up migration drops it (A
 below now compile and pass CI, but only the register/login/refresh/reuse path is exercised by a test.
 
 ## Current progress
-Reflects branch `docs/readme-and-roadmap`, kept equal to `develop` and `main` (merged on request), 2026-11-24; see `git log -1`.
+Work happens on branch `develop`; `main` is updated by merging `develop` on request (`docs/readme-and-roadmap` is retired and equals `develop` at 9d4abb1). 2026-11-24; see `git log -1`.
 
 - [x] Phase 0 docs refactor (README, architecture, repo-check, roadmap, integrations/owl-editor, decisions)
 - [x] Review 2a Shared, 2b Auth, 2c User (findings S1-S13, A1-A18, U1-U10)
