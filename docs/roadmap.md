@@ -64,7 +64,7 @@ Findings go to `repo-check.md`; safe fixes are committed one by one; docs and `C
 - [ ] Remove `UserSession`; device columns on `RefreshToken` (AI2)
 - [ ] Write `SecurityAuditLog` (login, password change, role change, token reuse)
 - [ ] `AccountDeactivated` / `AccountDeleted` / `AccountEmailChanged` in `Auth.Contracts` + User consumer (UD2)
-- [x] E-mail verification and password reset on `SecurityToken` (AA4, ADR 0009, plan 0004): 4 Auth endpoints, 2 events, Notification mails and links; **written 2026-11-24, unbuilt, CI result awaited**. Not done: enforce verified e-mail at login
+- [x] E-mail verification and password reset on `SecurityToken` (AA4, ADR 0009, plan 0004): 4 Auth endpoints, 2 events, Notification mails and links; **written 2026-11-24, unbuilt, CI result awaited**. Optional enforcement at login: ADR 0010 (`Auth__RequireVerifiedEmail`, written 2026-11-24, CI awaited)
 
 ## Phase 11: shared-layer and auth fixes from the master READMEs
 Order: W1+S2 (real client IP / rate limit), I1, I3 (service-scoped queue names), AP1/AP2/S6, D1, AD1, AA1 (fallback authorization policy), A15, AN1, AI1.

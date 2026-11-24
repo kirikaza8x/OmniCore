@@ -77,6 +77,8 @@ public sealed class AdminSeeder(
         }
 
         var account = created.Value;
+        // The operator owns this address; with the verified-e-mail switch on (ADR 0010) an unverified admin could not sign in.
+        account.ConfirmEmail();
         account.AssignRole(userRole.Id);
         account.AssignRole(superAdminRole.Id);
 

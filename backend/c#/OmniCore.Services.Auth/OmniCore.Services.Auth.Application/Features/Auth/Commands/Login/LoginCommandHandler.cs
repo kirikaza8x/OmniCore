@@ -14,10 +14,14 @@ public sealed class LoginCommandHandler(
     IAccountRepository accountRepository,
     IPasswordHasherService passwordHasher,
     IJwtTokenService jwtTokenService,
-    IRefreshTokenService refreshTokenService) : ICommandHandler<LoginCommand, AuthResponse>
+    IRefreshTokenService refreshTokenService,
+    IAuthPolicy authPolicy) : ICommandHandler<LoginCommand, AuthResponse>
 {
     internal static readonly Error InvalidCredentials =
         Error.Unauthorized("Auth.InvalidCredentials", "Invalid username, email or password.");
+
+    internal static readonly Error EmailNotVerified =
+        Error.Forbidden("Auth.EmailNotVerified", "Confirm your e-mail address before signing in. You can ask for a new link.");
 
     private static string? _dummyHash;
 
@@ -49,6 +53,13 @@ public sealed class LoginCommandHandler(
         if (!passwordMatches || !account.IsActive)
         {
             return Result.Failure<AuthResponse>(InvalidCredentials);
+        }
+
+        // Only now, with the right password on an active account, can the caller be told the e-mail is unverified (ADR 0010):
+        // a wrong password or an unknown account never reaches this answer, so it reveals nothing about other accounts.
+        if (authPolicy.RequireVerifiedEmail && !account.IsEmailConfirmed)
+        {
+            return Result.Failure<AuthResponse>(EmailNotVerified);
         }
 
         // 6. Generate Refresh Token via Aggregate Root

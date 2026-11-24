@@ -99,6 +99,8 @@ services:
       Jwt__ExpiryMinutes: ${JWT_EXPIRY_MINUTES:-60}
       # First administrator (A15): created once on a fresh database when all three are set and no admin exists.
       # Password: 12+ characters. Remove these three lines from .env after the first start if you like.
+      # ADR 0010: true = only accounts with a verified e-mail can sign in (needs working SMTP). Off by default.
+      Auth__RequireVerifiedEmail: ${REQUIRE_VERIFIED_EMAIL:-false}
       Admin__Email: ${ADMIN_EMAIL:-}
       Admin__Username: ${ADMIN_USERNAME:-}
       Admin__Password: ${ADMIN_PASSWORD:-}

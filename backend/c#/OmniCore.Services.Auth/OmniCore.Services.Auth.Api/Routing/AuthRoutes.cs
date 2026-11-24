@@ -23,4 +23,5 @@ public sealed class AuthRoutes : BaseRouteModule
     public string ResetPassword => "password/reset";
     public string RequestEmailVerification => "email/verify/request";
     public string ConfirmEmail => "email/verify/confirm";
+    public string ResendEmailVerification => "email/verify/resend";
 }

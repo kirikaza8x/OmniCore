@@ -3,7 +3,7 @@
 Next.js 16 (App Router), React 19, TypeScript, Tailwind 4, zod. Decisions: [ADR 0005](../../docs/decisions/0005-web-client.md).
 
 ## What it does today
-Sign in, register, sign out, forgot/reset password and e-mail confirmation (ADR 0009), and a profile page (personal information, avatar upload, settings, up to 10 addresses) that talks to the Auth and User services through the gateway.
+Sign in, register, sign out, forgot/reset password, e-mail confirmation and resend (ADR 0009, 0010), and a profile page (personal information, avatar upload, settings, up to 10 addresses) that talks to the Auth and User services through the gateway.
 
 ## Run it
 ```bash
@@ -27,7 +27,7 @@ CI: `.github/workflows/frontend.yml` runs all four and builds the Docker image.
 ```
 src/
   app/                  routes only (like the Api layer): pages, layouts, route handlers, nothing else
-    (auth)/login, register, forgot-password, reset-password?token=, verify-email?token=     public pages
+    (auth)/login, register, forgot-password, reset-password?token=, verify-email?token=, resend-verification     public pages
     (app)/profile              private page
     api/auth/*                 login, register, logout (BFF: set/clear httpOnly cookies); forgot-password, reset-password, verify-email (anonymous, forwarded without tokens)
     api/proxy/[...path]        adds the bearer token, refreshes it once, forwards to the gateway

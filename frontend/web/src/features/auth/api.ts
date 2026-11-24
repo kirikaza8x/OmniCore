@@ -1,6 +1,6 @@
 import { http } from "@/shared/api/http";
 import type { CurrentAccount } from "./types";
-import type { ForgotPasswordInput, LoginInput, RegisterInput, ResetPasswordInput, VerifyEmailInput } from "./schemas";
+import type { ForgotPasswordInput, LoginInput, RegisterInput, ResendVerificationInput, ResetPasswordInput, VerifyEmailInput } from "./schemas";
 
 export const authApi = {
   login: (input: LoginInput) => http<void>("/api/auth/login", { method: "POST", json: input }),
@@ -9,6 +9,7 @@ export const authApi = {
   me: () => http<CurrentAccount>("/api/proxy/auth/me"),
   forgotPassword: (input: ForgotPasswordInput) => http<void>("/api/auth/forgot-password", { method: "POST", json: input }),
   resetPassword: (input: ResetPasswordInput) => http<void>("/api/auth/reset-password", { method: "POST", json: input }),
+  resendVerification: (input: ResendVerificationInput) => http<void>("/api/auth/resend-verification", { method: "POST", json: input }),
   verifyEmail: (input: VerifyEmailInput) => http<void>("/api/auth/verify-email", { method: "POST", json: input }),
   /** Signed-in users only: goes through the proxy, which adds the bearer token. */
   requestEmailVerification: () => http<void>("/api/proxy/auth/email/verify/request", { method: "POST" }),

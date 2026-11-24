@@ -3,6 +3,7 @@ import {
   forgotPasswordSchema,
   loginSchema,
   registerSchema,
+  resendVerificationSchema,
   resetPasswordFormSchema,
   resetPasswordSchema,
   verifyEmailSchema,
@@ -69,5 +70,12 @@ describe("verifyEmailSchema", () => {
   it("needs a token", () => {
     expect(verifyEmailSchema.safeParse({ token: "abc" }).success).toBe(true);
     expect(verifyEmailSchema.safeParse({ token: "" }).success).toBe(false);
+  });
+});
+
+describe("resendVerificationSchema", () => {
+  it("needs a valid email", () => {
+    expect(resendVerificationSchema.safeParse({ email: "alice@example.com" }).success).toBe(true);
+    expect(resendVerificationSchema.safeParse({ email: "" }).success).toBe(false);
   });
 });
