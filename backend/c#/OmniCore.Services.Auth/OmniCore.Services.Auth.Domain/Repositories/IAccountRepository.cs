@@ -29,6 +29,9 @@ public interface IAccountRepository : IRepository<Account, AccountId>
     /// <summary>Finds the account that owns an unused security token of the given type, by the token's hash.</summary>
     Task<Account?> GetBySecurityTokenAsync(string codeHash, SecurityTokenType type, CancellationToken cancellationToken = default);
 
+    /// <summary>Loads several accounts by id (accounts that do not exist are simply missing from the result).</summary>
+    Task<IReadOnlyList<Account>> GetByIdsAsync(IReadOnlyCollection<AccountId> ids, CancellationToken cancellationToken = default);
+
     Task<bool> IsUsernameUniqueAsync(string username, CancellationToken cancellationToken = default);
     Task<bool> IsEmailUniqueAsync(string email, CancellationToken cancellationToken = default);
 

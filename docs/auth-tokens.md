@@ -96,7 +96,7 @@ integration event (it sits in the outbox until cleanup) and is never logged or s
 ### Requiring a verified e-mail (ADR 0010)
 `Auth__RequireVerifiedEmail=true` makes login fail with 403 `Auth.EmailNotVerified` for unverified accounts, but only after the
 identifier and password were right (a wrong password keeps the generic 401). Refresh is not affected. Blocked users ask for a
-new link at `POST /api/v1/auth/email/verify/resend` (always 200). Off by default; the seeded first admin is created verified.
+new link at `POST /api/v1/auth/email/verify/resend` (always 200). A SuperAdmin can vouch for existing accounts in bulk with `POST /api/v1/auth/admin/emails/confirm` (`{"accountIds":[...]}`, up to 500, no mail sent). Off by default; the seeded first admin is created verified.
 
 ## Not covered here
 Account lockout (A8) is still open. Generic login errors (A9) and the first admin account (A15) were fixed on

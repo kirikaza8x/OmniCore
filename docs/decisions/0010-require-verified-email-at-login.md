@@ -24,9 +24,14 @@ unverified account and anyone who registered before the mail pipeline was reacha
 4. **The first admin is verified.** The configured admin (A15) is created with `ConfirmEmail()`, because the operator owns the
    address and an unverified admin could otherwise lock themselves out of a fresh stack with the switch on.
 
+5. **Bulk verify for existing accounts.** `POST /api/v1/auth/admin/emails/confirm` (`SuperAdmin` only) takes 1 to 500
+   account ids and marks their e-mail confirmed without sending mail, for users verified out of band, so the switch can be
+   turned on without locking them out. It reports confirmed / already confirmed / skipped (no address) / not found counts and
+   logs the administrator id and the counts, not the addresses. Only SuperAdmin, because it vouches for other people's addresses.
+
 ## Consequences
 - Turning the switch on for an existing system blocks unverified users until they use the resend link. Roll out by setting it
-  after announcing it, or verify the important accounts first. There is no bulk-verify tool yet.
+  after announcing it, or verify the important accounts first. Use the bulk-verify endpoint (point 5) for accounts you trust.
 - The switch needs working outbound mail. Production already guards the SMTP host; with the switch on, a broken relay means
   nobody new can sign in. That is the intended trade.
 - External (Google) sign-in is not built; when it is, an account created from a verified Google e-mail should start verified.
