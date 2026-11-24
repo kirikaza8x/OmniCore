@@ -18,6 +18,8 @@ public class AuthDbContext : DbContext
     public DbSet<Role> Roles => Set<Role>();
     public DbSet<SecurityAuditLog> SecurityAuditLogs => Set<SecurityAuditLog>();
     public DbSet<SecurityToken> SecurityTokens => Set<SecurityToken>();
+    public DbSet<Tenant> Tenants => Set<Tenant>();
+    public DbSet<TenantMembership> TenantMemberships => Set<TenantMembership>();
     public DbSet<UserSession> UserSessions => Set<UserSession>();
     
 
