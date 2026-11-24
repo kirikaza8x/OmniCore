@@ -1,6 +1,7 @@
 namespace OmniCore.Services.Auth.Domain.Repositories;
 
 using OmniCore.Services.Auth.Domain.Entities;
+using OmniCore.Services.Auth.Domain.Enums;
 using OmniCore.Services.Auth.Domain.ValueObjects;
 using OmniCore.Shared.Domain.Repositories;
 
@@ -18,6 +19,15 @@ public interface IAccountRepository : IRepository<Account, AccountId>
 
     /// <summary>Finds an account associated with the given refresh token string.</summary>
     Task<Account?> GetByRefreshTokenAsync(string refreshToken, CancellationToken cancellationToken = default);
+
+    /// <summary>Loads an account with its security tokens (password reset, e-mail verification) by e-mail.</summary>
+    Task<Account?> GetByEmailWithSecurityTokensAsync(string email, CancellationToken cancellationToken = default);
+
+    /// <summary>Loads an account with its security tokens by id.</summary>
+    Task<Account?> GetByIdWithSecurityTokensAsync(AccountId id, CancellationToken cancellationToken = default);
+
+    /// <summary>Finds the account that owns an unused security token of the given type, by the token's hash.</summary>
+    Task<Account?> GetBySecurityTokenAsync(string codeHash, SecurityTokenType type, CancellationToken cancellationToken = default);
 
     Task<bool> IsUsernameUniqueAsync(string username, CancellationToken cancellationToken = default);
     Task<bool> IsEmailUniqueAsync(string email, CancellationToken cancellationToken = default);

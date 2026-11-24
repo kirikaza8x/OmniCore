@@ -83,7 +83,7 @@ change that still needs `dotnet build` and a smoke test by the owner. Status: **
 | AA1 | medium | No authorization fallback policy: an Auth endpoint that forgets `RequireAuthorization()` is public (all current ones are fine, nothing enforces it) | open |
 | AA2 | low | `CreateRoleEndpoint` calls `ToCreated("message")`, which binds the message to the `uri` parameter, so `Location` is the message | open |
 | AA3 | low | `LogoutEndpoint` is anonymous (refresh token is the credential), no rate limit beyond the gateway | open, see Application README |
-| AA4 | medium | Missing endpoints: password change/reset, e-mail confirmation, MFA, external login, session list/revoke, deactivation, role delete (entities exist for most) | open, roadmap |
+| AA4 | medium | Missing endpoints: ~~password reset, e-mail confirmation~~ (written 2026-11-24, ADR 0009, **unbuilt: CI result awaited**), password change, MFA, external login, session list/revoke, deactivation, role delete (entities exist for most) | partly done, roadmap |
 | AA5 | low | Public endpoints bind the command from the body, admin endpoints bind a request DTO | open |
 | AN1 | medium | Register hard-codes role `User` in the token while the role row is attached by an event handler that only logs when the role is missing | open |
 | AN2 | low | Role changes take effect only at the next token refresh; removing a role does not revoke sessions | open, document |

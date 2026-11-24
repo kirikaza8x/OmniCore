@@ -22,6 +22,18 @@ public sealed partial class BuiltInTemplateRenderer : ITemplateRenderer
             "Welcome to {{appName}}",
             "<h2>Welcome to {{appName}}, {{name}}!</h2><p>Your account is ready. You can sign in now.</p>",
             "Welcome to {{appName}}, {{name}}! Your account is ready."),
+        ["password-reset"] = new(
+            "Reset your {{appName}} password",
+            "<h2>Reset your password</h2><p>Hi {{name}}, we received a request to reset your {{appName}} password.</p>"
+            + "<p><a href=\"{{link}}\">Choose a new password</a></p>"
+            + "<p>The link works once and expires in {{expiresInMinutes}} minutes. If you did not ask for this, ignore this e-mail.</p>",
+            "Hi {{name}}, open this link to choose a new {{appName}} password: {{link}} (works once, expires in {{expiresInMinutes}} minutes). If you did not ask for this, ignore this message."),
+        ["verify-email"] = new(
+            "Confirm your {{appName}} e-mail",
+            "<h2>Confirm your e-mail</h2><p>Hi {{name}}, please confirm this address for your {{appName}} account.</p>"
+            + "<p><a href=\"{{link}}\">Confirm e-mail</a></p>"
+            + "<p>The link works once and expires in {{expiresInMinutes}} minutes.</p>",
+            "Hi {{name}}, open this link to confirm your e-mail for {{appName}}: {{link}} (works once, expires in {{expiresInMinutes}} minutes)."),
         ["test"] = new(
             "{{appName}} test notification",
             "<h2>{{appName}} test</h2><p>If you can read this, delivery works. Sent by {{sentBy}}.</p>",

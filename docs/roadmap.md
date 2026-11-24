@@ -64,7 +64,7 @@ Findings go to `repo-check.md`; safe fixes are committed one by one; docs and `C
 - [ ] Remove `UserSession`; device columns on `RefreshToken` (AI2)
 - [ ] Write `SecurityAuditLog` (login, password change, role change, token reuse)
 - [ ] `AccountDeactivated` / `AccountDeleted` / `AccountEmailChanged` in `Auth.Contracts` + User consumer (UD2)
-- [ ] E-mail verification and password reset on `SecurityToken` (AA4)
+- [x] E-mail verification and password reset on `SecurityToken` (AA4, ADR 0009, plan 0004): 4 Auth endpoints, 2 events, Notification mails and links; **written 2026-11-24, unbuilt, CI result awaited**. Not done: enforce verified e-mail at login
 
 ## Phase 11: shared-layer and auth fixes from the master READMEs
 Order: W1+S2 (real client IP / rate limit), I1, I3 (service-scoped queue names), AP1/AP2/S6, D1, AD1, AA1 (fallback authorization policy), A15, AN1, AI1.
@@ -80,7 +80,7 @@ Candidates, effort and order: [services-plan.md](services-plan.md). Each new ser
 - [x] `frontend/web`: Next.js, BFF cookies, sign in / register / profile, Dockerfile, compose profile `web`, CI workflow
 - [ ] Run it against the real stack (compose `--profile web`), then add Playwright smoke tests
 - [ ] Apply the theme setting, edit/promote addresses, show other users' public profiles
-- [ ] Password reset and e-mail verification screens (after Notification service + AA4)
+- [ ] Password reset and e-mail verification screens: pages `/forgot-password`, `/reset-password?token=`, `/verify-email?token=` and BFF routes (Auth endpoints exist, ADR 0009)
 - [ ] Admin screens (roles, accounts) once the admin endpoints are settled
 
 ## Phase 15: Notification service (2026-11-23)

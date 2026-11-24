@@ -1,3 +1,5 @@
+using System.Security.Cryptography;
+using System.Text;
 using OmniCore.Services.Auth.Domain.Enums;
 using OmniCore.Services.Auth.Domain.ValueObjects;
 using OmniCore.Shared.Domain.Abstractions;
@@ -95,4 +97,13 @@ public class SecurityToken : Entity<SecurityTokenId>
     }
 
     public bool IsExpired => DateTime.UtcNow >= ExpiresAtUtc;
+
+    /// <summary>A new random code (32 bytes, URL-safe base64) to put in an e-mailed link.</summary>
+    public static string GenerateCode() =>
+        Convert.ToBase64String(RandomNumberGenerator.GetBytes(32))
+            .Replace('+', '-').Replace('/', '_').TrimEnd('=');
+
+    /// <summary>Hash stored and looked up instead of the raw code. Plain SHA-256 is right for a 256-bit random code.</summary>
+    public static string HashCode(string code) =>
+        Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(code)));
 }

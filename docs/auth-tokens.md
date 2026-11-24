@@ -84,6 +84,15 @@ defaults still start in the legacy HS256 mode until you do, but `docker-compose.
 key (2026-11-23). **Not done:** the owner cut-over and a real compose-stack start with RS256; CI covers the API
 in-process with Testcontainers only.
 
+## Security tokens: password reset and e-mail verification (ADR 0009)
+Separate from JWTs and refresh tokens. A 32-byte random code goes into an e-mailed link; only its SHA-256 is stored in
+`security_tokens` (type, expiry, used flag). Reset links live 1 hour, verification links 24 hours, each works once, and a
+new request of the same type voids the older one. A token of one type is rejected for the other, and unknown, used and
+expired tokens give the same `Auth.InvalidToken` error. A successful reset revokes every refresh token.
+`POST /api/v1/auth/password/forgot` answers the same whether or not the e-mail exists. The raw code travels once in the
+integration event (it sits in the outbox until cleanup) and is never logged or stored by Notification. The links point at
+`PUBLIC_WEB_URL` (`/reset-password?token=`, `/verify-email?token=`); the web pages are not built yet.
+
 ## Not covered here
 Account lockout (A8) is still open. Generic login errors (A9) and the first admin account (A15) were fixed on
 2026-11-23; see [repo-check.md](repo-check.md).

@@ -42,6 +42,7 @@ services:
       <<: *prod-env
       # Production must not send through the dev Mailpit: a real relay is required.
       Smtp__Host: ${SMTP_HOST:?set SMTP_HOST to a real SMTP relay (Mailpit is for development)}
+      Notification__PublicBaseUrl: ${PUBLIC_WEB_URL:?set PUBLIC_WEB_URL to the https URL of the web client, e.g. https://app.example.com}
       Smtp__FromAddress: ${SMTP_FROM_ADDRESS:?set SMTP_FROM_ADDRESS to a verified sender}
 
   mailpit:

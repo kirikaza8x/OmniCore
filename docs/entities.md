@@ -48,5 +48,5 @@ The split is sound: Auth owns **credentials and access**, User owns **who the pe
 3. Remove `UserSession`, add device columns to `RefreshToken`
 4. Start writing `SecurityAuditLog`
 5. Account lifecycle events and the User consumer
-6. `SecurityToken` features (verify e-mail, reset password)
+6. `SecurityToken` features (verify e-mail, reset password): endpoints written, ADR 0009 (CI result awaited)
 7. After ADR 0001: tenant entities

@@ -17,4 +17,10 @@ public sealed class AuthRoutes : BaseRouteModule
     public string Logout => "logout";
 
     public string Me => "me";
+
+    // Password reset and e-mail verification (ADR 0009)
+    public string ForgotPassword => "password/forgot";
+    public string ResetPassword => "password/reset";
+    public string RequestEmailVerification => "email/verify/request";
+    public string ConfirmEmail => "email/verify/confirm";
 }

@@ -2,6 +2,7 @@ namespace OmniCore.Services.Auth.Infrastructure.Persistence.Repositories;
 
 using Microsoft.EntityFrameworkCore;
 using OmniCore.Services.Auth.Domain.Entities;
+using OmniCore.Services.Auth.Domain.Enums;
 using OmniCore.Services.Auth.Domain.Repositories;
 using OmniCore.Services.Auth.Domain.ValueObjects;
 using OmniCore.Services.Auth.Infrastructure.Persistence.Contexts;
@@ -57,6 +58,49 @@ public class AccountRepository(AuthDbContext dbContext)
             .Include(a => a.AccountRoles)
                 .ThenInclude(ar => ar.Role)
             .FirstOrDefaultAsync(a => a.Email == emailResult.Value, cancellationToken);
+    }
+
+    public async Task<Account?> GetByEmailWithSecurityTokensAsync(
+        string email,
+        CancellationToken cancellationToken = default)
+    {
+        var emailResult = EmailAddress.Create(email);
+        if (emailResult.IsFailure)
+        {
+            return null;
+        }
+
+        return await DbSet
+            .Include(a => a.SecurityTokens)
+            .FirstOrDefaultAsync(a => a.Email == emailResult.Value, cancellationToken);
+    }
+
+    public async Task<Account?> GetByIdWithSecurityTokensAsync(
+        AccountId id,
+        CancellationToken cancellationToken = default)
+    {
+        return await DbSet
+            .Include(a => a.SecurityTokens)
+            .FirstOrDefaultAsync(a => a.Id == id, cancellationToken);
+    }
+
+    public async Task<Account?> GetBySecurityTokenAsync(
+        string codeHash,
+        SecurityTokenType type,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(codeHash))
+        {
+            return null;
+        }
+
+        // Refresh tokens are loaded too: a password reset revokes every session.
+        return await DbSet
+            .Include(a => a.SecurityTokens)
+            .Include(a => a.RefreshTokens)
+            .FirstOrDefaultAsync(
+                a => a.SecurityTokens.Any(t => t.CodeHash == codeHash && t.TokenType == type),
+                cancellationToken);
     }
 
     public async Task<Account?> GetByIdentifierAsync(

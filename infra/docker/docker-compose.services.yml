@@ -134,6 +134,8 @@ services:
       Redis__InstanceName: ${NOTIFICATION_REDIS_INSTANCE_NAME:-OmniCore_Notification_}
       Jwt__JwksUrl: ${JWT_JWKS_URL:-http://auth-api:8080/.well-known/jwks.json}
       # E-mail: Mailpit in dev (nothing leaves the machine, read it at http://localhost:8025). Production: set SMTP_* to a real relay.
+      # Where users open the links in account e-mails (password reset, e-mail verification): the web client's public URL.
+      Notification__PublicBaseUrl: ${PUBLIC_WEB_URL:-http://localhost:3000}
       Smtp__Host: ${SMTP_HOST:-mailpit}
       Smtp__Port: ${SMTP_PORT:-1025}
       Smtp__Security: ${SMTP_SECURITY:-None}

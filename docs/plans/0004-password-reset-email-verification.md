@@ -1,6 +1,6 @@
 # 0004: Password reset and e-mail verification
 
-- Status: in progress
+- Status: code written 2026-11-24, unbuilt (CI result awaited); front-end pages and enforcement at login not started
 - Date: 2026-11-23
 - Owner: Claude session
 - Related: ADR 0009, repo-check AA4, roadmap Phase 10
@@ -16,7 +16,7 @@ A user who forgets the password is locked out and e-mails are never verified. Th
 4. Docs: auth-tokens.md, repo-check AA4, roadmap, CLAUDE.md, front-end note.
 
 ## Acceptance
-- Forgot always 202; reset works once, expires, wrong type rejected, old refresh tokens revoked.
+- Forgot always 200 with the same body; reset works once, expires, wrong type rejected, old refresh tokens revoked.
 - Verify sets `IsEmailConfirmed`; Notification sends one mail per request, no token in logs.
 
 ## Out of scope

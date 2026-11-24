@@ -17,7 +17,7 @@ with templates and retries. No schema change is needed.
 1. **Opaque random token, hash at rest.** 32 random bytes, URL-safe base64; only its SHA-256 is stored in
    `SecurityToken.CodeHash`. Lifetimes: password reset 1 hour, e-mail verification 24 hours. A new request of the same
    type invalidates the older unused ones for that account.
-2. **No account enumeration.** `POST /password/forgot` always answers 202 with the same body, whether or not the
+2. **No account enumeration.** `POST /password/forgot` always answers 200 with the same body, whether or not the
    e-mail exists, and does the same amount of work as far as practical. Failures to send never reach the caller.
 3. **Auth publishes its own events, Notification maps them.** `PasswordResetRequestedIntegrationEvent` and
    `EmailVerificationRequestedIntegrationEvent` live in `Auth.Contracts` (Notification already consumes Auth's

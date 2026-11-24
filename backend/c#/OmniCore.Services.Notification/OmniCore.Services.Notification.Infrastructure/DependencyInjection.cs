@@ -71,6 +71,7 @@ public static class DependencyInjection
         // register it here; nothing else changes.
         services.AddConfig<SmtpConfig>();
         services.AddConfig<WebhooksConfig>();
+        services.AddConfig<NotificationLinksConfig>();
         services.AddSingleton<IEmailSender, SmtpEmailSender>();
         services.AddHttpClient(WebhookChannel.HttpClientName);
         services.AddScoped<INotificationChannel, EmailChannel>();
@@ -94,6 +95,19 @@ public static class DependencyInjection
                 throw new InvalidOperationException(
                     $"Smtp:Host is '{host}', a development mail catcher. Set SMTP_HOST to a real SMTP relay in production.");
             }
+        }
+
+        // Links in account e-mails must be absolute http(s) URLs; in production they must be https.
+        var baseUrl = provider.GetRequiredService<IOptions<NotificationLinksConfig>>().Value.PublicBaseUrl;
+        if (!Uri.TryCreate(baseUrl, UriKind.Absolute, out var baseUri)
+            || (baseUri.Scheme != Uri.UriSchemeHttps && baseUri.Scheme != Uri.UriSchemeHttp))
+        {
+            throw new InvalidOperationException("Notification:PublicBaseUrl must be an absolute http(s) URL.");
+        }
+
+        if (provider.GetRequiredService<IHostEnvironment>().IsProduction() && baseUri.Scheme != Uri.UriSchemeHttps)
+        {
+            throw new InvalidOperationException("Notification:PublicBaseUrl must use https in production.");
         }
 
         await app.ApplyMigrationsAsync<NotificationDbContext>(seedData);
