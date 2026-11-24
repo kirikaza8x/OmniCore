@@ -3,6 +3,7 @@ namespace OmniCore.Shared.Infrastructure.Services.Authentication;
 using Microsoft.AspNetCore.Http;
 using OmniCore.Shared.Application.Abstractions.Tenancy;
 using OmniCore.Shared.Domain.DDD;
+using TenantIdValue = OmniCore.Shared.Domain.DDD.TenantId;
 
 /// <summary>
 /// Scoped tenant context (ADR 0001). Order: system scope, explicit scope (consumers and jobs), then the token's
@@ -32,7 +33,7 @@ public sealed class TenantContext(IHttpContextAccessor httpContextAccessor) : IT
             }
 
             string? claim = httpContextAccessor.HttpContext?.User.FindFirst(ClaimType)?.Value;
-            return TenantId.TryParse(claim, out TenantId parsed) ? parsed : null;
+            return TenantIdValue.TryParse(claim, out TenantIdValue parsed) ? parsed : null;
         }
     }
 
