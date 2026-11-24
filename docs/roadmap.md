@@ -49,8 +49,9 @@ off as they land; the status here is also mirrored in `CLAUDE.md`.
 Findings go to `repo-check.md`; safe fixes are committed one by one; docs and `CLAUDE.md` updated after each.
 
 ## Phase 8: multi-tenancy (F10)
-- [x] ADR `docs/decisions/0001-multitenancy.md` written and committed (status: proposed)
-- [ ] Owner confirms or amends the ADR (open questions in section 7)
+- [x] ADR `docs/decisions/0001-multitenancy.md` written and committed (status: accepted by delegation 2026-11-24)
+- [x] ADR accepted with answers to section 7 (2026-11-24); plan `docs/plans/0007-multitenancy.md`
+- [x] Step 1 Shared written (unbuilt, CI awaited)
 - [ ] Implementation order after confirmation: Shared -> Auth -> User -> gateway
 
 ## Phase 9: User service (ADR 0004)
