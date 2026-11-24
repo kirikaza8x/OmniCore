@@ -1,6 +1,7 @@
 namespace OmniCore.Services.Auth.Api.Endpoints.Accounts;
 
 using OmniCore.Services.Auth.Application.Features.Auth.Commands.AdminConfirmEmails;
+using OmniCore.Shared.Api.Extensions;
 
 public sealed class AdminConfirmEmailsEndpoint : ICarterModule
 {
