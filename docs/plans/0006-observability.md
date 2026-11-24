@@ -1,6 +1,6 @@
 # 0006: Observability slice
 
-- Status: code written 2026-11-24 on `develop`, unbuilt (CI result awaited)
+- Status: done 2026-11-24, CI green (developer reported)
 - Date: 2026-11-24
 - Related: ADR 0011, services-plan item 2
 

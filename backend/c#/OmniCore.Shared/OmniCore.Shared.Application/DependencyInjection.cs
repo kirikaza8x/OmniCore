@@ -34,6 +34,7 @@ public static class DependencyInjection
 
             // Behavior Execution Pipeline (Outer -> Inner):
             config.AddOpenBehavior(typeof(LoggingBehavior<,>));
+            config.AddOpenBehavior(typeof(TenantBehavior<,>));
             config.AddOpenBehavior(typeof(ValidationBehavior<,>));
             config.AddOpenBehavior(typeof(UnitOfWorkBehavior<,>));
             config.AddOpenBehavior(typeof(PerformanceBehavior<,>));

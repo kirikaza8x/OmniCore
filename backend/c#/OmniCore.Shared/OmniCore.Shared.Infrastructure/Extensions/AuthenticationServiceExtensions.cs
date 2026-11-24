@@ -20,6 +20,7 @@ public static class AuthenticationServiceExtensions
         services.AddHttpContextAccessor();
         services.AddSingleton<IDeviceDetectionService, DeviceDetectionService>();
         services.AddScoped<ICurrentUserService, CurrentUserService>();
+        services.AddScoped<OmniCore.Shared.Application.Abstractions.Tenancy.ITenantContext, TenantContext>();
 
         return services;
     }

@@ -1,7 +1,7 @@
 # Observability (ADR 0011, plan 0006)
 
 Logs, traces and metrics leave the services over OpenTelemetry (OTLP) and are only sent when you configure an endpoint.
-Code: `OmniCore.Shared.Api/ObservabilityExtensions.cs` (called from `AddApi`). **Written 2026-11-24, not yet built or run: CI result awaited.**
+Code: `OmniCore.Shared.Api/ObservabilityExtensions.cs` (called from `AddApi`). **CI green 2026-11-24 (developer reported); the stack itself has never been started.**
 
 ## Start it
 ```

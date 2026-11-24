@@ -99,7 +99,7 @@ but **not yet run on GitHub**.
 ## Do not
 - Do not claim tests or builds pass without running them. Mark code written without a build as unbuilt.
 - Do not commit secrets. Example values must be obviously fake (`CHANGE_ME`).
-- Do not start implementing multi-tenancy before the owner confirms ADR 0001.
+- Multi-tenancy: ADR 0001 is accepted (by delegation, 2026-11-24); follow it and `docs/plans/0007-multitenancy.md`, one step at a time. No fourth service before steps 1-3 are green.
 - ADR 0003 is accepted (decided by delegation, reasons in `docs/auth-tokens.md`); follow it, and do not change token format or schema outside it without a new ADR.
 - Do not re-enable `Provider=Both` for the message broker (it is rejected at startup); do not register `CachingBehavior`
   without reviewing cache invalidation (S6).
@@ -145,5 +145,5 @@ Work happens on branch `develop`; `main` is updated by merging `develop` on requ
 - [x] 2026-11-24 (on `develop`): optional verified-e-mail enforcement at login (ADR 0010, plan 0005): `Auth__RequireVerifiedEmail` (`REQUIRE_VERIFIED_EMAIL`, default false) -> 403 `Auth.EmailNotVerified` only after a correct password; anonymous `POST /auth/email/verify/resend`; first admin is created verified; web `/resend-verification` + login hint. 4 login + 3 resend tests, web 21 tests/lint/typecheck/build green locally; **CI green (developer reported 2026-11-24)**.
 - [x] 2026-11-24 (on `develop`): `POST /auth/admin/emails/confirm` (SuperAdmin, 1-500 ids, no mail) to verify existing accounts before turning the switch on; 4 tests. **CI green (developer reported 2026-11-24)**.
 - [x] 2026-11-24 (on `develop`): observability slice (ADR 0011, plan 0006, `docs/observability.md`): OpenTelemetry in `Shared.Api` (off unless `OTEL_*` endpoints are set), opt-in compose profile `observability` (Seq, Prometheus OTLP receiver, Grafana + one dashboard). Compose renders locally (dev, prod); **NuGet versions and image tags unbuilt, CI result awaited from the developer**, stack never started.
-- [ ] Next: owner makes `ci-gate` the required check (repo setting), run one small OpenCode task and one small Copilot task on GitHub after merge to `main`, owner generates `JWT_PRIVATE_KEY_PEM` and does the cut-over, then drop the plain token columns
-- [ ] Owner decisions pending: MinIO image (F7: keep the coollabsio fork, build from source, or switch store), ADR 0001 questions, keep or drop the User service in compose
+- [x] 2026-11-24 (on `develop`): CI green for the observability slice (developer reported). ADR 0001 multi-tenancy **accepted by delegation**; plan 0007 step 1 (Shared: `TenantId` Guid, `ITenantContext`, `TenantBehavior`, EF filter/interceptor, `ITenantIntegrationEvent`, 9 tests) written, **unbuilt, CI result awaited**. Steps 2 (Auth), 3 (User), 4 (gateway) follow.\n- [ ] Next: owner makes `ci-gate` the required check (repo setting), run one small OpenCode task and one small Copilot task on GitHub after merge to `main`, owner generates `JWT_PRIVATE_KEY_PEM` and does the cut-over, then drop the plain token columns
+- [ ] Owner decisions pending: MinIO image (F7: keep the coollabsio fork, build from source, or switch store), keep or drop the User service in compose
