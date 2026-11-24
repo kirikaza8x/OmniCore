@@ -53,6 +53,6 @@ Inside a feature: `schemas.ts` (zod, mirrors backend validators) -> `api.ts` (ca
 
 ## Known gaps
 - No browser tests yet (Playwright is the next step); the BFF was smoke-tested against a fake gateway, not yet against the real stack.
-- Account-level screens: password change and sessions wait for backend endpoints (AA4). The verify-email page confirms on a button press, not on load, so mail scanners cannot burn the single-use token. The profile page offers "Send verification e-mail" but does not show whether the address is verified (the profile API does not return it).
+- Account-level screens: password change and sessions wait for backend endpoints (AA4). The verify-email page confirms on a button press, not on load, so mail scanners cannot burn the single-use token. The profile page shows whether the address is verified (`GET /auth/me` returns `isEmailConfirmed`) and offers "Send verification e-mail" when it is not.
 - Edit/promote an address is not in the UI yet (the API supports it).
 - The theme setting is saved but not applied to the UI.

@@ -6,4 +6,5 @@ public record AccountDto(
     string Username,
     string? PasswordHash,
     bool IsActive,
+    bool IsEmailConfirmed,
     List<string> Roles);

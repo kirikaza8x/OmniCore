@@ -13,6 +13,7 @@ public static class AccountMappingExtensions
             Username: account.Username.Value,
             PasswordHash: account.PasswordHash?.Value,
             IsActive: account.IsActive,
+            IsEmailConfirmed: account.IsEmailConfirmed,
             Roles: account.AccountRoles
                 .Select(ar => ar.Role?.Name ?? string.Empty)
                 .Where(r => !string.IsNullOrWhiteSpace(r))
@@ -25,6 +26,7 @@ public static class AccountMappingExtensions
         dto.Email,
         dto.Username,
         dto.IsActive,
+        dto.IsEmailConfirmed,
         dto.Roles
     );
 
@@ -33,6 +35,7 @@ public static class AccountMappingExtensions
         account.Email?.Value,
         account.Username.Value,
         account.IsActive,
+        account.IsEmailConfirmed,
         account.AccountRoles
             .Select(ar => ar.Role?.Name ?? string.Empty)
             .Where(r => !string.IsNullOrWhiteSpace(r))
