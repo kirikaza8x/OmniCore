@@ -50,21 +50,21 @@ saying "CI passed" counts as shown; the agent does not have to see the run itsel
 
 ## Building and CI hand-off (agent sessions)
 No .NET SDK or NuGet access in the agent sandbox (the egress policy answers 403 for nuget.org and dot.net; do not route
-around it). Use GitHub Actions as the build machine: push the branch (`backend.yml` also runs on `docs/**` and `fix/**`)
-and **stop there**. Do not wait, sleep, poll or re-check the run.
+around it). GitHub Actions is the build machine: push the branch (`backend.yml` also runs on `docs/**` and `fix/**`).
 
-- The developer (or reviewer) reports the result. If they say it failed, read the failure; otherwise treat the pipeline
-  as accepted and continue. A silent pipeline is not a reason to poll.
-- **"Failed" / "build failed" / a pasted error from the developer means: look it up yourself first.** Never ask the developer to paste the error or the log; fetch it, fix it, push once. Ask only if the annotations are empty or inaccessible.
-- On a reported failure, read the public annotations: `GET https://api.github.com/repos/kirikaza8x/OmniCore/actions/runs?head_sha=<sha>`,
-  then `/actions/runs/<id>/jobs` and `/check-runs/<job id>/annotations`. Compiler errors and integration-test failure
-  text arrive as annotations (job summaries and raw logs are **not** readable without a token).
-- Every poll is a tool call whose result is added to the context and billed on later turns. Repeated waiting wastes
-  tokens; one push plus one reported result is the intended path.
-- Do not describe a pipeline the developer has not reported as "verified"; say "pushed, CI result awaited from the
-  developer" and finish the turn.
-
-See [docs/ci-cd.md](docs/ci-cd.md) for the workflows, jobs and the full hand-off.
+**CI mode: `auto` (set by the developer 2026-11-24; the developer says "manual" to switch back).**
+- After a push the agent checks the run itself with the public API and acts on it; the developer does not have to report.
+  Check **once per push, after finishing other useful work**, never in a sleep/poll loop. If the run is still `in_progress`,
+  carry on with other work and look again later (next push, or when there is nothing else to do); a run that has not
+  finished is "awaited", not green.
+- Only a `completed` run with `conclusion: success` counts as green. Read it: `GET https://api.github.com/repos/kirikaza8x/OmniCore/actions/runs?head_sha=<sha>`
+  (or `?branch=<name>`); on failure `/actions/runs/<id>/jobs`, then `/check-runs/<job id>/annotations` (compiler errors and
+  integration-test text arrive as annotations; job summaries and raw logs are not readable without a token).
+- On a failure the agent fixes it and pushes; it never asks the developer to paste an error. Ask only if the annotations are empty or inaccessible.
+- The proxy blocks the Actions **write** paths (dispatch, settings). Junior agents are started with an issue comment
+  (`/oc <role>: <task>`) or, for Copilot, by assigning the issue; see `docs/copilot.md`.
+- Say "CI green" only for a run that was seen completed with success (by the agent or reported by the developer). Otherwise say "pushed, CI awaited".
+- In `manual` mode (developer says so): push, stop, no polling, the developer reports the result.
 
 ## Change workflow: plan first
 Every non-trivial change starts with a Markdown plan in `docs/plans/NNNN-short-title.md`; the full workflow is in
