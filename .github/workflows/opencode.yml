@@ -12,7 +12,9 @@ name: opencode
 # published and the other workflows are untouched ("fall back to standard behaviour"): the task is simply done by hand.
 #
 # Start it: Actions -> opencode -> Run workflow, or comment "/oc [role] task" on an ISSUE (owners/members/collaborators only).
-# GitHub only runs issue_comment and lists workflow_dispatch for workflow files on the default branch (main).
+# GitHub only runs issue_comment and lists workflow_dispatch for workflow files on the default branch (main), so this file
+# must also exist on main. The agent itself works on OPENCODE_BASE_BRANCH (develop): issue comments check out and open their PR against it;
+# Run workflow uses the branch picked in the dropdown.
 
 on:
   workflow_dispatch:
@@ -42,6 +44,8 @@ concurrency:
 env:
   # Pinned: a floating "latest" would run new, unreviewed code. Bump on purpose.
   OPENCODE_VERSION: "1.19.6"
+  # Branch an issue comment works on and targets (the repo's working branch; main is only updated on request).
+  OPENCODE_BASE_BRANCH: develop
   # Free OpenCode models whose ids exist in the pinned version (checked with `opencode models opencode`). The free list
   # changes often, so every run re-checks the catalogue and skips ids that are gone.
   DEFAULT_MODELS: opencode/deepseek-v4.1-flash-free,opencode/hy4-flash-free,opencode/glm-5.3-flash-free
@@ -94,7 +98,7 @@ jobs:
             case "$first" in
               implement|tests|docs|review|repo-scan) role="$first"; body="${body#"${body%%[[:space:]]*}"}" ;;
             esac
-            task="$(printf '%s' "$body" | sed 's/^[[:space:]:]*//')"; base="$DEFAULT_BRANCH"
+            task="$(printf '%s' "$body" | sed 's/^[[:space:]:]*//')"; base="${OPENCODE_BASE_BRANCH:-$DEFAULT_BRANCH}"
           fi
           case "$role" in implement|tests|docs|review|repo-scan) ;; *) echo "::error::unknown role"; exit 1 ;; esac
           printf '%s' "$base" | grep -Eq '^[A-Za-z0-9._/-]+$' || { echo "::error::odd base branch name"; exit 1; }

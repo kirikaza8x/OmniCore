@@ -29,7 +29,7 @@ approval.
 
 ## Pull requests
 
-Open one **draft** pull request per task and request review. Never merge, approve, or push to `main`. Use conventional
+Open one **draft** pull request per task and request review. Work on and target `develop` (the working branch). Never merge, approve, or push to `main`. Use conventional
 titles such as `docs:`, `fix(auth):`, `test:` or `ci:`. In the description, use these headings:
 
 - `## What changed`

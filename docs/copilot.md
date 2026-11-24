@@ -30,14 +30,14 @@ Neither junior agent listens to Claude's chat session. Claude hands off work thr
 Start OpenCode from the issue with `/oc implement: task` or `/oc tests: task`. The comment author must be an OWNER,
 MEMBER or COLLABORATOR. Manual `Actions > opencode > Run workflow` is the fallback. See [opencode.md](opencode.md).
 
-Start Copilot from the Agents tab, by assigning the issue to `copilot-swe-agent[bot]` with
+Always point Copilot at `develop` (`base_branch` / `base_ref`): that is where the current code is; `main` only gets the agent files and releases. Start Copilot from the Agents tab, by assigning the issue to `copilot-swe-agent[bot]` with
 `custom_agent: "OmniCore Junior"`, or through the agent tasks API:
 
 ```text
 POST /agents/repos/{owner}/{repo}/tasks
 {
   "prompt": "...",
-  "base_ref": "main",
+  "base_ref": "develop",
   "create_pull_request": true
 }
 ```

@@ -11,8 +11,7 @@ for the first time on a task that is small and checkable. None of these tasks to
 `CLAUDE.md`, secrets or compose files, so they cannot collide with Claude's branch.
 
 ## Preconditions
-- The agents work from the default branch. `main` is at 9d4abb1; `develop` is far ahead. Say "merge main" first (after the
-  tenancy CI results are in), otherwise the juniors read stale code. Copilot can instead be given `base_branch: develop`.
+- The agents work on `develop` (OpenCode: `OPENCODE_BASE_BRANCH`; Copilot: `base_branch: develop`). Only the workflow and agent files must also exist on `main`; they do.
 - Repo setting: Actions > General > "Allow GitHub Actions to create and approve pull requests" (OpenCode needs it).
 - Start **one agent per task**, one task at a time per area. Draft PRs only; Claude reviews every line before merge.
 
