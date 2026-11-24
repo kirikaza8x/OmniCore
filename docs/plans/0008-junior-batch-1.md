@@ -1,6 +1,6 @@
 # 0008: First junior batch (OpenCode and Copilot)
 
-- Status: planned (briefs ready, nothing started: Claude has no GitHub token to open issues or start agents)
+- Status: A and B done (OpenCode, reviewed, merged 2026-11-24); C waiting for the developer to assign issue #4 to Copilot in the GitHub UI (API assignment answered Forbidden)
 - Date: 2026-11-24
 - Owner: Claude writes the briefs and reviews; the developer opens the issues and starts the agents
 - Related: ADR 0007, ADR 0008, `docs/copilot.md#claude-to-junior-agent-handoff`, roadmap phases 5, 10, 14

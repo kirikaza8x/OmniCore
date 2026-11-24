@@ -89,13 +89,13 @@ the plan file but still update the docs they invalidate.
 ## Junior agents
 `.github/workflows/opencode.yml` runs a free-model OpenCode agent for routine tasks (ADR 0007, `docs/opencode.md`). It only produces **draft PRs** `opencode/<run>`;
 read every line of one before merging (green CI is not enough; integration tests run on the branch). It cannot touch `.github/`, `CLAUDE.md`, secrets or prod compose.
-Built and linted (actionlint) but **not yet run on GitHub**; do not describe it as working until a run has shown it.
+**First real runs 2026-11-24 (issue comments `/oc`): two runs succeeded** (docs: event catalogue; implement: reserved usernames + tests, backend CI green on its branch). It pushed `opencode/<run>` branches and a compare link in the issue, **not a draft PR**, because the repo setting "Allow GitHub Actions to create and approve pull requests" is off (developer-only setting). Review the branch diff, then `git merge --no-ff origin/opencode/<run>` into `develop`.
 
 GitHub Copilot is a second junior agent (ADR 0008, `docs/copilot.md`). `.github/copilot-instructions.md` gives it repo-wide
 rules, `.github/agents/omnicore-junior.agent.md` is the custom agent profile, and `.github/workflows/copilot-setup-steps.yml`
 installs .NET 9 and Node 22 for GitHub Actions-based sessions. It also produces draft PRs only and must not merge or approve.
-Copilot's instructions are guidance, not the OpenCode patch guard; read every draft line by line. Configured and linted locally,
-but **not yet run on GitHub**.
+Copilot's instructions are guidance, not the OpenCode patch guard; read every draft line by line. Configured and linted locally;
+**not yet run on GitHub**: assigning issue #4 through the API answered Forbidden (the proxy or Copilot coding agent not enabled for the repo), so the developer must assign it in the GitHub UI (custom agent `OmniCore Junior`, base branch `develop`).
 
 ## Do not
 - Do not claim tests or builds pass without running them. Mark code written without a build as unbuilt.
@@ -150,5 +150,6 @@ Work happens on branch `develop`; `main` is updated by merging `develop` on requ
 - [x] 2026-11-24 (on `develop`): plan 0007 step 1 CI green (developer reported). Step 2a written: Auth `Tenant` + `TenantMembership`, hand-written migration `add_tenants` (default tenant, backfilled memberships) + snapshot, 6 domain tests; **unbuilt, CI result awaited** (the integration test checks snapshot drift). Next 2b: claims, switch-tenant, admin endpoints.
 - [x] 2026-11-24 (on `develop`): plan 0007 step 2a CI green. Step 2b written: tenant membership on register/first admin, `tenant_id` + `tenant_role` token claims, `GET /auth/tenants`, `POST /auth/switch-tenant`, SuperAdmin `POST /auth/admin/tenants` and `PUT /auth/admin/tenants/{id}/members`, refresh `tenantId` hint, 13 tests; **unbuilt, CI result awaited**. Next: step 3 (User), then 4.
 - [x] 2026-11-24: plan 0008 written: three junior tasks (OpenCode docs event catalogue, OpenCode reserved usernames, Copilot web theme) with issue-ready briefs; nothing started (no GitHub token here). Agents work on `develop`: OpenCode issue comments use `OPENCODE_BASE_BRANCH=develop` (workflow file also on `main`); Copilot is assigned with `base_branch: develop`.
+- [x] 2026-11-24: CI mode set to `auto` (agent checks CI itself). Plan 0007 step 2b CI green (seen: backend run on 6335bec success). OpenCode first runs reviewed and merged into `develop`: `docs/events.md` (claims spot-checked) and reserved usernames at registration (17 names x 2 casings tested). Issue #4 (Copilot, web theme) waits for a UI assignment.
 - [ ] Next: owner makes `ci-gate` the required check (repo setting), review the first OpenCode and Copilot draft PRs (plan 0008), owner generates `JWT_PRIVATE_KEY_PEM` and does the cut-over, then drop the plain token columns
 - [ ] Owner decisions pending: MinIO image (F7: keep the coollabsio fork, build from source, or switch store), keep or drop the User service in compose
