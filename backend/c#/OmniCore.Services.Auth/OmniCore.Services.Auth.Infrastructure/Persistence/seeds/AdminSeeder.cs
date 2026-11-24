@@ -83,6 +83,13 @@ public sealed class AdminSeeder(
         account.AssignRole(superAdminRole.Id);
 
         await dbContext.Accounts.AddAsync(account);
+
+        // Owner of the default tenant (ADR 0001); the account itself is the platform admin through SuperAdmin.
+        var membership = TenantMembership.Create(Tenant.DefaultId, account.Id, TenantRoles.Owner, DateTime.UtcNow);
+        if (membership.IsSuccess)
+        {
+            await dbContext.TenantMemberships.AddAsync(membership.Value);
+        }
         await dbContext.SaveChangesAsync();
 
         logger.LogInformation("Created the first administrator '{Username}' with the SuperAdmin role.", username);

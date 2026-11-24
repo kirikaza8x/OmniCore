@@ -12,7 +12,15 @@ public class RegisterCommandHandlerTests
     private readonly IJwtTokenService _jwt = TestSupport.Jwt();
     private readonly IRefreshTokenService _refresh = TestSupport.RefreshTokens("refresh-1");
 
-    private RegisterCommandHandler Handler() => new(_accounts, _hasher, _jwt, _refresh);
+    private readonly Domain.Repositories.ITenantRepository _tenants = Substitute.For<Domain.Repositories.ITenantRepository>();
+    private readonly OmniCore.Shared.Application.Abstractions.Time.IDateTimeProvider _clock =
+        Substitute.For<OmniCore.Shared.Application.Abstractions.Time.IDateTimeProvider>();
+
+    private RegisterCommandHandler Handler()
+    {
+        _clock.UtcNow.Returns(new DateTime(2026, 11, 24, 0, 0, 0, DateTimeKind.Utc));
+        return new(_accounts, _hasher, _jwt, _refresh, _tenants, _clock);
+    }
 
     private void Uniqueness(bool emailTaken, bool usernameTaken) =>
         _accounts.CheckUniquenessAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
@@ -72,6 +80,9 @@ public class RegisterCommandHandlerTests
             a.Username.Value == "alice_01" && a.RefreshTokens.Count == 1 && a.PasswordHash!.Value == "hashed"));
         _jwt.Received(1).GenerateToken(
             Arg.Any<Guid>(), "alice@example.com", "alice_01",
-            Arg.Is<IEnumerable<string>>(roles => roles.SequenceEqual(new[] { "User" })));
+            Arg.Is<IEnumerable<string>>(roles => roles.SequenceEqual(new[] { "User" })),
+            Arg.Is<TenantClaim?>(t => t != null && t.TenantId == Tenant.DefaultId.Value && t.Role == "Member"));
+        _tenants.Received(1).Add(Arg.Is<TenantMembership>(m =>
+            m.TenantId == Tenant.DefaultId && m.Role == "Member"));
     }
 }

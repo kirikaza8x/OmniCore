@@ -64,6 +64,8 @@ A developer saying "CI passed" counts as the run having shown it. The agent does
 
 ## Reading a reported failure
 
+When the developer says CI failed, the agent finds the failure itself with the commands below and does not ask for a paste. Order: runs for the head sha -> jobs (find the failed one) -> annotations. Fix, push once, stop. Only if the annotations are empty or unreachable does the agent ask for the error text. (A Docker or local build error the developer pastes is used as given.)
+
 Use the public API (no token needed):
 
 ```text

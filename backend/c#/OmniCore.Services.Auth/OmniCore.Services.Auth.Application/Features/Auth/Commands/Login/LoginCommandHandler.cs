@@ -2,6 +2,7 @@
 
 using OmniCore.Services.Auth.Application.Abstractions.Security;
 using OmniCore.Services.Auth.Application.Features.Auth.DTOs;
+using OmniCore.Services.Auth.Application.Features.Tenants;
 using OmniCore.Services.Auth.Domain.Repositories;
 using OmniCore.Shared.Application.Abstractions.Messaging;
 using OmniCore.Shared.Domain.Abstractions;
@@ -15,7 +16,8 @@ public sealed class LoginCommandHandler(
     IPasswordHasherService passwordHasher,
     IJwtTokenService jwtTokenService,
     IRefreshTokenService refreshTokenService,
-    IAuthPolicy authPolicy) : ICommandHandler<LoginCommand, AuthResponse>
+    IAuthPolicy authPolicy,
+    ITenantRepository tenantRepository) : ICommandHandler<LoginCommand, AuthResponse>
 {
     internal static readonly Error InvalidCredentials =
         Error.Unauthorized("Auth.InvalidCredentials", "Invalid username, email or password.");
@@ -75,12 +77,17 @@ public sealed class LoginCommandHandler(
             .Select(ar => ar.Role?.Name ?? string.Empty)
             .Where(r => !string.IsNullOrWhiteSpace(r));
 
+        // 7b. Active tenant (ADR 0001): the default tenant if the account is a member, else the oldest membership.
+        var memberships = await tenantRepository.GetMembershipsAsync(account.Id, cancellationToken);
+        var tenant = TenantSelector.ToClaim(TenantSelector.Choose(memberships));
+
         // 8. Generate JWT Access Token
         var accessToken = jwtTokenService.GenerateToken(
             account.Id.Value,
             account.Email?.Value,
             account.Username.Value,
-            roles
+            roles,
+            tenant
         );
 
         return Result.Success(new AuthResponse(

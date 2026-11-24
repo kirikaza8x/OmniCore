@@ -12,7 +12,7 @@ public class LoginCommandHandlerTests
     private readonly IRefreshTokenService _refresh = TestSupport.RefreshTokens("refresh-1");
     private readonly IAuthPolicy _policy = Substitute.For<IAuthPolicy>();
 
-    private LoginCommandHandler Handler() => new(_accounts, _hasher, _jwt, _refresh, _policy);
+    private LoginCommandHandler Handler() => new(_accounts, _hasher, _jwt, _refresh, _policy, TestSupport.NoTenants());
 
     private void Finds(Account? account) =>
         _accounts.GetByIdentifierAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())

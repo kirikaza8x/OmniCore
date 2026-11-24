@@ -55,6 +55,7 @@ and **stop there**. Do not wait, sleep, poll or re-check the run.
 
 - The developer (or reviewer) reports the result. If they say it failed, read the failure; otherwise treat the pipeline
   as accepted and continue. A silent pipeline is not a reason to poll.
+- **"Failed" / "build failed" / a pasted error from the developer means: look it up yourself first.** Never ask the developer to paste the error or the log; fetch it, fix it, push once. Ask only if the annotations are empty or inaccessible.
 - On a reported failure, read the public annotations: `GET https://api.github.com/repos/kirikaza8x/OmniCore/actions/runs?head_sha=<sha>`,
   then `/actions/runs/<id>/jobs` and `/check-runs/<job id>/annotations`. Compiler errors and integration-test failure
   text arrive as annotations (job summaries and raw logs are **not** readable without a token).
@@ -147,5 +148,6 @@ Work happens on branch `develop`; `main` is updated by merging `develop` on requ
 - [x] 2026-11-24 (on `develop`): observability slice (ADR 0011, plan 0006, `docs/observability.md`): OpenTelemetry in `Shared.Api` (off unless `OTEL_*` endpoints are set), opt-in compose profile `observability` (Seq, Prometheus OTLP receiver, Grafana + one dashboard). Compose renders locally (dev, prod); **NuGet versions and image tags unbuilt, CI result awaited from the developer**, stack never started.
 - [x] 2026-11-24 (on `develop`): CI green for the observability slice (developer reported). ADR 0001 multi-tenancy **accepted by delegation**; plan 0007 step 1 (Shared: `TenantId` Guid, `ITenantContext`, `TenantBehavior`, EF filter/interceptor, `ITenantIntegrationEvent`, 9 tests) written, **unbuilt, CI result awaited**. Steps 2 (Auth), 3 (User), 4 (gateway) follow.
 - [x] 2026-11-24 (on `develop`): plan 0007 step 1 CI green (developer reported). Step 2a written: Auth `Tenant` + `TenantMembership`, hand-written migration `add_tenants` (default tenant, backfilled memberships) + snapshot, 6 domain tests; **unbuilt, CI result awaited** (the integration test checks snapshot drift). Next 2b: claims, switch-tenant, admin endpoints.
+- [x] 2026-11-24 (on `develop`): plan 0007 step 2a CI green. Step 2b written: tenant membership on register/first admin, `tenant_id` + `tenant_role` token claims, `GET /auth/tenants`, `POST /auth/switch-tenant`, SuperAdmin `POST /auth/admin/tenants` and `PUT /auth/admin/tenants/{id}/members`, refresh `tenantId` hint, 13 tests; **unbuilt, CI result awaited**. Next: step 3 (User), then 4.
 - [ ] Next: owner makes `ci-gate` the required check (repo setting), run one small OpenCode task and one small Copilot task on GitHub after merge to `main`, owner generates `JWT_PRIVATE_KEY_PEM` and does the cut-over, then drop the plain token columns
 - [ ] Owner decisions pending: MinIO image (F7: keep the coollabsio fork, build from source, or switch store), keep or drop the User service in compose

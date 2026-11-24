@@ -26,7 +26,8 @@ public sealed class JwtTokenService(
         Guid userId,
         string? email,
         string? name,
-        IEnumerable<string> roles)
+        IEnumerable<string> roles,
+        TenantClaim? tenant = null)
     {
         var claims = new List<Claim>
         {
@@ -41,6 +42,12 @@ public sealed class JwtTokenService(
             claims.Add(new Claim(JwtRegisteredClaimNames.Name, name));
 
         claims.AddRange(roles.Select(role => new Claim(ClaimTypes.Role, role)));
+
+        if (tenant is not null)
+        {
+            claims.Add(new Claim("tenant_id", tenant.TenantId.ToString()));
+            claims.Add(new Claim("tenant_role", tenant.Role));
+        }
 
         var tokenDescriptor = new SecurityTokenDescriptor
         {
