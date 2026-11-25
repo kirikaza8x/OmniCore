@@ -3,7 +3,9 @@
 Machine-readable [JSON Schema (draft 2020-12)](https://json-schema.org/draft/2020-12/schema) files for the concrete
 integration events catalogued in [docs/events.md](../../docs/events.md). The C# records in `*.Contracts` remain the
 source of truth; these files describe the wire shape so other languages and tooling can validate a message without
-reading the .NET code. Every field name and type here was copied from the record.
+reading the .NET code. Every field name and type here was copied from the record (checked against the four records by Claude, 2026-11-25).
+
+**Not verified:** property names use the C# (PascalCase) names. MassTransit wraps each message in an envelope and its serializer may emit camelCase; no message has been captured from a running broker yet, so treat the schemas as the contract of the record, not a proven wire dump.
 
 ## Naming and versioning
 
