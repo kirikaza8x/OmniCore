@@ -41,7 +41,8 @@ public static class TenantEfExtensions
                      .ToList())
         {
             ParameterExpression entity = Expression.Parameter(entityType.ClrType, "e");
-            Expression ctx = Expression.Constant(context, typeof(TContext));
+            // Typed as the interface so an explicit implementation on the context also works.
+            Expression ctx = Expression.Constant(context, typeof(ITenantFilterSource));
 
             Expression disabled = Expression.Property(ctx, nameof(ITenantFilterSource.FilterDisabled));
             Expression current = Expression.Property(ctx, nameof(ITenantFilterSource.FilterTenant));
