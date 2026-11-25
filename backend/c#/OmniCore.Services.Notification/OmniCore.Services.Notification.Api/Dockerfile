@@ -9,7 +9,8 @@ COPY --parents backend/c#/OmniCore.Services.Notification/**/*.csproj ./
 COPY --parents backend/c#/OmniCore.Services.Auth/OmniCore.Services.Auth.Contracts/**/*.csproj ./
 COPY --parents backend/c#/OmniCore.Shared/**/*.csproj ./
 
-RUN --mount=type=cache,target=/root/.nuget/packages \
+# Isolated per-service NuGet cache avoids concurrent cross-service restore races; locked serializes same-ID writers.
+RUN --mount=type=cache,id=nuget-notification,target=/root/.nuget/packages,sharing=locked \
     dotnet restore "backend/c#/OmniCore.Services.Notification/OmniCore.Services.Notification.Api/OmniCore.Services.Notification.Api.csproj"
 
 COPY backend/c#/OmniCore.Services.Notification/ backend/c#/OmniCore.Services.Notification/
@@ -17,7 +18,8 @@ COPY backend/c#/OmniCore.Services.Auth/OmniCore.Services.Auth.Contracts/ backend
 COPY backend/c#/OmniCore.Shared/ backend/c#/OmniCore.Shared/
 
 WORKDIR "/src/backend/c#/OmniCore.Services.Notification/OmniCore.Services.Notification.Api"
-RUN --mount=type=cache,target=/root/.nuget/packages \
+# Isolated per-service NuGet cache avoids concurrent cross-service restore races; locked serializes same-ID writers.
+RUN --mount=type=cache,id=nuget-notification,target=/root/.nuget/packages,sharing=locked \
     dotnet publish "OmniCore.Services.Notification.Api.csproj" -c Release -o /app/publish /p:UseAppHost=false --no-restore
 
 # 2. Final Runtime Stage
@@ -27,7 +29,8 @@ WORKDIR /app
 # curl needed for container healthchecks
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt,sharing=locked \
-    apt-get update && apt-get install -y --no-install-recommends curl
+    apt-get update && apt-get install -y --no-install-recommends curl \
+    && rm -rf /var/lib/apt/lists/*
 
 RUN adduser --disabled-password --gecos "" appuser
 USER appuser
