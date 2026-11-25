@@ -16,7 +16,6 @@ OmniCore is a modular, service-oriented backend with Docker infrastructure and a
 | [docs/workflow.md](docs/workflow.md) | plan-first change workflow: plan, code, docs in the same change |
 | [docs/plans/](docs/plans/README.md) | one Markdown plan per non-trivial change |
 | [docs/opencode.md](docs/opencode.md) | free-model OpenCode junior agent and its roles |
-| [docs/copilot.md](docs/copilot.md) | GitHub Copilot junior agent, setup steps and review rules |
 | [docs/integrations/owl-editor.md](docs/integrations/owl-editor.md) | how the Python `owl_editor` service would plug in |
 | `docs/decisions/` | architecture decision records (ADRs), added when a risky change needs one |
 

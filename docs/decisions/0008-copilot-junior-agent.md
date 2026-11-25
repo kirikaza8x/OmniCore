@@ -1,6 +1,6 @@
 # ADR 0008: GitHub Copilot as a second junior agent
 
-Status: accepted by delegation (2026-11-23). Config written and linted locally; not yet run on GitHub.
+Status: **superseded 2026-11-25**. Copilot never ran (assigning a task needs a click in the GitHub UI the sandbox cannot make, and the API answered Forbidden); it was removed and OpenCode is the only junior agent. Originally accepted by delegation 2026-11-23.
 
 ## Context
 

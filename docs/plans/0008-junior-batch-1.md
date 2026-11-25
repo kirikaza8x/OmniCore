@@ -1,9 +1,9 @@
 # 0008: First junior batch (OpenCode and Copilot)
 
-- Status: A and B done (OpenCode, reviewed, merged 2026-11-24); C waiting for the developer to assign issue #4 to Copilot in the GitHub UI (API assignment answered Forbidden)
+- Status: task C dropped (Copilot removed 2026-11-25); A and B done (OpenCode, reviewed, merged 2026-11-24); C waiting for the developer to assign issue #4 to Copilot in the GitHub UI (API assignment answered Forbidden)
 - Date: 2026-11-24
 - Owner: Claude writes the briefs and reviews; the developer opens the issues and starts the agents
-- Related: ADR 0007, ADR 0008, `docs/copilot.md#claude-to-junior-agent-handoff`, roadmap phases 5, 10, 14
+- Related: ADR 0007, ADR 0008, `docs/opencode.md#claude-to-opencode-handoff`, roadmap phases 5, 10, 14
 
 ## Why
 Take routine, self-contained work off Claude while it does the multi-tenancy steps (plan 0007), and run each junior agent
@@ -56,5 +56,5 @@ Scope matches the issue; no change outside the named files; no secrets; tests ex
 docs updated where the change invalidates them; CI result reported by the developer before merging.
 
 ## After the batch
-Record in `docs/opencode.md` / `docs/copilot.md` what the first real runs showed (what worked, what the guard blocked),
+Record in `docs/opencode.md` / `docs/opencode.md` what the first real runs showed (what worked, what the guard blocked),
 then change "not yet run on GitHub" in `CLAUDE.md`.
