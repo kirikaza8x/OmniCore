@@ -50,9 +50,14 @@ export const verifyEmailSchema = z.object({
   token: z.string().min(1, "The link is not valid.").max(128, "The link is not valid."),
 });
 
+export const switchTenantSchema = z.object({
+  tenantId: z.string().uuid("Choose a valid tenant."),
+});
+
 export type LoginInput = z.infer<typeof loginSchema>;
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type ResendVerificationInput = z.infer<typeof resendVerificationSchema>;
 export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;
 export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
+export type SwitchTenantInput = z.infer<typeof switchTenantSchema>;
 export type VerifyEmailInput = z.infer<typeof verifyEmailSchema>;

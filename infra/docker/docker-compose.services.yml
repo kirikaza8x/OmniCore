@@ -129,9 +129,10 @@ services:
       OTEL_SERVICE_NAME: omnicore-user
       # User only validates tokens issued by Auth: it fetches the public keys from Auth's JWKS endpoint.
       Jwt__JwksUrl: ${JWT_JWKS_URL:-http://auth-api:8080/.well-known/jwks.json}
-      # Transition window (ADR 0001, plan 0007): access tokens issued before tenancy have no tenant_id claim and are
-      # treated as this tenant (Auth's default tenant). Remove in step 4 once old tokens have expired.
-      Tenancy__AssumeDefaultTenantId: ${TENANCY_ASSUME_DEFAULT_TENANT_ID:-7e4a0001-0000-4000-8000-000000000001}
+      # Transition window (ADR 0001, plan 0007 step 4): CLOSED by default, so a token without a tenant_id claim gets no
+      # tenant (403). To re-open it for old tokens, set TENANCY_ASSUME_DEFAULT_TENANT_ID to Auth's default tenant id
+      # (7e4a0001-0000-4000-8000-000000000001); access tokens are short-lived, so a day is plenty.
+      Tenancy__AssumeDefaultTenantId: ${TENANCY_ASSUME_DEFAULT_TENANT_ID:-}
 
   notification-api:
     <<: *service-base

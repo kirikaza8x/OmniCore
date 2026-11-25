@@ -1,6 +1,6 @@
 import { http } from "@/shared/api/http";
-import type { CurrentAccount } from "./types";
-import type { ForgotPasswordInput, LoginInput, RegisterInput, ResendVerificationInput, ResetPasswordInput, VerifyEmailInput } from "./schemas";
+import type { CurrentAccount, TenantMembership } from "./types";
+import type { ForgotPasswordInput, LoginInput, RegisterInput, ResendVerificationInput, ResetPasswordInput, SwitchTenantInput, VerifyEmailInput } from "./schemas";
 
 export const authApi = {
   login: (input: LoginInput) => http<void>("/api/auth/login", { method: "POST", json: input }),
@@ -13,5 +13,9 @@ export const authApi = {
   verifyEmail: (input: VerifyEmailInput) => http<void>("/api/auth/verify-email", { method: "POST", json: input }),
   /** Signed-in users only: goes through the proxy, which adds the bearer token. */
   requestEmailVerification: () => http<void>("/api/proxy/auth/email/verify/request", { method: "POST" }),
+  /** Tenants the signed-in account belongs to. */
+  tenants: () => http<TenantMembership[]>("/api/proxy/auth/tenants"),
+  /** Issues a new access token for another tenant (the refresh token is untouched). */
+  switchTenant: (input: SwitchTenantInput) => http<void>("/api/auth/switch-tenant", { method: "POST", json: input }),
   logout: () => http<void>("/api/auth/logout", { method: "POST" }),
 };

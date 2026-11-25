@@ -4,7 +4,8 @@ using OmniCore.Services.Auth.Application.Abstractions.Security;
 using OmniCore.Services.Auth.Domain.Entities;
 using OmniCore.Services.Auth.Domain.Repositories;
 
-public record TenantDto(Guid Id, string Slug, string Name, string Role);
+/// <param name="IsCurrent">True for the tenant of the token that made the call (only set by the list query).</param>
+public record TenantDto(Guid Id, string Slug, string Name, string Role, bool IsCurrent = false);
 
 /// <summary>Chooses the tenant a new access token is issued for (ADR 0001, section 3).</summary>
 public static class TenantSelector

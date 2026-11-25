@@ -1,6 +1,6 @@
 # 0007: Multi-tenancy rollout (ADR 0001)
 
-- Status: step 1 CI green (developer reported 2026-11-24, after fixing CS1061); step 2a CI green (developer: "continue"); step 2b CI green (seen 2026-11-24); step 3 written 2026-11-25, unbuilt (CI awaited); 4 not started
+- Status: step 1 CI green (developer reported 2026-11-24, after fixing CS1061); step 2a CI green (developer: "continue"); step 2b CI green (seen 2026-11-24); step 3 CI green (seen 2026-11-25); step 4 written 2026-11-25, web checked locally, backend unbuilt (CI awaited)
 - Related: ADR 0001, `docs/services-plan.md` guardrail (decide before the next service)
 
 ## Steps (each is a CI-green commit before the next)
@@ -14,7 +14,8 @@
 3. **User** (written 2026-11-25, unbuilt, CI awaited): `UserTenantProfile` reworked into a standalone tenant-scoped aggregate (no navigation from `UserProfile`; gamer tag max 50, optional avatar URL), table `users.tenant_profiles` (unique `user_id, tenant_id`, FK to `user_profiles` cascade) by hand-written migration `20261125090000_add_tenant_profiles` + edited snapshot; `UserDbContext` implements `ITenantFilterSource` and applies the filters by convention; `GET|PUT /api/v1/users/me/tenant-profile` (both `ITenantScopedRequest`: 403 without a tenant). `TenantContext` falls back to `Tenancy:AssumeDefaultTenantId` for a signed-in caller whose token has no claim (compose sets it for User; anonymous callers never get it).
    **Deviation from ADR 0001:** the profile is created lazily by the first `PUT`, not from a membership event. No event, no consumer, no backfill: a person who never sets a gamer tag has no row. Revisit only if a feature needs the row to exist.
    Tests: 5 domain, 6 application, 4 integration (two tenants, same user, separate rows; 403 without a tenant; validation; snapshot drift) and 3 more in `TenancyTests` for the fallback.
-4. **Gateway / web**: tenant pre-selection, end the transition window (reject tokens without `tenant_id`), web tenant switcher only if more than one membership.
+4. **Gateway / web** (written 2026-11-25): the transition window is closed by default in compose (`TENANCY_ASSUME_DEFAULT_TENANT_ID` empty; the code option stays for a rollback). Web: `TenantSwitcher` in the nav bar (shown only with 2+ memberships), BFF `POST /api/auth/switch-tenant` (replaces the access cookie only, remembers the pick in an httpOnly `omni_tenant` cookie), the proxy sends that cookie as the `tenantId` hint on refresh so a renewed token stays in the chosen tenant, `GET /auth/tenants` marks the active tenant with `isCurrent`. Web lint, typecheck, 25 tests green locally; Auth change (`isCurrent`, one test) unbuilt.
+   **Not done, on purpose:** the `platform_roles` claim (it changes the token format and needs its own ADR, so the old role claims stay) and gateway tenant pre-selection (the gateway does not read tokens, ADR 0002; nothing to do there). After this step the "no fourth service" guardrail is lifted.
 
 ## Not decided here
 RLS, act-as audit trail, invitations, per-tenant settings (ADR 0001 section 7, items 6 and 11).

@@ -103,10 +103,14 @@ public class TenantFlowTests
         _tenants.GetMembershipsAsync(account.Id, Arg.Any<CancellationToken>())
             .Returns(Task.FromResult<IReadOnlyList<TenantMembershipInfo>>([Info(Tenant.DefaultId, "default", TenantRoles.Owner)]));
 
-        var result = await new GetMyTenantsQueryHandler(_tenants, _user).Handle(new GetMyTenantsQuery(), default);
+        var tenantContext = Substitute.For<OmniCore.Shared.Application.Abstractions.Tenancy.ITenantContext>();
+        tenantContext.TenantId.Returns(Tenant.DefaultId);
+
+        var result = await new GetMyTenantsQueryHandler(_tenants, _user, tenantContext).Handle(new GetMyTenantsQuery(), default);
 
         var tenant = Assert.Single(result.Value);
         Assert.Equal(("default", TenantRoles.Owner), (tenant.Slug, tenant.Role));
+        Assert.True(tenant.IsCurrent);
     }
 
     // ---- create tenant ----
