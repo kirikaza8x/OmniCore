@@ -19,6 +19,12 @@ public class SwaggerSpecTests(NotificationApiFactory factory)
         using var doc = JsonDocument.Parse(text);
         var root = doc.RootElement;
 
+        // Swagger UI refuses a document without this field ("does not specify a valid version field").
+        Assert.True(root.TryGetProperty("openapi", out var version) && version.ValueKind == JsonValueKind.String
+            && System.Text.RegularExpressions.Regex.IsMatch(version.GetString()!, @"^3\.\d+\.\d+$"),
+            "Missing or odd openapi version. Top-level keys: " + string.Join(", ", root.EnumerateObject().Select(x => x.Name)) + "; head: " + text[..Math.Min(text.Length, 200)]);
+        Assert.Contains("json", response.Content.Headers.ContentType?.MediaType ?? "", StringComparison.OrdinalIgnoreCase);
+
         var paths = root.GetProperty("paths").EnumerateObject().ToList();
         Assert.NotEmpty(paths);
         Assert.Contains(paths, p => p.Name.StartsWith("/api/v1/notifications", StringComparison.OrdinalIgnoreCase));
