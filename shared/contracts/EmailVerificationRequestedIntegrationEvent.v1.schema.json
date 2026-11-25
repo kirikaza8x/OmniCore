@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "EmailVerificationRequestedIntegrationEvent.v1.schema.json",
+  "title": "EmailVerificationRequestedIntegrationEvent",
+  "description": "Published by Auth from the request and resend verification commands; consumed by Notification (sends the verify-email e-mail). Contract source: backend/c#/OmniCore.Services.Auth/OmniCore.Services.Auth.Contracts/Events/EmailVerificationRequestedIntegrationEvent.cs.",
+  "type": "object",
+  "properties": {
+    "AccountId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "Username": {
+      "type": "string",
+      "description": "Used as the display name in the mail."
+    },
+    "Email": {
+      "type": "string"
+    },
+    "Token": {
+      "type": "string",
+      "x-secret": true,
+      "description": "Secret: the raw single-use verification code. Only its SHA-256 is stored; consumers must not log it."
+    },
+    "ExpiresInMinutes": {
+      "type": "integer",
+      "description": "Verification links live 1440 minutes (24 hours)."
+    },
+    "Id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Inherited from IntegrationEvent."
+    },
+    "OccurredOnUtc": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Inherited from IntegrationEvent."
+    }
+  },
+  "required": [
+    "AccountId",
+    "Username",
+    "Email",
+    "Token",
+    "ExpiresInMinutes",
+    "Id",
+    "OccurredOnUtc"
+  ],
+  "additionalProperties": false
+}

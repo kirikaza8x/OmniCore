@@ -37,7 +37,7 @@ off as they land; the status here is also mirrored in `CLAUDE.md`.
 
 ## Phase 5: contracts (F9)
 - [x] Integration-event catalogue: every event, its publisher and consumers, fields and secret handling in [events.md](events.md) (2026-11-24)
-- [ ] OpenAPI per service; AsyncAPI / JSON schemas for integration events in `shared/contracts/`, versioned
+- [ ] OpenAPI per service; [x] JSON schemas for integration events in `shared/contracts/`, versioned
 
 ## Phase 6: messaging simplification (F8)
 - [x] Compose default is `RabbitMQ` (S1: `Both` failed startup validation)

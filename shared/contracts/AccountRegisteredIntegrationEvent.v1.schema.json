@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "AccountRegisteredIntegrationEvent.v1.schema.json",
+  "title": "AccountRegisteredIntegrationEvent",
+  "description": "Published by Auth when an account is registered; consumed by User (creates the profile) and Notification (sends the welcome e-mail). Contract source: backend/c#/OmniCore.Services.Auth/OmniCore.Services.Auth.Contracts/Events/AccountRegisteredIntegrationEvent.cs.",
+  "type": "object",
+  "properties": {
+    "AccountId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Auth account id; the User profile id equals it (ADR 0004)."
+    },
+    "Username": {
+      "type": "string"
+    },
+    "Email": {
+      "type": "string"
+    },
+    "FirstName": {
+      "type": "string",
+      "description": "Auth does not collect names: it sends the username here."
+    },
+    "LastName": {
+      "type": "string",
+      "description": "Empty when unknown."
+    },
+    "Id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Inherited from IntegrationEvent."
+    },
+    "OccurredOnUtc": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Inherited from IntegrationEvent."
+    }
+  },
+  "required": [
+    "AccountId",
+    "Username",
+    "Email",
+    "FirstName",
+    "LastName",
+    "Id",
+    "OccurredOnUtc"
+  ],
+  "additionalProperties": false
+}
