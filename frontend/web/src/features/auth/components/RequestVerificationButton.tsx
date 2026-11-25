@@ -27,7 +27,7 @@ export function RequestVerificationButton() {
     <div className="space-y-2">
       {error ? <Alert>{error}</Alert> : null}
       {state === "sent" ? (
-        <p className="text-sm text-zinc-500">If your address is not verified yet, a link is on its way.</p>
+        <p className="text-sm text-zinc-500">A link is on its way. It works once and expires in 24 hours.</p>
       ) : (
         <Button type="button" variant="ghost" busy={state === "busy"} onClick={send}>
           Send verification e-mail

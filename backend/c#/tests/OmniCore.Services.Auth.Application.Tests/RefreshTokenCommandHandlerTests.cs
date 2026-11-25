@@ -12,7 +12,7 @@ public class RefreshTokenCommandHandlerTests
     private readonly IUnitOfWork _uow = Substitute.For<IUnitOfWork>();
 
     private RefreshTokenCommandHandler Handler(params string[] newTokens) =>
-        new(_accounts, _jwt, TestSupport.RefreshTokens(newTokens), _uow);
+        new(_accounts, _jwt, TestSupport.RefreshTokens(newTokens), _uow, TestSupport.NoTenants());
 
     private void Finds(Account? account) =>
         _accounts.GetByRefreshTokenAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())

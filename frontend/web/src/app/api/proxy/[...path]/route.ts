@@ -8,7 +8,7 @@ import { clearSession, setSession, type Tokens } from "@/shared/server/session";
 
 // The browser calls /api/proxy/<path>; this handler adds the bearer token from the httpOnly cookie, refreshes it
 // once when it has expired, and forwards to the gateway. Only these backend areas can be reached through it.
-const ALLOWED = [/^users(\/|$)/, /^auth\/me$/, /^auth\/email\/verify\/request$/];
+const ALLOWED = [/^users(\/|$)/, /^auth\/me$/, /^auth\/tenants$/, /^auth\/email\/verify\/request$/];
 
 type Context = { params: Promise<{ path: string[] }> };
 
@@ -25,10 +25,11 @@ async function forward(request: Request, { params }: Context): Promise<NextRespo
   const jar = await cookies();
   let accessToken = jar.get(COOKIES.access)?.value;
   const refreshToken = jar.get(COOKIES.refresh)?.value;
+  const tenantHint = jar.get(COOKIES.tenant)?.value;
   let renewed: Tokens | null = null;
 
   if (!accessToken && refreshToken) {
-    renewed = await refreshTokens(refreshToken);
+    renewed = await refreshTokens(refreshToken, tenantHint);
     accessToken = renewed?.accessToken;
   }
   if (!accessToken) return unauthorized();
@@ -49,7 +50,7 @@ async function forward(request: Request, { params }: Context): Promise<NextRespo
 
   // The access token may have been revoked or expired early: try once with a fresh one.
   if (upstream.status === 401 && refreshToken && !renewed) {
-    renewed = await refreshTokens(refreshToken);
+    renewed = await refreshTokens(refreshToken, tenantHint);
     if (!renewed) return unauthorized();
     upstream = (await call(renewed.accessToken).catch(() => null)) ?? upstream;
   }

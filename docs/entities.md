@@ -8,7 +8,7 @@ Scope: the domain models of Auth and User (Shared has only base types, see its R
  Account (aggregate)                    UserProfile (aggregate)  id = Account.Id, no FK across databases
   |- RefreshToken[]                      |- UserSettings (1:1)
   |- AccountRole[] --> Role              |- UserAddress[] (max 10, one primary)
- SecurityToken, MfaMethod,               (UserTenantProfile: defined, not mapped, ADR 0001)
+ SecurityToken, MfaMethod,               (UserTenantProfile: mapped to users.tenant_profiles, tenant-scoped, ADR 0001 step 3)
  MfaRecoveryCode, ExternalLogin,
  SecurityAuditLog, UserSession  <- tables exist, no feature uses them
 ```
@@ -33,7 +33,7 @@ The split is sound: Auth owns **credentials and access**, User owns **who the pe
 | `UserProfile` | **keep (done)** | Rebuilt per ADR 0004: validated updates, owned children, soft delete event. |
 | `UserSettings` | **keep (done)** | Value-validated theme and language; owned by the aggregate. Consider storing future preferences as a JSON column instead of a column per switch. |
 | `UserAddress` | **keep (done)** | One primary, max 10. Later: country code (ISO 3166) instead of free text. |
-| `UserTenantProfile` | **defer** | Overlaps `UserProfile` (U7); `GamerTag` is game-specific naming (UD6). Decide with ADR 0001; likely becomes a separate table keyed by (user, tenant). |
+| `UserTenantProfile` | **built (unbuilt by CI)** | Separate table `users.tenant_profiles`, unique (user, tenant), tenant filter by convention, created lazily by `PUT /users/me/tenant-profile` (plan 0007 step 3). |
 | `Username` (User copy) | **remove later** | Duplicate of Auth's (U9). Move the rule to `Shared.Domain` once a second consumer needs it, or just store a plain validated string in User. |
 
 ## 4. Cross-service gaps worth fixing

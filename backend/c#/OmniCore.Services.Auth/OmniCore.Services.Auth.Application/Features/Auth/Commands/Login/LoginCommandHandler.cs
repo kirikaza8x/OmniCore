@@ -2,6 +2,7 @@
 
 using OmniCore.Services.Auth.Application.Abstractions.Security;
 using OmniCore.Services.Auth.Application.Features.Auth.DTOs;
+using OmniCore.Services.Auth.Application.Features.Tenants;
 using OmniCore.Services.Auth.Domain.Repositories;
 using OmniCore.Shared.Application.Abstractions.Messaging;
 using OmniCore.Shared.Domain.Abstractions;
@@ -14,10 +15,15 @@ public sealed class LoginCommandHandler(
     IAccountRepository accountRepository,
     IPasswordHasherService passwordHasher,
     IJwtTokenService jwtTokenService,
-    IRefreshTokenService refreshTokenService) : ICommandHandler<LoginCommand, AuthResponse>
+    IRefreshTokenService refreshTokenService,
+    IAuthPolicy authPolicy,
+    ITenantRepository tenantRepository) : ICommandHandler<LoginCommand, AuthResponse>
 {
     internal static readonly Error InvalidCredentials =
         Error.Unauthorized("Auth.InvalidCredentials", "Invalid username, email or password.");
+
+    internal static readonly Error EmailNotVerified =
+        Error.Forbidden("Auth.EmailNotVerified", "Confirm your e-mail address before signing in. You can ask for a new link.");
 
     private static string? _dummyHash;
 
@@ -51,6 +57,13 @@ public sealed class LoginCommandHandler(
             return Result.Failure<AuthResponse>(InvalidCredentials);
         }
 
+        // Only now, with the right password on an active account, can the caller be told the e-mail is unverified (ADR 0010):
+        // a wrong password or an unknown account never reaches this answer, so it reveals nothing about other accounts.
+        if (authPolicy.RequireVerifiedEmail && !account.IsEmailConfirmed)
+        {
+            return Result.Failure<AuthResponse>(EmailNotVerified);
+        }
+
         // 6. Generate Refresh Token via Aggregate Root
         var (refreshTokenString, duration) = refreshTokenService.GenerateRefreshToken();
         var refreshTokenResult = account.AddRefreshToken(refreshTokenString, duration, refreshTokenService.MaxActiveSessions);
@@ -64,12 +77,17 @@ public sealed class LoginCommandHandler(
             .Select(ar => ar.Role?.Name ?? string.Empty)
             .Where(r => !string.IsNullOrWhiteSpace(r));
 
+        // 7b. Active tenant (ADR 0001): the default tenant if the account is a member, else the oldest membership.
+        var memberships = await tenantRepository.GetMembershipsAsync(account.Id, cancellationToken);
+        var tenant = TenantSelector.ToClaim(TenantSelector.Choose(memberships));
+
         // 8. Generate JWT Access Token
         var accessToken = jwtTokenService.GenerateToken(
             account.Id.Value,
             account.Email?.Value,
             account.Username.Value,
-            roles
+            roles,
+            tenant
         );
 
         return Result.Success(new AuthResponse(

@@ -3,7 +3,7 @@
 Next.js 16 (App Router), React 19, TypeScript, Tailwind 4, zod. Decisions: [ADR 0005](../../docs/decisions/0005-web-client.md).
 
 ## What it does today
-Sign in, register, sign out, forgot/reset password and e-mail confirmation (ADR 0009), and a profile page (personal information, avatar upload, settings, up to 10 addresses) that talks to the Auth and User services through the gateway.
+Sign in, register, sign out, forgot/reset password, e-mail confirmation and resend (ADR 0009, 0010), and a profile page (personal information, avatar upload, settings, up to 10 addresses) that talks to the Auth and User services through the gateway.
 
 ## Run it
 ```bash
@@ -27,7 +27,7 @@ CI: `.github/workflows/frontend.yml` runs all four and builds the Docker image.
 ```
 src/
   app/                  routes only (like the Api layer): pages, layouts, route handlers, nothing else
-    (auth)/login, register, forgot-password, reset-password?token=, verify-email?token=     public pages
+    (auth)/login, register, forgot-password, reset-password?token=, verify-email?token=, resend-verification     public pages
     (app)/profile              private page
     api/auth/*                 login, register, logout (BFF: set/clear httpOnly cookies); forgot-password, reset-password, verify-email (anonymous, forwarded without tokens)
     api/proxy/[...path]        adds the bearer token, refreshes it once, forwards to the gateway
@@ -53,6 +53,6 @@ Inside a feature: `schemas.ts` (zod, mirrors backend validators) -> `api.ts` (ca
 
 ## Known gaps
 - No browser tests yet (Playwright is the next step); the BFF was smoke-tested against a fake gateway, not yet against the real stack.
-- Account-level screens: password change and sessions wait for backend endpoints (AA4). The verify-email page confirms on a button press, not on load, so mail scanners cannot burn the single-use token. The profile page offers "Send verification e-mail" but does not show whether the address is verified (the profile API does not return it).
+- Account-level screens: password change and sessions wait for backend endpoints (AA4). The verify-email page confirms on a button press, not on load, so mail scanners cannot burn the single-use token. The profile page shows whether the address is verified (`GET /auth/me` returns `isEmailConfirmed`) and offers "Send verification e-mail" when it is not.
 - Edit/promote an address is not in the UI yet (the API supports it).
 - The theme setting is saved but not applied to the UI.

@@ -25,6 +25,13 @@ public static class MappingExtensions
         profile.AvatarUrl,
         profile.Bio);
 
+    public static TenantProfileResponse ToResponse(this UserTenantProfile profile) => new(
+        profile.Id.Value,
+        profile.TenantId.Value,
+        profile.GamerTag,
+        profile.CustomAvatarUrl,
+        profile.JoinedAtUtc);
+
     public static UserSettingsResponse ToResponse(this UserSettings settings) => new(
         settings.Theme,
         settings.Language,

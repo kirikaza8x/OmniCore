@@ -6,6 +6,7 @@
 #   docker-compose.gateway.yml    nginx gateway, Swagger UI
 #   docker-compose.web.yml        the Next.js web client (profile: web)
 #   docker-compose.aws.yml        optional local AWS emulator (profiles: aws, aws-localstack)
+#   docker-compose.observability.yml  Seq, Prometheus, Grafana (profile: observability, ADR 0011)
 #
 # Overrides, added with extra -f flags (see README.md):
 #   docker-compose.prod.yml       Production settings, data-store ports closed
@@ -17,6 +18,7 @@ include:
   - path: ./docker-compose.gateway.yml
   - path: ./docker-compose.web.yml
   - path: ./docker-compose.aws.yml
+  - path: ./docker-compose.observability.yml
 
 networks:
   omnicore-network:

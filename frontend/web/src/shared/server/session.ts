@@ -13,7 +13,14 @@ export function setSession(response: NextResponse, tokens: Tokens): void {
   response.cookies.set(COOKIES.refresh, tokens.refreshToken, { ...base, maxAge: REFRESH_DAYS * 24 * 3600 });
 }
 
+/** Replaces only the access token (switching tenant does not touch the refresh token) and remembers the tenant. */
+export function setAccessToken(response: NextResponse, accessToken: string, expiresInMinutes: number, tenantId: string): void {
+  response.cookies.set(COOKIES.access, accessToken, { ...base, maxAge: Math.max(60, expiresInMinutes * 60 - 30) });
+  response.cookies.set(COOKIES.tenant, tenantId, { ...base, maxAge: REFRESH_DAYS * 24 * 3600 });
+}
+
 export function clearSession(response: NextResponse): void {
+  response.cookies.set(COOKIES.tenant, "", { ...base, maxAge: 0 });
   response.cookies.set(COOKIES.access, "", { ...base, maxAge: 0 });
   response.cookies.set(COOKIES.refresh, "", { ...base, maxAge: 0 });
 }

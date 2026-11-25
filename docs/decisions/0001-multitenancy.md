@@ -1,6 +1,6 @@
 # ADR 0001: Multi-tenancy for Auth and User
 
-- Status: **proposed. Nothing is implemented. Waiting for the owner to confirm the direction.**
+- Status: **accepted by delegation 2026-11-24** (owner: "finish all before a 4th service"). Step 1 (Shared) written, unbuilt; steps 2-4 not started. Plan: `docs/plans/0007-multitenancy.md`.
 - Date: 2026-11-19
 - Scope: `OmniCore.Shared`, `OmniCore.Services.Auth`, `OmniCore.Services.User`, the gateway
 - Basis: a read of the code (see `docs/repo-check.md`). Nothing was built or run.
@@ -159,5 +159,15 @@ the default tenant absorbs it.
 
 ## Decision
 
-Pending. When confirmed (or amended), the status changes to *accepted* and implementation starts at step 1 on a
-`feature/multitenancy` branch.
+Accepted 2026-11-24 by delegation, with the recommendations above and these answers to section 7:
+
+1. **Tenant id:** `Guid` (uuid) plus a unique slug. `TenantId` in Shared.Domain was changed (only the unused `UserTenantProfile` referenced it).
+2. **Who creates tenants:** admin-created only (platform admin); people join when an admin adds a membership. Self-service sign-up and invitations are out of scope until a real need. A seeded **default tenant** absorbs all existing data, so a single-user install behaves as today.
+3. **Uniqueness:** username and e-mail stay global.
+4. **Hard isolation:** not required. Shared database, `tenant_id` column, EF query filters by convention, RLS later and optional.
+5. **Tenant profile shape:** keep `UserTenantProfile` (GamerTag, avatar) as the per-tenant profile, reworked per section 2; extend when a real use appears.
+6. **Platform admin in a tenant:** only through an explicit, logged "act as" scope; not built before it is needed.
+7. **Refresh token:** bound to the account; `switch-tenant` re-issues only the access token.
+8. **Cache keys and event partitions** include the tenant (`TenantPartitionKey`); cache is fixed when revived (S6).
+
+Implementation follows section 6, one CI-verified step at a time on `develop` (no separate branch): 1 Shared, 2 Auth (with the claim on the RS256 tokens), 3 User, 4 gateway and end of the transition window. **No fourth service starts before steps 1-3 are green**, so it is born tenant-aware.

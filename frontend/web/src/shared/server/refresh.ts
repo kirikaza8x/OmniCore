@@ -7,7 +7,8 @@ import type { Tokens } from "./session";
 // refresh token and the others wait for its result.
 const inflight = new Map<string, Promise<Tokens | null>>();
 
-export function refreshTokens(refreshToken: string): Promise<Tokens | null> {
+/** `tenantId` is the person's last pick: the backend honours it only if they are still a member. */
+export function refreshTokens(refreshToken: string, tenantId?: string): Promise<Tokens | null> {
   const existing = inflight.get(refreshToken);
   if (existing) return existing;
 
@@ -15,7 +16,7 @@ export function refreshTokens(refreshToken: string): Promise<Tokens | null> {
     const response = await backendFetch("/api/v1/auth/refresh-token", {
       method: "POST",
       contentType: "application/json",
-      body: JSON.stringify({ refreshToken }),
+      body: JSON.stringify(tenantId ? { refreshToken, tenantId } : { refreshToken }),
     });
     return response.ok ? readTokens(response) : null;
   })().finally(() => setTimeout(() => inflight.delete(refreshToken), 5_000));

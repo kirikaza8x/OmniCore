@@ -11,4 +11,6 @@ export const env = {
 export const COOKIES = {
   access: "omni_at",
   refresh: "omni_rt",
+  /** The tenant the person picked; sent as a hint when the access token is renewed (never a secret). */
+  tenant: "omni_tenant",
 } as const;

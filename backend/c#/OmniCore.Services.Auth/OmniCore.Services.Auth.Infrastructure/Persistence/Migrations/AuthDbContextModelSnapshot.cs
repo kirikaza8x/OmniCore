@@ -626,6 +626,71 @@ namespace OmniCore.Services.Auth.Infrastructure.Persistence.Migrations
                     b.ToTable("security_tokens", "auth");
                 });
 
+            modelBuilder.Entity("OmniCore.Services.Auth.Domain.Entities.Tenant", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_active");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("name");
+
+                    b.Property<string>("Slug")
+                        .IsRequired()
+                        .HasMaxLength(63)
+                        .HasColumnType("character varying(63)")
+                        .HasColumnName("slug");
+
+                    b.HasKey("Id")
+                        .HasName("pk_tenants");
+
+                    b.HasIndex("Slug")
+                        .IsUnique()
+                        .HasDatabaseName("ix_tenants_slug");
+
+                    b.ToTable("tenants", "auth");
+                });
+
+            modelBuilder.Entity("OmniCore.Services.Auth.Domain.Entities.TenantMembership", b =>
+                {
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<Guid>("AccountId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("account_id");
+
+                    b.Property<DateTime>("JoinedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("joined_at_utc");
+
+                    b.Property<string>("Role")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("role");
+
+                    b.HasKey("TenantId", "AccountId")
+                        .HasName("pk_tenant_memberships");
+
+                    b.HasIndex("AccountId")
+                        .HasDatabaseName("ix_tenant_memberships_account_id");
+
+                    b.ToTable("tenant_memberships", "auth");
+                });
+
             modelBuilder.Entity("OmniCore.Services.Auth.Domain.Entities.UserSession", b =>
                 {
                     b.Property<Guid>("Id")
@@ -789,6 +854,23 @@ namespace OmniCore.Services.Auth.Infrastructure.Persistence.Migrations
                         .HasConstraintName("fk_security_tokens_accounts_account_id");
 
                     b.Navigation("Account");
+                });
+
+            modelBuilder.Entity("OmniCore.Services.Auth.Domain.Entities.TenantMembership", b =>
+                {
+                    b.HasOne("OmniCore.Services.Auth.Domain.Entities.Account", null)
+                        .WithMany()
+                        .HasForeignKey("AccountId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_tenant_memberships_accounts_account_id");
+
+                    b.HasOne("OmniCore.Services.Auth.Domain.Entities.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_tenant_memberships_tenants_tenant_id");
                 });
 
             modelBuilder.Entity("OmniCore.Services.Auth.Domain.Entities.UserSession", b =>

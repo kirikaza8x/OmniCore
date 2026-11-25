@@ -93,6 +93,11 @@ expired tokens give the same `Auth.InvalidToken` error. A successful reset revok
 integration event (it sits in the outbox until cleanup) and is never logged or stored by Notification. The links point at
 `PUBLIC_WEB_URL` (`/reset-password?token=`, `/verify-email?token=`); the web pages (`/reset-password`, `/verify-email`, `/forgot-password`) are built; verification is confirmed by a button press so link scanners cannot use up the token.
 
+### Requiring a verified e-mail (ADR 0010)
+`Auth__RequireVerifiedEmail=true` makes login fail with 403 `Auth.EmailNotVerified` for unverified accounts, but only after the
+identifier and password were right (a wrong password keeps the generic 401). Refresh is not affected. Blocked users ask for a
+new link at `POST /api/v1/auth/email/verify/resend` (always 200). A SuperAdmin can vouch for existing accounts in bulk with `POST /api/v1/auth/admin/emails/confirm` (`{"accountIds":[...]}`, up to 500, no mail sent). Off by default; the seeded first admin is created verified.
+
 ## Not covered here
 Account lockout (A8) is still open. Generic login errors (A9) and the first admin account (A15) were fixed on
 2026-11-23; see [repo-check.md](repo-check.md).

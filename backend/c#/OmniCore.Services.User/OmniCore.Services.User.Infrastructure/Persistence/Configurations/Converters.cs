@@ -14,4 +14,7 @@ internal static class Converters
 
     public static readonly ValueConverter<UserAddressId, Guid> UserAddressIdConverter =
         new(id => id.Value, value => UserAddressId.From(value));
+
+    public static readonly ValueConverter<UserTenantProfileId, Guid> UserTenantProfileIdConverter =
+        new(id => id.Value, value => UserTenantProfileId.From(value));
 }

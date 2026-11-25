@@ -23,4 +23,12 @@ public sealed class AuthRoutes : BaseRouteModule
     public string ResetPassword => "password/reset";
     public string RequestEmailVerification => "email/verify/request";
     public string ConfirmEmail => "email/verify/confirm";
+    public string ResendEmailVerification => "email/verify/resend";
+    public string AdminConfirmEmails => "admin/emails/confirm";
+
+    // Tenants (ADR 0001)
+    public string MyTenants => "tenants";
+    public string SwitchTenant => "switch-tenant";
+    public string AdminTenants => "admin/tenants";
+    public string AdminTenantMembers => "admin/tenants/{tenantId:guid}/members";
 }

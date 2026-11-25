@@ -1,0 +1,7 @@
+# Metrics arrive by push over OTLP (--web.enable-otlp-receiver), so there is nothing to scrape except Prometheus itself.
+global:
+  scrape_interval: 15s
+scrape_configs:
+  - job_name: prometheus
+    static_configs:
+      - targets: ["localhost:9090"]

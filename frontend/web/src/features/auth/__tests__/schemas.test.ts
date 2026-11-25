@@ -3,8 +3,10 @@ import {
   forgotPasswordSchema,
   loginSchema,
   registerSchema,
+  resendVerificationSchema,
   resetPasswordFormSchema,
   resetPasswordSchema,
+  switchTenantSchema,
   verifyEmailSchema,
 } from "../schemas";
 
@@ -69,5 +71,22 @@ describe("verifyEmailSchema", () => {
   it("needs a token", () => {
     expect(verifyEmailSchema.safeParse({ token: "abc" }).success).toBe(true);
     expect(verifyEmailSchema.safeParse({ token: "" }).success).toBe(false);
+  });
+});
+
+describe("resendVerificationSchema", () => {
+  it("needs a valid email", () => {
+    expect(resendVerificationSchema.safeParse({ email: "alice@example.com" }).success).toBe(true);
+    expect(resendVerificationSchema.safeParse({ email: "" }).success).toBe(false);
+  });
+});
+
+describe("switchTenantSchema", () => {
+  it("accepts a uuid", () => {
+    expect(switchTenantSchema.safeParse({ tenantId: "7e4a0001-0000-4000-8000-000000000001" }).success).toBe(true);
+  });
+
+  it.each([[{}], [{ tenantId: "" }], [{ tenantId: "default" }]])("rejects %j", (input) => {
+    expect(switchTenantSchema.safeParse(input).success).toBe(false);
   });
 });

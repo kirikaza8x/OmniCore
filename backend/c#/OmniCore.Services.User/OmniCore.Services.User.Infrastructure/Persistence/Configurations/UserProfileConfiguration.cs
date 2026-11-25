@@ -60,8 +60,5 @@ public class UserProfileConfiguration : IEntityTypeConfiguration<UserProfile>
             .WithOne(s => s.UserProfile)
             .HasForeignKey<UserSettings>(s => s.UserId)
             .OnDelete(DeleteBehavior.Cascade);
-
-        // Tenant profiles are not stored until the owner decides on multi-tenancy (ADR 0001, ADR 0004).
-        builder.Ignore(p => p.TenantProfiles);
     }
 }

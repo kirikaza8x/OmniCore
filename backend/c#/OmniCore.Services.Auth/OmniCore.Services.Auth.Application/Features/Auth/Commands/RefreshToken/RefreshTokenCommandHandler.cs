@@ -2,19 +2,23 @@ namespace OmniCore.Services.Auth.Application.Features.Auth.Commands.RefreshToken
 
 using OmniCore.Services.Auth.Application.Abstractions.Security;
 using OmniCore.Services.Auth.Application.Features.Auth.DTOs;
+using OmniCore.Services.Auth.Application.Features.Tenants;
 using OmniCore.Services.Auth.Domain.Repositories;
 using OmniCore.Shared.Application.Abstractions.Messaging;
 using OmniCore.Shared.Domain.Abstractions;
 using OmniCore.Shared.Domain.Repositories;
 
+/// <param name="TenantId">Optional: the tenant the caller was working in. Used only if the account is a member of it.</param>
 public record RefreshTokenCommand(
-    string RefreshToken) : ICommand<AuthResponse>;
+    string RefreshToken,
+    Guid? TenantId = null) : ICommand<AuthResponse>;
 
 public sealed class RefreshTokenCommandHandler(
     IAccountRepository accountRepository,
     IJwtTokenService jwtTokenService,
     IRefreshTokenService refreshTokenService,
-    IUnitOfWork unitOfWork) : ICommandHandler<RefreshTokenCommand, AuthResponse>
+    IUnitOfWork unitOfWork,
+    ITenantRepository tenantRepository) : ICommandHandler<RefreshTokenCommand, AuthResponse>
 {
     public async Task<Result<AuthResponse>> Handle(
         RefreshTokenCommand request, 
@@ -50,11 +54,15 @@ public sealed class RefreshTokenCommandHandler(
             .Select(ar => ar.Role?.Name ?? string.Empty)
             .Where(r => !string.IsNullOrWhiteSpace(r));
 
+        var memberships = await tenantRepository.GetMembershipsAsync(account.Id, cancellationToken);
+        var tenant = TenantSelector.ToClaim(TenantSelector.Choose(memberships, request.TenantId));
+
         var newAccessToken = jwtTokenService.GenerateToken(
             account.Id.Value,
             account.Email?.Value,
             account.Username.Value,
-            roles
+            roles,
+            tenant
         );
 
         return Result.Success(new AuthResponse(

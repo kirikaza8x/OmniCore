@@ -3,7 +3,7 @@
 - Status: done
 - Date: 2026-11-23
 - Owner: agent session
-- Related: `CLAUDE.md`, `docs/copilot.md`, `docs/opencode.md`, `docs/ci-cd.md`
+- Related: `CLAUDE.md`, `docs/opencode.md`, `docs/opencode.md`, `docs/ci-cd.md`
 
 ## Problem
 
@@ -13,7 +13,7 @@ branch and date.
 
 ## Scope
 
-- Add a Claude-to-junior-agent handoff section to `docs/copilot.md`.
+- Add a Claude-to-junior-agent handoff section to `docs/opencode.md`.
 - Point `docs/opencode.md` and `docs/ci-cd.md` to that handoff.
 - Update `CLAUDE.md` read-first pointers, current progress header, last commit and next steps.
 

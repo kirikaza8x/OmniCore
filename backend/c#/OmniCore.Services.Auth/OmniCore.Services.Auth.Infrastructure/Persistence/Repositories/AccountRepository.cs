@@ -60,6 +60,19 @@ public class AccountRepository(AuthDbContext dbContext)
             .FirstOrDefaultAsync(a => a.Email == emailResult.Value, cancellationToken);
     }
 
+    public async Task<IReadOnlyList<Account>> GetByIdsAsync(
+        IReadOnlyCollection<AccountId> ids,
+        CancellationToken cancellationToken = default)
+    {
+        if (ids.Count == 0)
+        {
+            return [];
+        }
+
+        var idList = ids.ToList();
+        return await DbSet.Where(a => idList.Contains(a.Id)).ToListAsync(cancellationToken);
+    }
+
     public async Task<Account?> GetByEmailWithSecurityTokensAsync(
         string email,
         CancellationToken cancellationToken = default)

@@ -4,8 +4,8 @@
 (numbered findings), [docs/roadmap.md](docs/roadmap.md) (the plan), [docs/decisions/](docs/decisions/) (ADRs).
 
 **Agent handoff:** [docs/workflow.md](docs/workflow.md), [docs/ci-cd.md](docs/ci-cd.md),
-[docs/opencode.md](docs/opencode.md), [docs/copilot.md](docs/copilot.md) and [docs/plans/](docs/plans/README.md). The
-Claude-to-junior task protocol is in [docs/copilot.md](docs/copilot.md#claude-to-junior-agent-handoff).
+[docs/opencode.md](docs/opencode.md) and [docs/plans/](docs/plans/README.md). The
+Claude-to-junior task protocol is in [docs/opencode.md](docs/opencode.md#claude-to-opencode-handoff).
 
 ## What this is
 **OmniCore** is a .NET 9 service-oriented backend (`backend/c#/`), a Next.js web client (`frontend/web/`, ADR 0005) and Docker
@@ -14,7 +14,7 @@ infrastructure (`infra/docker/`). Other backend languages are planned, not in th
 | Project | Responsibility |
 |---|---|
 | `OmniCore.Services.Auth` | Accounts (register, login, logout, refresh-token rotation, current user), roles, JWT issuing. Own database. A Google token validator exists but no endpoint uses it. |
-| `OmniCore.Services.User` | Profiles, settings, addresses (ADR 0004). Profile id = Auth account id, created from `AccountRegisteredIntegrationEvent`; `/api/v1/users/me/...`. Own database (schema `users`). Tenant profiles not built (ADR 0001). Built and tested by CI 2026-11-22; not run as a compose stack. |
+| `OmniCore.Services.User` | Profiles, settings, addresses (ADR 0004). Profile id = Auth account id, created from `AccountRegisteredIntegrationEvent`; `/api/v1/users/me/...`. Own database (schema `users`). Tenant profiles (`/me/tenant-profile`, ADR 0001 step 3) written 2026-11-25, CI awaited. Built and tested by CI 2026-11-22; not run as a compose stack. |
 | `OmniCore.Services.Notification` | E-mail (SMTP/Mailpit) and named-webhook delivery behind `INotificationChannel`, built-in templates, dedup, admin delivery log; consumes `AccountRegisteredIntegrationEvent`. Own database (schema `notification`). Pattern for new services: `docs/new-service.md`. consumes the Auth password-reset and e-mail-verification events too (ADR 0009); CI green (developer reported 2026-11-24). |
 | `OmniCore.Shared` | Shared library: Domain (DDD base types, `Result`, `Error`), Application (MediatR behaviours), Infrastructure (EF, MassTransit + outbox, Redis, MinIO, config), Api (Carter, JWT bearer, CORS, rate limiting, Swagger), Contracts (integration events). |
 | `frontend/web` | Next.js 16 web client: BFF route handlers keep tokens in httpOnly cookies, features `auth` and `profile`, layer rules enforced by ESLint. See `frontend/web/README.md`. |
@@ -50,20 +50,21 @@ saying "CI passed" counts as shown; the agent does not have to see the run itsel
 
 ## Building and CI hand-off (agent sessions)
 No .NET SDK or NuGet access in the agent sandbox (the egress policy answers 403 for nuget.org and dot.net; do not route
-around it). Use GitHub Actions as the build machine: push the branch (`backend.yml` also runs on `docs/**` and `fix/**`)
-and **stop there**. Do not wait, sleep, poll or re-check the run.
+around it). GitHub Actions is the build machine: push the branch (`backend.yml` also runs on `docs/**` and `fix/**`).
 
-- The developer (or reviewer) reports the result. If they say it failed, read the failure; otherwise treat the pipeline
-  as accepted and continue. A silent pipeline is not a reason to poll.
-- On a reported failure, read the public annotations: `GET https://api.github.com/repos/kirikaza8x/OmniCore/actions/runs?head_sha=<sha>`,
-  then `/actions/runs/<id>/jobs` and `/check-runs/<job id>/annotations`. Compiler errors and integration-test failure
-  text arrive as annotations (job summaries and raw logs are **not** readable without a token).
-- Every poll is a tool call whose result is added to the context and billed on later turns. Repeated waiting wastes
-  tokens; one push plus one reported result is the intended path.
-- Do not describe a pipeline the developer has not reported as "verified"; say "pushed, CI result awaited from the
-  developer" and finish the turn.
-
-See [docs/ci-cd.md](docs/ci-cd.md) for the workflows, jobs and the full hand-off.
+**CI mode: `auto` (set by the developer 2026-11-24; the developer says "manual" to switch back).**
+- After a push the agent checks the run itself with the public API and acts on it; the developer does not have to report.
+  Check **once per push, after finishing other useful work**, never in a sleep/poll loop. If the run is still `in_progress`,
+  carry on with other work and look again later (next push, or when there is nothing else to do); a run that has not
+  finished is "awaited", not green.
+- Only a `completed` run with `conclusion: success` counts as green. Read it: `GET https://api.github.com/repos/kirikaza8x/OmniCore/actions/runs?head_sha=<sha>`
+  (or `?branch=<name>`); on failure `/actions/runs/<id>/jobs`, then `/check-runs/<job id>/annotations` (compiler errors and
+  integration-test text arrive as annotations; job summaries and raw logs are not readable without a token).
+- On a failure the agent fixes it and pushes; it never asks the developer to paste an error. Ask only if the annotations are empty or inaccessible.
+- The proxy blocks the Actions **write** paths (dispatch, settings). Junior agents are started with an issue comment
+  (`/oc <role>: <task>`) see `docs/opencode.md`.
+- Say "CI green" only for a run that was seen completed with success (by the agent or reported by the developer). Otherwise say "pushed, CI awaited".
+- In `manual` mode (developer says so): push, stop, no polling, the developer reports the result.
 
 ## Change workflow: plan first
 Every non-trivial change starts with a Markdown plan in `docs/plans/NNNN-short-title.md`; the full workflow is in
@@ -88,18 +89,14 @@ the plan file but still update the docs they invalidate.
 ## Junior agents
 `.github/workflows/opencode.yml` runs a free-model OpenCode agent for routine tasks (ADR 0007, `docs/opencode.md`). It only produces **draft PRs** `opencode/<run>`;
 read every line of one before merging (green CI is not enough; integration tests run on the branch). It cannot touch `.github/`, `CLAUDE.md`, secrets or prod compose.
-Built and linted (actionlint) but **not yet run on GitHub**; do not describe it as working until a run has shown it.
+**First real runs 2026-11-24 (issue comments `/oc`): two runs succeeded** (docs: event catalogue; implement: reserved usernames + tests, backend CI green on its branch). It pushed `opencode/<run>` branches and a compare link in the issue, **not a draft PR**, because the repo setting "Allow GitHub Actions to create and approve pull requests" is off (developer-only setting). Review the branch diff, then `git merge --no-ff origin/opencode/<run>` into `develop`.
 
-GitHub Copilot is a second junior agent (ADR 0008, `docs/copilot.md`). `.github/copilot-instructions.md` gives it repo-wide
-rules, `.github/agents/omnicore-junior.agent.md` is the custom agent profile, and `.github/workflows/copilot-setup-steps.yml`
-installs .NET 9 and Node 22 for GitHub Actions-based sessions. It also produces draft PRs only and must not merge or approve.
-Copilot's instructions are guidance, not the OpenCode patch guard; read every draft line by line. Configured and linted locally,
-but **not yet run on GitHub**.
+GitHub Copilot was removed 2026-11-25 (never ran; needed a UI assignment). OpenCode is the only junior agent. Use it for small, well-specified, self-contained tasks (docs, schemas, tests, simple features); do cross-cutting or risky work (tenancy, migrations, auth) yourself.
 
 ## Do not
 - Do not claim tests or builds pass without running them. Mark code written without a build as unbuilt.
 - Do not commit secrets. Example values must be obviously fake (`CHANGE_ME`).
-- Do not start implementing multi-tenancy before the owner confirms ADR 0001.
+- Multi-tenancy: ADR 0001 is accepted (by delegation, 2026-11-24); follow it and `docs/plans/0007-multitenancy.md`, one step at a time. Steps 1-3 are CI green; step 4 is written (CI awaited). A fourth service is allowed once step 4 is green (it is) but the owner put Notes on the wait list 2026-11-25: do not start one unasked.
 - ADR 0003 is accepted (decided by delegation, reasons in `docs/auth-tokens.md`); follow it, and do not change token format or schema outside it without a new ADR.
 - Do not re-enable `Provider=Both` for the message broker (it is rejected at startup); do not register `CachingBehavior`
   without reviewing cache invalidation (S6).
@@ -111,14 +108,14 @@ old plain `token` column still present until the follow-up migration drops it (A
 below now compile and pass CI, but only the register/login/refresh/reuse path is exercised by a test.
 
 ## Current progress
-Reflects branch `docs/readme-and-roadmap`, kept equal to `develop` and `main` (merged on request), 2026-11-24; see `git log -1`.
+Work happens on branch `develop`; `main` is updated by merging `develop` on request (`docs/readme-and-roadmap` is retired and equals `develop` at 9d4abb1). 2026-11-24; see `git log -1`.
 
 - [x] Phase 0 docs refactor (README, architecture, repo-check, roadmap, integrations/owl-editor, decisions)
 - [x] Review 2a Shared, 2b Auth, 2c User (findings S1-S13, A1-A18, U1-U10)
 - [x] Safe fixes committed, **built by CI 2026-11-20** (CI and the handler tests also found and fixed a validator syntax error, missing xunit usings, an unregistered password hasher (A19) and `IsActive` never set (A20)): broker default, JWT algorithm pin + startup validation, LogHub auth, dead rate-limit code,
       refresh-reuse persistence, admin-only UpdateRole / GetAccountById, no password hash in Redis, input limits, avatar order
 - [x] Phase 1: `backend.yml`, Auth domain unit tests and the Testcontainers integration test are **green on GitHub** (2026-11-20). Not yet a required check. Handler tests for register / login / refresh exist (13); 14 domain + 2 integration tests
-- [x] ADR 0001 multi-tenancy written (**proposed, waiting for the owner**)
+- [x] ADR 0001 multi-tenancy written (**accepted by delegation 2026-11-24**)
 - [x] Phase 2 infra, 2026-11-20: `docker-compose.prod.yml`, safe compose defaults, `CHANGE_ME` `.env.example`, root `.env.example`
       removed, all images pinned. CI job `infra-config` verifies every tag exists and smoke-starts postgres, redis, rabbitmq and
       minio (healthy). The full stack (services, kafka, gateway together) has still **never been started**. `minio/minio` is gone
@@ -141,5 +138,16 @@ Reflects branch `docs/readme-and-roadmap`, kept equal to `develop` and `main` (m
 - [x] 2026-11-23: prod override closes the service ports (gateway only); `infra/docker/scripts/gen-jwt-key.sh` makes throwaway RS256 keys; `docs/new-service.md`; `Auth.Contracts` changes now fan out to User and Notification CI. CI green (developer reported 2026-11-24).
 - [x] 2026-11-23: Auth handler tests for logout (3) and role assign/remove (5) written, CI green (developer reported 2026-11-24).
 - [x] 2026-11-24: password reset and e-mail verification (ADR 0009, plan 0004): Auth commands/endpoints (`/password/forgot|reset`, `/email/verify/request|confirm`), `Auth.Contracts` events, Notification consumers, templates `password-reset`/`verify-email`, `Notification__PublicBaseUrl` (`PUBLIC_WEB_URL`, required in prod), gateway rate limit on the anonymous ones, 12 Auth + 4 Notification tests. **CI green (developer reported 2026-11-24).** No migration needed (`security_tokens` exists). Web pages `/forgot-password`, `/reset-password`, `/verify-email` + BFF routes built the same day (lint, typecheck, 20 tests, build and a fake-gateway smoke green locally; not run against the real stack).
-- [ ] Next: owner makes `ci-gate` the required check (repo setting), run one small OpenCode task and one small Copilot task on GitHub after merge to `main`, owner generates `JWT_PRIVATE_KEY_PEM` and does the cut-over, then drop the plain token columns
-- [ ] Owner decisions pending: MinIO image (F7: keep the coollabsio fork, build from source, or switch store), ADR 0001 questions, keep or drop the User service in compose
+- [x] 2026-11-24 (on `develop`): `GET /auth/me` returns `isEmailConfirmed`; profile page shows the verification status. Mapping test + web lint/typecheck/20 tests/build green locally; **CI green (developer reported 2026-11-24)**.
+- [x] 2026-11-24 (on `develop`): optional verified-e-mail enforcement at login (ADR 0010, plan 0005): `Auth__RequireVerifiedEmail` (`REQUIRE_VERIFIED_EMAIL`, default false) -> 403 `Auth.EmailNotVerified` only after a correct password; anonymous `POST /auth/email/verify/resend`; first admin is created verified; web `/resend-verification` + login hint. 4 login + 3 resend tests, web 21 tests/lint/typecheck/build green locally; **CI green (developer reported 2026-11-24)**.
+- [x] 2026-11-24 (on `develop`): `POST /auth/admin/emails/confirm` (SuperAdmin, 1-500 ids, no mail) to verify existing accounts before turning the switch on; 4 tests. **CI green (developer reported 2026-11-24)**.
+- [x] 2026-11-24 (on `develop`): observability slice (ADR 0011, plan 0006, `docs/observability.md`): OpenTelemetry in `Shared.Api` (off unless `OTEL_*` endpoints are set), opt-in compose profile `observability` (Seq, Prometheus OTLP receiver, Grafana + one dashboard). Compose renders locally (dev, prod); **NuGet versions and image tags unbuilt, CI result awaited from the developer**, stack never started.
+- [x] 2026-11-24 (on `develop`): CI green for the observability slice (developer reported). ADR 0001 multi-tenancy **accepted by delegation**; plan 0007 step 1 (Shared: `TenantId` Guid, `ITenantContext`, `TenantBehavior`, EF filter/interceptor, `ITenantIntegrationEvent`, 9 tests) written, **unbuilt, CI result awaited**. Steps 2 (Auth), 3 (User), 4 (gateway) follow.
+- [x] 2026-11-24 (on `develop`): plan 0007 step 1 CI green (developer reported). Step 2a written: Auth `Tenant` + `TenantMembership`, hand-written migration `add_tenants` (default tenant, backfilled memberships) + snapshot, 6 domain tests; **unbuilt, CI result awaited** (the integration test checks snapshot drift). Next 2b: claims, switch-tenant, admin endpoints.
+- [x] 2026-11-24 (on `develop`): plan 0007 step 2a CI green. Step 2b written: tenant membership on register/first admin, `tenant_id` + `tenant_role` token claims, `GET /auth/tenants`, `POST /auth/switch-tenant`, SuperAdmin `POST /auth/admin/tenants` and `PUT /auth/admin/tenants/{id}/members`, refresh `tenantId` hint, 13 tests; **unbuilt, CI result awaited**. Next: step 3 (User), then 4.
+- [x] 2026-11-24: plan 0008 written: three junior tasks (OpenCode docs event catalogue, OpenCode reserved usernames, Copilot web theme) with issue-ready briefs; nothing started (no GitHub token here). Agents work on `develop`: OpenCode issue comments use `OPENCODE_BASE_BRANCH=develop` (workflow file also on `main`); Copilot is assigned with `base_branch: develop`.
+- [x] 2026-11-24: CI mode set to `auto` (agent checks CI itself). Plan 0007 step 2b CI green (seen: backend run on 6335bec success). OpenCode first runs reviewed and merged into `develop`: `docs/events.md` (claims spot-checked) and reserved usernames at registration (17 names x 2 casings tested). Issue #4 (Copilot, web theme) waits for a UI assignment.
+- [x] 2026-11-25 (on `develop`): plan 0007 step 3 (User) **CI green (seen: backend run b304dca success)**; written: tenant-scoped `UserTenantProfile` (`users.tenant_profiles`, hand-written migration + snapshot, `GET|PUT /users/me/tenant-profile`), `Tenancy__AssumeDefaultTenantId` fallback in `TenantContext` (compose sets it for User), lazy creation instead of an event (deviation recorded in the plan), 18 tests; Step 4 (web tenant switcher, transition window closed in compose, `isCurrent` on `/auth/tenants`) written the same day; web green locally, backend CI awaited. Guardrail lifted once CI is green; `platform_roles` deferred (needs an ADR).
+- [x] 2026-11-25: plan 0007 step 4 **CI green (seen: backend + frontend on f3d9cc9)**; multi-tenancy plan complete (`platform_roles` deferred). Owner reported Swagger UI shows endpoints wrongly (symptom unknown, no device to capture): added `SwaggerSpecTests` to Auth, User and Notification integration tests (spec served, has paths, no dangling `$ref`); **unbuilt, CI awaited**.
+- [ ] Next: owner makes `ci-gate` the required check (repo setting), review OpenCode branches, owner generates `JWT_PRIVATE_KEY_PEM` and does the cut-over, then drop the plain token columns
+- [ ] Owner decisions pending: MinIO image (F7: keep the coollabsio fork, build from source, or switch store), keep or drop the User service in compose

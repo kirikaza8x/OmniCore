@@ -10,12 +10,67 @@ public class LoginCommandHandlerTests
     private readonly IPasswordHasherService _hasher = Substitute.For<IPasswordHasherService>();
     private readonly IJwtTokenService _jwt = TestSupport.Jwt();
     private readonly IRefreshTokenService _refresh = TestSupport.RefreshTokens("refresh-1");
+    private readonly IAuthPolicy _policy = Substitute.For<IAuthPolicy>();
 
-    private LoginCommandHandler Handler() => new(_accounts, _hasher, _jwt, _refresh);
+    private LoginCommandHandler Handler() => new(_accounts, _hasher, _jwt, _refresh, _policy, TestSupport.NoTenants());
 
     private void Finds(Account? account) =>
         _accounts.GetByIdentifierAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns(Task.FromResult(account));
+
+    [Fact]
+    public async Task VerifiedEmailRequired_UnverifiedAccountWithRightPassword_IsToldToVerify()
+    {
+        _policy.RequireVerifiedEmail.Returns(true);
+        var account = TestSupport.NewAccount();
+        Finds(account);
+        _hasher.VerifyPassword(Arg.Any<string>(), Arg.Any<string>()).Returns(true);
+
+        var result = await Handler().Handle(new LoginCommand("alice_01", TestSupport.Password), default);
+
+        Assert.True(result.IsFailure);
+        Assert.Equal("Auth.EmailNotVerified", result.Error.Code);
+        Assert.Equal(OmniCore.Shared.Domain.Abstractions.ErrorType.Forbidden, result.Error.Type);
+        Assert.Empty(account.RefreshTokens);
+    }
+
+    [Fact]
+    public async Task VerifiedEmailRequired_WrongPassword_StaysGeneric()
+    {
+        _policy.RequireVerifiedEmail.Returns(true);
+        Finds(TestSupport.NewAccount());
+        _hasher.VerifyPassword(Arg.Any<string>(), Arg.Any<string>()).Returns(false);
+
+        var result = await Handler().Handle(new LoginCommand("alice_01", "wrong"), default);
+
+        Assert.Equal("Auth.InvalidCredentials", result.Error.Code);
+    }
+
+    [Fact]
+    public async Task VerifiedEmailRequired_VerifiedAccount_SignsIn()
+    {
+        _policy.RequireVerifiedEmail.Returns(true);
+        var account = TestSupport.NewAccount();
+        Assert.True(account.ConfirmEmail().IsSuccess);
+        Finds(account);
+        _hasher.VerifyPassword(Arg.Any<string>(), Arg.Any<string>()).Returns(true);
+
+        var result = await Handler().Handle(new LoginCommand("alice_01", TestSupport.Password), default);
+
+        Assert.True(result.IsSuccess);
+    }
+
+    [Fact]
+    public async Task SwitchOff_UnverifiedAccount_SignsInAsBefore()
+    {
+        var account = TestSupport.NewAccount();
+        Finds(account);
+        _hasher.VerifyPassword(Arg.Any<string>(), Arg.Any<string>()).Returns(true);
+
+        var result = await Handler().Handle(new LoginCommand("alice_01", TestSupport.Password), default);
+
+        Assert.True(result.IsSuccess);
+    }
 
     [Fact]
     public async Task UnknownIdentifier_GetsTheGenericAnswer_AndStillCostsAHashCheck()

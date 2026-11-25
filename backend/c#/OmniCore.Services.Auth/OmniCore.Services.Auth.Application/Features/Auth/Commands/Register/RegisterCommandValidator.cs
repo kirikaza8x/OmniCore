@@ -9,7 +9,8 @@ public sealed class RegisterCommandValidator : AbstractValidator<RegisterCommand
         RuleFor(x => x.Username)
             .NotEmpty().WithMessage("Username is required.")
             .MinimumLength(3).WithMessage("Username must be at least 3 characters long.")
-            .MaximumLength(30).WithMessage("Username cannot exceed 30 characters.");   // matches Username value object + column
+            .MaximumLength(30).WithMessage("Username cannot exceed 30 characters.")   // matches Username value object + column
+            .Must(username => !ReservedUsernames.IsReserved(username)).WithMessage("This username is reserved.");
 
         RuleFor(x => x.Email)
             .NotEmpty().WithMessage("Email is required.")

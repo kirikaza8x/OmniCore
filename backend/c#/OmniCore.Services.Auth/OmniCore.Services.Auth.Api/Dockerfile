@@ -8,7 +8,8 @@ COPY --parents backend/c#/OmniCore.Services.Auth/**/*.csproj ./
 COPY --parents backend/c#/OmniCore.Shared/**/*.csproj ./
 
 # Restore dependencies (cached unless Auth or Shared .csproj files change)
-RUN --mount=type=cache,target=/root/.nuget/packages \
+# Isolated per-service NuGet cache avoids concurrent cross-service restore races; locked serializes same-ID writers.
+RUN --mount=type=cache,id=nuget-auth,target=/root/.nuget/packages,sharing=locked \
     dotnet restore "backend/c#/OmniCore.Services.Auth/OmniCore.Services.Auth.Api/OmniCore.Services.Auth.Api.csproj"
 
 # Copy only the Auth service + Shared source (NOT the whole monorepo)
@@ -17,7 +18,8 @@ COPY backend/c#/OmniCore.Shared/ backend/c#/OmniCore.Shared/
 
 # Publish directly (skips the redundant intermediate `dotnet build` step)
 WORKDIR "/src/backend/c#/OmniCore.Services.Auth/OmniCore.Services.Auth.Api"
-RUN --mount=type=cache,target=/root/.nuget/packages \
+# Isolated per-service NuGet cache avoids concurrent cross-service restore races; locked serializes same-ID writers.
+RUN --mount=type=cache,id=nuget-auth,target=/root/.nuget/packages,sharing=locked \
     dotnet publish "OmniCore.Services.Auth.Api.csproj" -c Release -o /app/publish /p:UseAppHost=false --no-restore
 
 # 2. Final Runtime Stage
@@ -27,7 +29,8 @@ WORKDIR /app
 # curl needed for the container healthcheck (docker-compose.services.yml)
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt,sharing=locked \
-    apt-get update && apt-get install -y --no-install-recommends curl
+    apt-get update && apt-get install -y --no-install-recommends curl \
+    && rm -rf /var/lib/apt/lists/*
 
 # Run as non-root
 RUN adduser --disabled-password --gecos "" appuser

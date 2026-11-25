@@ -5,7 +5,7 @@ off as they land; the status here is also mirrored in `CLAUDE.md`.
 
 ## Phase 0: documentation
 - [x] README, architecture, repo-check, roadmap, owl-editor integration split and checked against the code (F5 of the old list)
-- [x] Junior-agent docs and config: OpenCode ([ADR 0007](decisions/0007-opencode-junior-agent.md), [opencode.md](opencode.md)) and GitHub Copilot ([ADR 0008](decisions/0008-copilot-junior-agent.md), [copilot.md](copilot.md)); both configured and linted locally, first GitHub runs still unverified
+- [x] Junior-agent docs and config: OpenCode ([ADR 0007](decisions/0007-opencode-junior-agent.md), [opencode.md](opencode.md)) (GitHub Copilot was tried and removed 2026-11-25, [ADR 0008](decisions/0008-copilot-junior-agent.md)); configured and linted locally, first GitHub runs still unverified
 
 ## Phase 1: safety net (F1)
 - [x] GitHub Actions `backend.yml`: path-filtered restore, build and selective unit/integration tests (**green 2026-11-20**; scoped by changed area 2026-11-23, see [ci-cd.md](ci-cd.md))
@@ -36,7 +36,9 @@ off as they land; the status here is also mirrored in `CLAUDE.md`.
 - [x] A11: unique-index race on register answers 409 instead of 500 (built by CI, no test yet)
 
 ## Phase 5: contracts (F9)
-- [ ] OpenAPI per service; AsyncAPI / JSON schemas for integration events in `shared/contracts/`, versioned
+- [x] Integration-event catalogue: every event, its publisher and consumers, fields and secret handling in [events.md](events.md) (2026-11-24)
+- [x] JSON schemas for integration events in `shared/contracts/`, versioned (OpenCode, reviewed 2026-11-25; wire casing unverified)
+- [ ] OpenAPI per service
 
 ## Phase 6: messaging simplification (F8)
 - [x] Compose default is `RabbitMQ` (S1: `Both` failed startup validation)
@@ -49,8 +51,9 @@ off as they land; the status here is also mirrored in `CLAUDE.md`.
 Findings go to `repo-check.md`; safe fixes are committed one by one; docs and `CLAUDE.md` updated after each.
 
 ## Phase 8: multi-tenancy (F10)
-- [x] ADR `docs/decisions/0001-multitenancy.md` written and committed (status: proposed)
-- [ ] Owner confirms or amends the ADR (open questions in section 7)
+- [x] ADR `docs/decisions/0001-multitenancy.md` written and committed (status: accepted by delegation 2026-11-24)
+- [x] ADR accepted with answers to section 7 (2026-11-24); plan `docs/plans/0007-multitenancy.md`
+- [x] Step 1 Shared written (unbuilt, CI awaited)
 - [ ] Implementation order after confirmation: Shared -> Auth -> User -> gateway
 
 ## Phase 9: User service (ADR 0004)
@@ -64,7 +67,7 @@ Findings go to `repo-check.md`; safe fixes are committed one by one; docs and `C
 - [ ] Remove `UserSession`; device columns on `RefreshToken` (AI2)
 - [ ] Write `SecurityAuditLog` (login, password change, role change, token reuse)
 - [ ] `AccountDeactivated` / `AccountDeleted` / `AccountEmailChanged` in `Auth.Contracts` + User consumer (UD2)
-- [x] E-mail verification and password reset on `SecurityToken` (AA4, ADR 0009, plan 0004): 4 Auth endpoints, 2 events, Notification mails and links; **written 2026-11-24, unbuilt, CI result awaited**. Not done: enforce verified e-mail at login
+- [x] E-mail verification and password reset on `SecurityToken` (AA4, ADR 0009, plan 0004): 4 Auth endpoints, 2 events, Notification mails and links; **written 2026-11-24, unbuilt, CI result awaited**. Optional enforcement at login: ADR 0010 (`Auth__RequireVerifiedEmail`, 2026-11-24, CI green)
 
 ## Phase 11: shared-layer and auth fixes from the master READMEs
 Order: W1+S2 (real client IP / rate limit), I1, I3 (service-scoped queue names), AP1/AP2/S6, D1, AD1, AA1 (fallback authorization policy), A15, AN1, AI1.

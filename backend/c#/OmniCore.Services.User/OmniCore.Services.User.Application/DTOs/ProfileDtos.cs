@@ -55,3 +55,13 @@ public record AddressRequest(
     string Country,
     string? ZipCode,
     bool IsPrimary);
+
+/// <summary>The caller's profile in the active tenant (ADR 0001).</summary>
+public record TenantProfileResponse(
+    Guid Id,
+    Guid TenantId,
+    string GamerTag,
+    string? CustomAvatarUrl,
+    DateTime JoinedAtUtc);
+
+public record UpsertMyTenantProfileRequest(string GamerTag, string? CustomAvatarUrl);

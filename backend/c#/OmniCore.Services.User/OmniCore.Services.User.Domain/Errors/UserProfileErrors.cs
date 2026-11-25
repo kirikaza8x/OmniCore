@@ -22,6 +22,12 @@ public static class UserProfileErrors
     public static Error TooLong(string field, int max) =>
         Error.Validation($"UserProfile.{field}TooLong", $"{field} cannot exceed {max} characters.");
 
+    public static readonly Error GamerTagEmpty =
+        Error.Validation("UserTenantProfile.GamerTagEmpty", "Gamer tag cannot be empty.");
+
+    public static readonly Error TenantProfileNotFound =
+        Error.NotFound("UserTenantProfile.NotFound", "There is no profile for you in this tenant yet.");
+
     public static readonly Error PhoneInvalid =
         Error.Validation("UserProfile.PhoneInvalid", "Phone number may contain only digits, spaces and + - ( ).");
 

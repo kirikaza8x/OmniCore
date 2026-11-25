@@ -1,0 +1,64 @@
+# Observability backends (ADR 0011). Opt-in: `docker compose --profile observability up -d`
+# Then set in .env (the services read them; empty = no export):
+#   OTEL_LOGS_ENDPOINT=http://seq:5341/ingest/otlp/v1/logs
+#   OTEL_TRACES_ENDPOINT=http://seq:5341/ingest/otlp/v1/traces
+#   OTEL_METRICS_ENDPOINT=http://prometheus:9090/api/v1/otlp/v1/metrics
+# Seq http://localhost:5341  Prometheus http://localhost:9090  Grafana http://localhost:3001 (admin / GRAFANA_ADMIN_PASSWORD)
+# All ports are bound to 127.0.0.1. Seq runs without a login: never expose it. See docs/observability.md.
+services:
+  seq:
+    image: datalust/seq:2025.2
+    container_name: omnicore-seq
+    restart: unless-stopped
+    profiles: [observability]
+    environment:
+      ACCEPT_EULA: "Y"
+    ports:
+      - "127.0.0.1:${SEQ_PORT:-5341}:80"
+    volumes:
+      - seq-data:/data
+    networks:
+      - omnicore-network
+
+  prometheus:
+    image: prom/prometheus:v3.5.0
+    container_name: omnicore-prometheus
+    restart: unless-stopped
+    profiles: [observability]
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.retention.time=${PROMETHEUS_RETENTION:-7d}
+      - --web.enable-otlp-receiver
+    ports:
+      - "127.0.0.1:${PROMETHEUS_PORT:-9090}:9090"
+    volumes:
+      - ./observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    networks:
+      - omnicore-network
+
+  grafana:
+    image: grafana/grafana:12.1.0
+    container_name: omnicore-grafana
+    restart: unless-stopped
+    profiles: [observability]
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?set GRAFANA_ADMIN_PASSWORD in .env}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+    ports:
+      - "127.0.0.1:${GRAFANA_PORT:-3001}:3000"
+    volumes:
+      - ./observability/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./observability/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana-data:/var/lib/grafana
+    depends_on:
+      - prometheus
+    networks:
+      - omnicore-network
+
+volumes:
+  seq-data:
+  prometheus-data:
+  grafana-data:

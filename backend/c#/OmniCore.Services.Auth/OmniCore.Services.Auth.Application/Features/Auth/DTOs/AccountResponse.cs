@@ -5,4 +5,5 @@ public record AccountResponse(
     string? Email,
     string Username,
     bool IsActive,
+    bool IsEmailConfirmed,
     List<string> Roles);

@@ -5,6 +5,7 @@ using OmniCore.Services.Auth.Application.Features.Auth.DTOs;
 using OmniCore.Services.Auth.Domain.Entities;
 using OmniCore.Services.Auth.Domain.Repositories;
 using OmniCore.Shared.Application.Abstractions.Messaging;
+using OmniCore.Shared.Application.Abstractions.Time;
 using OmniCore.Shared.Domain.Abstractions;
 
 public record RegisterCommand(
@@ -16,7 +17,9 @@ public sealed class RegisterCommandHandler(
     IAccountRepository accountRepository,
     IPasswordHasherService passwordHasher,
     IJwtTokenService jwtTokenService,
-    IRefreshTokenService refreshTokenService) : ICommandHandler<RegisterCommand, AuthResponse>
+    IRefreshTokenService refreshTokenService,
+    ITenantRepository tenantRepository,
+    IDateTimeProvider clock) : ICommandHandler<RegisterCommand, AuthResponse>
 {
     public async Task<Result<AuthResponse>> Handle(
         RegisterCommand request,
@@ -68,12 +71,22 @@ public sealed class RegisterCommandHandler(
         // 5. Persist Account (Dispatches AccountCreatedDomainEvent -> assigns default "User" role)
         accountRepository.Add(account);
 
+        // 5b. Everyone joins the default tenant as a plain member (ADR 0001); an admin adds other memberships.
+        var membership = TenantMembership.Create(Tenant.DefaultId, account.Id, TenantRoles.Member, clock.UtcNow);
+        if (membership.IsFailure)
+        {
+            return Result.Failure<AuthResponse>(membership.Error);
+        }
+
+        tenantRepository.Add(membership.Value);
+
         // 6. Generate Access Token containing default "User" role
         var accessToken = jwtTokenService.GenerateToken(
             account.Id.Value,
             account.Email?.Value,
             account.Username.Value,
-            roles: ["User"]
+            roles: ["User"],
+            tenant: new TenantClaim(Tenant.DefaultId.Value, TenantRoles.Member)
         );
 
         return Result.Success(new AuthResponse(

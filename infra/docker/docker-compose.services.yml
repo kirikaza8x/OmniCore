@@ -17,6 +17,12 @@ x-service-env: &service-env
   Logging__LogLevel__Microsoft.AspNetCore: ${LOG_LEVEL_ASPNETCORE:-Warning}
   Logging__LogLevel__Microsoft.EntityFrameworkCore.Database.Command: ${EF_CORE_LOG_LEVEL:-Warning}
 
+  # Observability (ADR 0011): off while the endpoints are empty. Backends: docker-compose.observability.yml (profile observability).
+  OTEL_EXPORTER_OTLP_LOGS_ENDPOINT: ${OTEL_LOGS_ENDPOINT:-}
+  OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: ${OTEL_TRACES_ENDPOINT:-}
+  OTEL_EXPORTER_OTLP_METRICS_ENDPOINT: ${OTEL_METRICS_ENDPOINT:-}
+  OTEL_EXPORTER_OTLP_PROTOCOL: http/protobuf
+
   # Database (the connection string itself is per service)
   Database__MaxRetryCount: ${DB_MAX_RETRY_COUNT:-3}
   Database__CommandTimeout: ${DB_COMMAND_TIMEOUT:-30}
@@ -92,6 +98,7 @@ services:
       <<: *service-env
       Database__ConnectionString: Host=postgres;Port=5432;Database=${AUTH_DB_NAME};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
       Redis__InstanceName: ${AUTH_REDIS_INSTANCE_NAME:-OmniCore_Auth_}
+      OTEL_SERVICE_NAME: omnicore-auth
       # Auth signs the tokens. RS256: set JWT_PRIVATE_KEY_PEM and Auth signs with it and publishes the public key
       # (ADR 0003 step 4).
       Jwt__PrivateKeyPem: ${JWT_PRIVATE_KEY_PEM:-}
@@ -99,6 +106,8 @@ services:
       Jwt__ExpiryMinutes: ${JWT_EXPIRY_MINUTES:-60}
       # First administrator (A15): created once on a fresh database when all three are set and no admin exists.
       # Password: 12+ characters. Remove these three lines from .env after the first start if you like.
+      # ADR 0010: true = only accounts with a verified e-mail can sign in (needs working SMTP). Off by default.
+      Auth__RequireVerifiedEmail: ${REQUIRE_VERIFIED_EMAIL:-false}
       Admin__Email: ${ADMIN_EMAIL:-}
       Admin__Username: ${ADMIN_USERNAME:-}
       Admin__Password: ${ADMIN_PASSWORD:-}
@@ -117,8 +126,13 @@ services:
       <<: *service-env
       Database__ConnectionString: Host=postgres;Port=5432;Database=${USER_DB_NAME};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
       Redis__InstanceName: ${USER_REDIS_INSTANCE_NAME:-OmniCore_User_}
+      OTEL_SERVICE_NAME: omnicore-user
       # User only validates tokens issued by Auth: it fetches the public keys from Auth's JWKS endpoint.
       Jwt__JwksUrl: ${JWT_JWKS_URL:-http://auth-api:8080/.well-known/jwks.json}
+      # Transition window (ADR 0001, plan 0007 step 4): CLOSED by default, so a token without a tenant_id claim gets no
+      # tenant (403). To re-open it for old tokens, set TENANCY_ASSUME_DEFAULT_TENANT_ID to Auth's default tenant id
+      # (7e4a0001-0000-4000-8000-000000000001); access tokens are short-lived, so a day is plenty.
+      Tenancy__AssumeDefaultTenantId: ${TENANCY_ASSUME_DEFAULT_TENANT_ID:-}
 
   notification-api:
     <<: *service-base
@@ -132,6 +146,7 @@ services:
       <<: *service-env
       Database__ConnectionString: Host=postgres;Port=5432;Database=${NOTIFICATION_DB_NAME};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
       Redis__InstanceName: ${NOTIFICATION_REDIS_INSTANCE_NAME:-OmniCore_Notification_}
+      OTEL_SERVICE_NAME: omnicore-notification
       Jwt__JwksUrl: ${JWT_JWKS_URL:-http://auth-api:8080/.well-known/jwks.json}
       # E-mail: Mailpit in dev (nothing leaves the machine, read it at http://localhost:8025). Production: set SMTP_* to a real relay.
       # Where users open the links in account e-mails (password reset, e-mail verification): the web client's public URL.

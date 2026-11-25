@@ -45,7 +45,7 @@ Integration events (`Shared.Contracts`) go through MassTransit. `MessageBroker__
 (default `RabbitMQ`; the value `Both` is **rejected** at startup, and the compose default was changed from `Both`). The outbox is the **MassTransit EF Core outbox**
 (`AddEntityFrameworkOutbox` + `UseBusOutbox`, switched by `MessageBroker__EnableOutbox`, default on); the comment in
 `MessageBrokerConfig` says it only applies to the RabbitMQ provider. The older hand-written outbox/inbox was removed;
-`IOutboxService` remains as an abstraction. Redis is the distributed cache, MinIO is object storage.
+`IOutboxService` remains as an abstraction. Redis is the distributed cache, MinIO is object storage. Every integration event, with its publisher, consumers, fields and secret handling, is catalogued in [events.md](events.md).
 
 ## Runtime layout (`infra/docker`)
 `docker-compose.yml` includes `database` (postgres:17), `infra` (RabbitMQ, Redis, MinIO, Kafka + Kafka UI),

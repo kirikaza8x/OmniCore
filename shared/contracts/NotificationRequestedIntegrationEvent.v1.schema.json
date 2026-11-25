@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "NotificationRequestedIntegrationEvent.v1.schema.json",
+  "title": "NotificationRequestedIntegrationEvent",
+  "description": "Published by any service that references Notification.Contracts (no production publisher yet); consumed by Notification, which resolves the channel and sends through SendNotificationCommand. Contract source: backend/c#/OmniCore.Services.Notification/OmniCore.Services.Notification.Contracts/Events/NotificationRequestedIntegrationEvent.cs.",
+  "type": "object",
+  "properties": {
+    "Channel": {
+      "type": "string",
+      "description": "\"Email\" or \"Webhook\", parsed case-insensitively; an unknown value is logged and dropped."
+    },
+    "Recipient": {
+      "type": "string",
+      "description": "An e-mail address, or the configured webhook endpoint name for Webhook."
+    },
+    "TemplateKey": {
+      "type": "string",
+      "description": "Fills the {{placeholders}} of the named built-in template."
+    },
+    "Model": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      },
+      "description": "Values for the template placeholders. There is no dedicated secret field: publishers must not put secrets here, because the values end up in the rendered message."
+    },
+    "DeduplicationKey": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Optional; when null the handler uses event:{Id}. Makes a broker redelivery harmless."
+    },
+    "Id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Inherited from IntegrationEvent."
+    },
+    "OccurredOnUtc": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Inherited from IntegrationEvent."
+    }
+  },
+  "required": [
+    "Channel",
+    "Recipient",
+    "TemplateKey",
+    "Model",
+    "Id",
+    "OccurredOnUtc"
+  ],
+  "additionalProperties": false
+}

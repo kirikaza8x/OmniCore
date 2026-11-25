@@ -4,24 +4,37 @@ public interface ITenantScoped
 {
     TenantId TenantId { get; }
 }
+/// <summary>Tenant identifier (ADR 0001, a Guid stored as uuid). The empty value is never a valid tenant.</summary>
 public readonly record struct TenantId
 {
-    public string Value { get; }
+    public Guid Value { get; }
 
-    public TenantId(string value)
+    public TenantId(Guid value)
     {
-        if (string.IsNullOrWhiteSpace(value))
+        if (value == Guid.Empty)
         {
-            throw new ArgumentException("Tenant identifier cannot be null or empty.", nameof(value));
+            throw new ArgumentException("Tenant identifier cannot be empty.", nameof(value));
         }
 
-        Value = value.ToLowerInvariant().Trim();
+        Value = value;
     }
 
-    public static TenantId From(string value) => new(value);
-    public static implicit operator string(TenantId tenantId) => tenantId.Value;
-    
-    public override string ToString() => Value;
+    public static TenantId New() => new(Guid.NewGuid());
+    public static TenantId From(Guid value) => new(value);
+
+    public static bool TryParse(string? text, out TenantId tenantId)
+    {
+        if (Guid.TryParse(text, out Guid guid) && guid != Guid.Empty)
+        {
+            tenantId = new TenantId(guid);
+            return true;
+        }
+
+        tenantId = default;
+        return false;
+    }
+
+    public override string ToString() => Value.ToString();
 }
 
 public abstract class TenantEntity<TId> : Entity<TId>, ITenantScoped
