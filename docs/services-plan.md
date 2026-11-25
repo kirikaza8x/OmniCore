@@ -29,7 +29,7 @@ OmniCore is a learning project first. The best way to keep learning *and* get so
 ## Suggested order
 1. Fix the entity items that unblock events (roadmap Phase 10), then **Notification** (verify e-mail, reset password), with **Mailpit** and **Seq** added to compose.
 2. **Observability** slice, then run the cloud-sim drills with it on.
-3. **Notes** (simplest real CRUD you will use daily) -> **Scheduler** -> **Job tracker** or **Expense tracker** (pick whichever you would open first thing in the morning).
+3. **Notes** (**wait list, on hold by the owner 2026-11-25**: tenancy is done, nothing blocks it, start only when asked; simplest real CRUD you will use daily) -> **Scheduler** -> **Job tracker** or **Expense tracker** (pick whichever you would open first thing in the morning).
 4. **File/Media** when the first feature needs attachments.
 5. Deploy to a VPS; fitness and webhook hub when the platform feels boring.
 
