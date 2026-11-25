@@ -426,6 +426,45 @@ namespace OmniCore.Services.User.Infrastructure.Persistence.Migrations
                     b.ToTable("user_settings", "users");
                 });
 
+            modelBuilder.Entity("OmniCore.Services.User.Domain.Entities.UserTenantProfile", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("CustomAvatarUrl")
+                        .HasMaxLength(2048)
+                        .HasColumnType("character varying(2048)")
+                        .HasColumnName("custom_avatar_url");
+
+                    b.Property<string>("GamerTag")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("gamer_tag");
+
+                    b.Property<DateTime>("JoinedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("joined_at_utc");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_tenant_profiles");
+
+                    b.HasIndex("UserId", "TenantId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_tenant_profiles_user_id_tenant_id");
+
+                    b.ToTable("tenant_profiles", "users");
+                });
+
             modelBuilder.Entity("MassTransit.EntityFrameworkCoreIntegration.OutboxMessage", b =>
                 {
                     b.HasOne("MassTransit.EntityFrameworkCoreIntegration.OutboxState", null)
@@ -462,6 +501,16 @@ namespace OmniCore.Services.User.Infrastructure.Persistence.Migrations
                         .HasConstraintName("fk_user_settings_user_profiles_user_id");
 
                     b.Navigation("UserProfile");
+                });
+
+            modelBuilder.Entity("OmniCore.Services.User.Domain.Entities.UserTenantProfile", b =>
+                {
+                    b.HasOne("OmniCore.Services.User.Domain.Entities.UserProfile", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_tenant_profiles_user_profiles_user_id");
                 });
 
             modelBuilder.Entity("OmniCore.Services.User.Domain.Entities.UserProfile", b =>

@@ -36,10 +36,6 @@ public class UserProfile : AggregateRoot<UserId>, IAuditableEntity, ISoftDeletab
     private readonly List<UserAddress> _addresses = [];
     public IReadOnlyCollection<UserAddress> Addresses => _addresses.AsReadOnly();
 
-    /// <summary>Not stored until the owner decides on multi-tenancy (ADR 0001, ADR 0004). Never filled today.</summary>
-    private readonly List<UserTenantProfile> _tenantProfiles = [];
-    public IReadOnlyCollection<UserTenantProfile> TenantProfiles => _tenantProfiles.AsReadOnly();
-
     public bool IsDeleted { get; private set; }
     public DateTime? DeletedAtUtc { get; private set; }
 

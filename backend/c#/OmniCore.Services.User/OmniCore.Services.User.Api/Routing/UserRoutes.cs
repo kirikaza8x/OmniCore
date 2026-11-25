@@ -13,6 +13,7 @@ public sealed class UserRoutes : BaseRouteModule
     public string MyAvatar => "me/avatar";
     public string MyAddresses => "me/addresses";
     public string MyAddress => "me/addresses/{addressId:guid}";
+    public string MyTenantProfile => "me/tenant-profile";
     public string PublicProfile => "{id:guid}";
     public string ProfileDetails => "{id:guid}/details";
 }

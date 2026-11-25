@@ -1,6 +1,7 @@
 namespace OmniCore.Shared.Infrastructure.Services.Authentication;
 
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Configuration;
 using OmniCore.Shared.Application.Abstractions.Tenancy;
 using OmniCore.Shared.Domain.DDD;
 using TenantIdValue = OmniCore.Shared.Domain.DDD.TenantId;
@@ -9,9 +10,12 @@ using TenantIdValue = OmniCore.Shared.Domain.DDD.TenantId;
 /// Scoped tenant context (ADR 0001). Order: system scope, explicit scope (consumers and jobs), then the token's
 /// <c>tenant_id</c> claim. Request headers and bodies are never read.
 /// </summary>
-public sealed class TenantContext(IHttpContextAccessor httpContextAccessor) : ITenantContext
+public sealed class TenantContext(IHttpContextAccessor httpContextAccessor, IConfiguration configuration) : ITenantContext
 {
     public const string ClaimType = "tenant_id";
+
+    /// <summary>Transition window (ADR 0001, step 3): a signed-in caller whose token has no tenant claim is treated as this tenant. Unset = no fallback.</summary>
+    public const string AssumeDefaultTenantKey = "Tenancy:AssumeDefaultTenantId";
 
     private TenantId? _explicit;
     private bool _system;
@@ -32,8 +36,20 @@ public sealed class TenantContext(IHttpContextAccessor httpContextAccessor) : IT
                 return _explicit;
             }
 
-            string? claim = httpContextAccessor.HttpContext?.User.FindFirst(ClaimType)?.Value;
-            return TenantIdValue.TryParse(claim, out TenantIdValue parsed) ? parsed : null;
+            var user = httpContextAccessor.HttpContext?.User;
+            if (TenantIdValue.TryParse(user?.FindFirst(ClaimType)?.Value, out TenantIdValue parsed))
+            {
+                return parsed;
+            }
+
+            // Only for a signed-in caller: an anonymous call never gets a tenant.
+            if (user?.Identity?.IsAuthenticated == true
+                && TenantIdValue.TryParse(configuration[AssumeDefaultTenantKey], out TenantIdValue assumed))
+            {
+                return assumed;
+            }
+
+            return null;
         }
     }
 

@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using MediatR;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Configuration;
 using OmniCore.Shared.Application.Abstractions.Tenancy;
 using OmniCore.Shared.Application.Behaviors;
 using OmniCore.Shared.Contracts.Events;
@@ -12,14 +13,19 @@ namespace OmniCore.Shared.Tests;
 
 public class TenancyTests
 {
-    private static TenantContext ContextWithClaim(string? tenantClaim)
+    private static TenantContext ContextWithClaim(string? tenantClaim, string? assumeDefault = null)
     {
         var http = new DefaultHttpContext();
         var claims = tenantClaim is null ? [] : new[] { new Claim(TenantContext.ClaimType, tenantClaim) };
         http.User = new ClaimsPrincipal(new ClaimsIdentity(claims, "test"));
         var accessor = Substitute.For<IHttpContextAccessor>();
         accessor.HttpContext.Returns(http);
-        return new TenantContext(accessor);
+        var config = new ConfigurationBuilder()
+            .AddInMemoryCollection(assumeDefault is null
+                ? new Dictionary<string, string?>()
+                : new Dictionary<string, string?> { [TenantContext.AssumeDefaultTenantKey] = assumeDefault })
+            .Build();
+        return new TenantContext(accessor, config);
     }
 
     [Fact]
@@ -46,6 +52,34 @@ public class TenancyTests
     public void Context_without_a_valid_claim_has_no_tenant(string? claim)
     {
         Assert.Null(ContextWithClaim(claim).TenantId);
+    }
+
+    [Fact]
+    public void A_signed_in_token_without_the_claim_gets_the_configured_default_during_the_window()
+    {
+        var assumed = TenantId.New();
+
+        Assert.Equal(assumed, ContextWithClaim(null, assumed.ToString()).TenantId);
+    }
+
+    [Fact]
+    public void The_claim_wins_over_the_configured_default()
+    {
+        var claim = TenantId.New();
+
+        Assert.Equal(claim, ContextWithClaim(claim.ToString(), TenantId.New().ToString()).TenantId);
+    }
+
+    [Fact]
+    public void An_anonymous_caller_never_gets_the_default()
+    {
+        var accessor = Substitute.For<IHttpContextAccessor>();
+        accessor.HttpContext.Returns(new DefaultHttpContext());
+        var config = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?> { [TenantContext.AssumeDefaultTenantKey] = TenantId.New().ToString() })
+            .Build();
+
+        Assert.Null(new TenantContext(accessor, config).TenantId);
     }
 
     [Fact]
