@@ -1,5 +1,7 @@
 # Integration events
 
+Machine-readable JSON Schemas for these events are in [`shared/contracts/`](../shared/contracts/README.md).
+
 Every record that implements `IIntegrationEvent` in a `*.Contracts` project, checked against the code on `develop`
 (2026-11-24). The contract file is the source of truth; publisher and consumer paths are given so each claim can be
 checked. The messaging wiring itself is described in [architecture.md](architecture.md#messaging).
