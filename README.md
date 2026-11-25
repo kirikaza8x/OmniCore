@@ -4,7 +4,7 @@ OmniCore is a modular, service-oriented backend with Docker infrastructure and a
 (`frontend/web`, see its README). **Only the C# (.NET 9) backend exists today**; services in other languages (for example the Python `owl_editor` service) are planned, see
 [docs/integrations/owl-editor.md](docs/integrations/owl-editor.md).
 
-**Status:** working prototype, not production-ready. All three backend services (Auth, User, Notification) build in CI and have automated unit and integration tests; integration tests use Postgres and RabbitMQ testcontainers. The local Compose stack was smoke-tested on 2026-11-25; all three APIs and required infrastructure reported healthy. Build cache rationale is recorded in [ADR 0010](docs/decisions/0010-dotnet-nuget-build-cache.md). See [docs/repo-check.md](docs/repo-check.md) for the numbered findings and [docs/roadmap.md](docs/roadmap.md) for the plan.
+**Status:** working prototype, not production-ready. All three backend services (Auth, User, Notification) build in CI and have automated unit and integration tests; integration tests use Postgres and RabbitMQ testcontainers. The local Compose stack was smoke-tested on 2026-11-25; all three APIs and required infrastructure reported healthy. Build cache rationale is recorded in [ADR 0012](docs/decisions/0012-dotnet-nuget-build-cache.md). See [docs/repo-check.md](docs/repo-check.md) for the numbered findings and [docs/roadmap.md](docs/roadmap.md) for the plan.
 
 ## Documentation
 | Doc | What is in it |
@@ -17,7 +17,7 @@ OmniCore is a modular, service-oriented backend with Docker infrastructure and a
 | [docs/plans/](docs/plans/README.md) | one Markdown plan per non-trivial change |
 | [docs/opencode.md](docs/opencode.md) | free-model OpenCode junior agent and its roles |
 | [docs/integrations/owl-editor.md](docs/integrations/owl-editor.md) | how the Python `owl_editor` service would plug in |
-| `docs/decisions/` | architecture decision records (ADRs), including [NuGet cache isolation for parallel Docker builds](docs/decisions/0010-dotnet-nuget-build-cache.md) |
+| `docs/decisions/` | architecture decision records (ADRs), including [NuGet cache isolation for parallel Docker builds](docs/decisions/0012-dotnet-nuget-build-cache.md) |
 
 ## Repository structure
 ```
