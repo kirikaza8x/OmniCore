@@ -337,9 +337,10 @@ jobs:
           fail=0
           check() {
             name="$1"; url="$2"
-            out=$(curl -s -m 30 -D - "$url" 2>&1 | head -c 1500)
-            body=$(curl -s -m 30 "$url")
-            if echo "$body" | python3 -c "import sys,json;d=json.load(sys.stdin);assert str(d.get('openapi','')).startswith('3.'), 'no openapi field'; assert d.get('paths'), 'no paths'" 2>/tmp/err; then
+            curl -s -m 30 -D /tmp/h.txt -o /tmp/b.txt "$url" || true
+            out="$(head -c 600 /tmp/h.txt 2>/dev/null) BODY: $(head -c 700 /tmp/b.txt 2>/dev/null)"
+            body=$(cat /tmp/b.txt 2>/dev/null || true)
+            if python3 -c "import json;d=json.load(open('/tmp/b.txt'));assert str(d.get('openapi','')).startswith('3.'), 'no openapi field'; assert d.get('paths'), 'no paths'" 2>/tmp/err; then
               echo "ok   $name"
             else
               msg="$name $url: $(cat /tmp/err | tail -1) :: $out"
