@@ -1,0 +1,80 @@
+name: branch-cleanup
+
+# Deletes branches that are no longer needed. develop, main and protected branches are never touched.
+#   - merged: the branch tip is already contained in develop or main  -> deleted
+#   - stale opencode/**: not merged, no open PR, last commit older than STALE_DAYS -> deleted
+#   - anything else (unmerged, other prefixes) is only listed in the job summary
+# Scheduled runs delete for real; a manual run defaults to dry-run (untick "dry_run" to delete).
+# schedule and workflow_dispatch only work for workflow files on the default branch (main).
+
+on:
+  schedule:
+    - cron: "0 3 * * 1"   # Mondays 03:00 UTC
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: List what would be deleted, delete nothing
+        type: boolean
+        default: true
+
+permissions: {}
+
+concurrency:
+  group: branch-cleanup
+  cancel-in-progress: false
+
+env:
+  KEEP: develop main
+  STALE_DAYS: "14"
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write        # delete refs
+      pull-requests: read    # skip branches with an open PR
+    env:
+      GH_TOKEN: ${{ github.token }}
+      DRY: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run || 'false' }}
+    steps:
+      - name: Delete merged and stale branches
+        run: |
+          set +e
+          repo="$GITHUB_REPOSITORY"
+          open_heads="$(gh pr list --repo "$repo" --state open --limit 200 --json headRefName --jq '.[].headRefName')"
+          now=$(date +%s); limit=$((STALE_DAYS*86400))
+          deleted=""; kept=""; report=""
+          while IFS=$'\t' read -r name protected sha; do
+            [ -n "$name" ] || continue
+            case " $KEEP " in *" $name "*) continue ;; esac
+            [ "$protected" = true ] && { kept="$kept\n- \`$name\` (protected)"; continue; }
+            if printf '%s\n' "$open_heads" | grep -qxF "$name"; then kept="$kept\n- \`$name\` (open PR)"; continue; fi
+            why=""
+            for base in develop main; do
+              ahead="$(gh api "repos/$repo/compare/$base...$sha" --jq .ahead_by 2>/dev/null)"
+              [ "$ahead" = 0 ] && { why="merged into $base"; break; }
+            done
+            if [ -z "$why" ]; then
+              case "$name" in
+                opencode/*)
+                  date="$(gh api "repos/$repo/commits/$sha" --jq .commit.committer.date)"
+                  age=$(( now - $(date -d "$date" +%s) ))
+                  [ "$age" -gt "$limit" ] && why="unmerged opencode branch older than $STALE_DAYS days" ;;
+              esac
+            fi
+            if [ -z "$why" ]; then kept="$kept\n- \`$name\` (unmerged, left alone: decide by hand)"; continue; fi
+            if [ "$DRY" = true ]; then
+              deleted="$deleted\n- \`$name\` would be deleted: $why"
+            elif gh api -X DELETE "repos/$repo/git/refs/heads/$name" >/dev/null 2>&1; then
+              deleted="$deleted\n- \`$name\` deleted: $why"
+            else
+              kept="$kept\n- \`$name\` (delete failed)"
+            fi
+          done < <(gh api --paginate "repos/$repo/branches?per_page=100" --jq '.[] | [.name, .protected, .commit.sha] | @tsv')
+          {
+            echo "## branch-cleanup (dry run: $DRY)"
+            echo "### Deleted / to delete"; printf '%b\n' "${deleted:-- none}"
+            echo "### Kept"; printf '%b\n' "${kept:-- none}"
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit 0

@@ -4,7 +4,7 @@ name: opencode
 #
 #   agent   : read-only token, no secrets. Runs OpenCode, then screens the result (guard.sh) and builds/tests it
 #             (validate.sh). Its only output is a patch + a report (artifact). It cannot push.
-#   publish : applies the screened patch, pushes branch opencode/<run>, opens a DRAFT pull request, starts backend/frontend CI
+#   publish : applies the screened patch, pushes branch opencode/<role>-<task>-<run>, opens a DRAFT pull request, starts backend/frontend CI
 #             on that branch. Never merges anything.
 #   notify  : says what happened (job summary; plus a comment on the issue when started from one).
 #
@@ -220,7 +220,6 @@ jobs:
       BASE: ${{ needs.agent.outputs.base }}
       ROLE: ${{ needs.agent.outputs.role }}
       MODEL: ${{ needs.agent.outputs.model }}
-      BRANCH: opencode/${{ github.run_id }}-${{ github.run_attempt }}
       ISSUE: ${{ github.event.issue.number }}
     outputs:
       pr_url: ${{ steps.pr.outputs.pr_url }}
@@ -234,6 +233,12 @@ jobs:
         with:
           name: opencode-result
           path: ${{ runner.temp }}/oc
+
+      - name: Name the branch
+        run: |
+          # opencode/<role>-<what-it-was-for>-<run id>, e.g. opencode/implement-web-theme-4538...
+          slug="$(head -n1 "$OC_OUT/task.txt" | tr 'A-Z' 'a-z' | tr -cs 'a-z0-9' '-' | sed 's/^-*//; s/-*$//' | cut -c1-40 | sed 's/-*$//')"
+          echo "BRANCH=opencode/${ROLE}-${slug:-task}-${GITHUB_RUN_ID}" >> "$GITHUB_ENV"
 
       - name: Apply the screened patch and push
         run: |
