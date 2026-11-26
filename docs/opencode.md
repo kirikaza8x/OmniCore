@@ -73,4 +73,10 @@ The agent tasks API is public preview. It needs a user-to-server token (PAT, OAu
 `custom_agent`, `custom_instructions`, `base_branch` and `target_repo`.
 
 ## Known limit of the patch guard
-The guard refuses "unusual file names", which includes Next.js route groups such as `frontend/web/src/app/(app)/layout.tsx` (parentheses). Issue #4 (web theme) was refused for that reason on 2026-11-25 (nothing changed); do tasks that touch such paths by hand, or give OpenCode only the files outside `(app)`.
+The guard allows letters, digits and `. _ / @ + # ( ) -` in changed paths, so Next.js route groups such as `(app)` pass (2026-11-26; issue #4 was refused on 2026-11-25 before this). Spaces, quotes and other odd characters are still rejected as "unusual file names"; do those tasks by hand.
+
+## Done-notification (no waiting)
+1. The `notify` job comments on the issue when the run ends (draft opened, report, or why nothing was produced).
+2. `.github/workflows/opencode-ci-report.yml` runs when `backend`/`frontend` finish on an `opencode/**` branch, reads the `OpenCode-Issue: #N` trailer of the branch head commit and comments "CI <result>, ready for review" on that issue (label `ready-for-review` on success, `ci-failed` otherwise).
+3. GitHub emails/pushes the owner for those comments natively. A Claude session cannot be woken by a workflow: Claude looks at issue comments / branches once at the next natural point (CI mode `auto`), never in a poll loop.
+Like `opencode.yml`, the report workflow only fires once it exists on `main`.
