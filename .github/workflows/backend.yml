@@ -309,11 +309,69 @@ jobs:
       - name: Gateway config is valid
         run: docker run --rm -v "$PWD/infra/docker/nginx/nginx.conf:/etc/nginx/nginx.conf:ro" nginx:1.27-alpine nginx -t
 
+  # First real start of the whole stack (issue #8): builds the three service images, starts everything with the example
+  # settings and fetches every Swagger spec both directly and through the gateway. A bad answer is printed in full as an
+  # annotation, so a failure explains itself without anyone pasting logs.
+  gateway-smoke:
+    needs: changes
+    if: needs.changes.outputs.infra == 'true' || needs.changes.outputs.workflow == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - name: Start the stack
+        shell: bash
+        working-directory: infra/docker
+        run: |
+          cp .env.example .env
+          if ! docker compose up -d --build --wait --wait-timeout 900; then
+            logs=$(docker compose ps -a 2>&1; docker compose logs --tail 30 auth-api user-api notification-api gateway 2>&1)
+            logs="${logs//'%'/'%25'}"; logs="${logs//$'\r'/}"; logs="${logs//$'\n'/'%0A'}"
+            echo "::error title=stack-start-logs::${logs:0:6000}"
+            exit 1
+          fi
+          docker compose ps
+      - name: Swagger specs are valid OpenAPI (direct and through the gateway)
+        shell: bash
+        run: |
+          fail=0
+          check() {
+            name="$1"; url="$2"
+            curl -s -m 30 -D /tmp/h.txt -o /tmp/b.txt "$url" || true
+            out="$(head -c 600 /tmp/h.txt 2>/dev/null) BODY: $(head -c 700 /tmp/b.txt 2>/dev/null)"
+            body=$(cat /tmp/b.txt 2>/dev/null || true)
+            if python3 -c "import json;d=json.load(open('/tmp/b.txt'));assert str(d.get('openapi','')).startswith('3.'), 'no openapi field'; assert d.get('paths'), 'no paths'" 2>/tmp/err; then
+              echo "ok   $name"
+            else
+              msg="$name $url: $(cat /tmp/err | tail -1) :: $out"
+              msg="${msg//'%'/'%25'}"; msg="${msg//$'\r'/}"; msg="${msg//$'\n'/'%0A'}"
+              echo "::error title=bad-spec-$name::${msg:0:3000}"
+              fail=1
+            fi
+          }
+          for pair in "auth:5001" "user:5002" "notification:5003"; do
+            check "direct-${pair%%:*}" "http://localhost:${pair##*:}/swagger/v1/swagger.json"
+          done
+          for n in auth user notification; do
+            check "gateway-$n" "http://localhost:8080/specs/$n.json"
+          done
+          exit $fail
+      - name: Swagger UI page is served by the gateway
+        shell: bash
+        run: |
+          code=$(curl -s -o /tmp/ui.html -w '%{http_code}' -m 30 -L http://localhost:8080/swagger/)
+          echo "swagger ui http $code"
+          grep -q "swagger-ui" /tmp/ui.html || { echo "::error title=swagger-ui-page::http $code, body starts: $(head -c 300 /tmp/ui.html | tr '\n' ' ')"; exit 1; }
+      - name: Stack logs on failure
+        if: failure()
+        working-directory: infra/docker
+        run: docker compose logs --tail 40 auth-api gateway swagger-ui 2>&1 | tail -150
+
   # One stable check when this workflow runs. Skipped jobs are fine; a failed or cancelled selected job is not.
   # A docs-only change does not start the workflow at all, so do not require this check globally unless docs-only
   # PRs are exempt from the rule.
   ci-gate:
-    needs: [changes, build-and-unit-test, integration-test, infra-config]
+    needs: [changes, build-and-unit-test, integration-test, infra-config, gateway-smoke]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -325,9 +383,10 @@ jobs:
           BUILD: ${{ needs.build-and-unit-test.result }}
           INTEGRATION: ${{ needs.integration-test.result }}
           INFRA: ${{ needs.infra-config.result }}
+          SMOKE: ${{ needs.gateway-smoke.result }}
         run: |
           set -euo pipefail
-          for entry in "changes:$CHANGES" "build-and-unit-test:$BUILD" "integration-test:$INTEGRATION" "infra-config:$INFRA"; do
+          for entry in "changes:$CHANGES" "build-and-unit-test:$BUILD" "integration-test:$INTEGRATION" "infra-config:$INFRA" "gateway-smoke:$SMOKE"; do
             name="${entry%%:*}"
             result="${entry#*:}"
             case "$result" in

@@ -55,7 +55,9 @@ public static class SwaggerExtensions
             ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
         });
 
-        app.UseSwagger();
+        // Emit OpenAPI 3.0: the gateway's Swagger UI (pinned v5.17.x) only recognises 3.0.x and 3.1.x and otherwise says
+        // "does not specify a valid version field" (issue #8). 3.0 is understood by every UI and client generator.
+        app.UseSwagger(options => options.OpenApiVersion = OpenApiSpecVersion.OpenApi3_0);
         app.UseSwaggerUI(options =>
         {
             options.SwaggerEndpoint($"{version}/swagger.json", title); 

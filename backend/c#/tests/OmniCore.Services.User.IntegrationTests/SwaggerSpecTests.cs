@@ -21,8 +21,8 @@ public class SwaggerSpecTests(UserApiFactory factory)
 
         // Swagger UI refuses a document without this field ("does not specify a valid version field").
         Assert.True(root.TryGetProperty("openapi", out var version) && version.ValueKind == JsonValueKind.String
-            && System.Text.RegularExpressions.Regex.IsMatch(version.GetString()!, @"^3\.\d+\.\d+$"),
-            "Missing or odd openapi version. Top-level keys: " + string.Join(", ", root.EnumerateObject().Select(x => x.Name)) + "; head: " + text[..Math.Min(text.Length, 200)]);
+            && System.Text.RegularExpressions.Regex.IsMatch(version.GetString()!, @"^3\.[01]\.\d+$"),
+            "Missing or unsupported openapi version (Swagger UI 5.17 knows 3.0.x and 3.1.x). Top-level keys: " + string.Join(", ", root.EnumerateObject().Select(x => x.Name)) + "; head: " + text[..Math.Min(text.Length, 200)]);
         Assert.Contains("json", response.Content.Headers.ContentType?.MediaType ?? "", StringComparison.OrdinalIgnoreCase);
 
         var paths = root.GetProperty("paths").EnumerateObject().ToList();

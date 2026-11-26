@@ -1,4 +1,4 @@
-# ADR 0010: Isolate NuGet caches for parallel service image builds
+# ADR 0012: Isolate NuGet caches for parallel service image builds
 
 - Status: accepted
 - Scope: Auth, User, and Notification API Dockerfiles

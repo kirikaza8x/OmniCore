@@ -1,4 +1,7 @@
 @import "tailwindcss";
 
-:root { color-scheme: light dark; }
+/* Dark mode is class-based so the saved theme setting (Light / Dark / System) decides, not only the OS. */
+@custom-variant dark (&:where(.dark, .dark *));
+:root { color-scheme: light; }
+:root.dark { color-scheme: dark; }
 body { @apply bg-white text-zinc-900 antialiased dark:bg-zinc-950 dark:text-zinc-100; }

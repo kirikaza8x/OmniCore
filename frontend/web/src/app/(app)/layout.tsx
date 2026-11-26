@@ -1,9 +1,13 @@
 import { TenantSwitcher } from "@/features/auth/components/TenantSwitcher";
 import { LogoutButton } from "@/features/auth/components/LogoutButton";
+import { ThemeApplier } from "@/features/profile/components/ThemeApplier";
+import { themeBootScript } from "@/features/profile/theme";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="mx-auto max-w-3xl px-4 py-6">
+      <script dangerouslySetInnerHTML={{ __html: themeBootScript }} />
+      <ThemeApplier />
       <nav className="mb-8 flex items-center justify-between border-b border-zinc-200 pb-4 dark:border-zinc-800">
         <span className="font-semibold">OmniCore</span>
         <div className="flex items-center gap-4">

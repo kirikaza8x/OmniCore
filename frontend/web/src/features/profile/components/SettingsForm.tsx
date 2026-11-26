@@ -7,6 +7,7 @@ import { Field } from "@/shared/ui/Field";
 import { messageOf } from "@/shared/ui/errors";
 import { profileApi } from "../api";
 import { settingsSchema } from "../schemas";
+import { applyTheme } from "../theme";
 import type { UserSettings } from "../types";
 
 export function SettingsForm({ settings, onSaved }: { settings: UserSettings; onSaved: () => void }) {
@@ -28,6 +29,7 @@ export function SettingsForm({ settings, onSaved }: { settings: UserSettings; on
     setBusy(true);
     try {
       await profileApi.updateSettings(parsed.data);
+      applyTheme(parsed.data.theme); // takes effect at once, no reload
       setMessage({ tone: "success", text: "Settings saved." });
       onSaved();
     } catch (e) {

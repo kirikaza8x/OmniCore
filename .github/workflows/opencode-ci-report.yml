@@ -1,0 +1,45 @@
+name: opencode-ci-report
+
+# Tells the requester when CI has finished on an opencode/<run> branch ("hey, done, please review").
+# workflow_run only fires for workflow files on the default branch (main), like opencode.yml.
+
+on:
+  workflow_run:
+    workflows: [backend, frontend]
+    types: [completed]
+
+permissions: {}
+
+jobs:
+  report:
+    if: startsWith(github.event.workflow_run.head_branch, 'opencode/')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      issues: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      BRANCH: ${{ github.event.workflow_run.head_branch }}
+      SHA: ${{ github.event.workflow_run.head_sha }}
+      WF: ${{ github.event.workflow_run.name }}
+      CONCLUSION: ${{ github.event.workflow_run.conclusion }}
+      RUN_URL: ${{ github.event.workflow_run.html_url }}
+    steps:
+      - name: Comment on the originating issue
+        run: |
+          set +e
+          msg="$(gh api "repos/$GITHUB_REPOSITORY/commits/$SHA" --jq .commit.message)"
+          issue="$(printf '%s' "$msg" | sed -n 's/^OpenCode-Issue: #\([0-9][0-9]*\)$/\1/p' | head -1)"
+          [ -n "$issue" ] || { echo "no issue trailer; nothing to report"; exit 0; }
+          if [ "$CONCLUSION" = success ]; then
+            label=ready-for-review
+            text="CI \`$WF\` is **green** on \`$BRANCH\`: ready for review (read the diff, then \`git merge --no-ff origin/$BRANCH\` into develop). Run: $RUN_URL"
+          else
+            label=ci-failed
+            text="CI \`$WF\` finished **$CONCLUSION** on \`$BRANCH\`: needs a fix before review. Run: $RUN_URL"
+          fi
+          gh label create "$label" --color 0e8a16 2>/dev/null
+          gh issue edit "$issue" --add-label "$label" 2>/dev/null
+          gh issue comment "$issue" --body "$text"
+          exit 0

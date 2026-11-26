@@ -38,8 +38,8 @@ if bad=$(grep -E "$denied" "$out/changed.txt" | head -3 | tr '\n' ' ') && [ -n "
   reject "touches protected paths: $bad"
 fi
 
-# Unusual file names are rejected instead of handled.
-if bad=$(grep -vE '^[A-Za-z0-9._/@+#-]+$' "$out/changed.txt" | head -3 | tr '\n' ' ') && [ -n "$bad" ]; then
+# Unusual file names are rejected instead of handled. Parentheses are allowed (Next.js route groups like "(app)").
+if bad=$(grep -vE '^[A-Za-z0-9._/@+#()-]+$' "$out/changed.txt" | head -3 | tr '\n' ' ') && [ -n "$bad" ]; then
   reject "unusual file names: $bad"
 fi
 
