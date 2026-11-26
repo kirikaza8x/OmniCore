@@ -72,3 +72,5 @@ The agent tasks API is public preview. It needs a user-to-server token (PAT, OAu
 `GITHUB_TOKEN` is not supported. Issue assignment is also available through REST and GraphQL and accepts
 `custom_agent`, `custom_instructions`, `base_branch` and `target_repo`.
 
+## Known limit of the patch guard
+The guard refuses "unusual file names", which includes Next.js route groups such as `frontend/web/src/app/(app)/layout.tsx` (parentheses). Issue #4 (web theme) was refused for that reason on 2026-11-25 (nothing changed); do tasks that touch such paths by hand, or give OpenCode only the files outside `(app)`.
