@@ -11,6 +11,8 @@ while it waits.
 | `backend.yml` | PRs and pushes changing `backend/c#/**`, `infra/docker/**` or its own workflow | `changes`, `build-and-unit-test`, `integration-test`, `infra-config`, `ci-gate` |
 | `frontend.yml` | PRs and pushes touching `frontend/**` or its workflow | `web` (lint, typecheck, test, build, Docker image) |
 | `opencode.yml` | manual dispatch or `/oc` issue comment | `agent` (read-only), `publish` (draft PR + start CI), `notify` |
+| `opencode-ci-report.yml` | `backend`/`frontend` finished on an `opencode/**` branch | comments "ready for review" / "needs a fix" on the issue |
+| `branch-cleanup.yml` | weekly, or manual (dry run by default) | deletes merged and stale `opencode/**` branches; never `develop`/`main` |
 
 ## Scoped runs
 
@@ -49,17 +51,13 @@ docs in the same change. This keeps parallel sessions from inventing different d
 Claude hands junior work to OpenCode through a task issue, not by chat polling. The shared protocol and agent
 start commands are in [opencode.md](opencode.md#claude-to-opencode-handoff).
 
-## Agent rule: push, then hand off
+## Agent rule after a push
+Never a sleep/poll loop. Behaviour depends on the CI mode below:
 
-After a push the agent **stops**. It does not wait, sleep, poll or re-check the run.
+- `auto` (current): check the run once per push, after other useful work; carry on if it is `in_progress`. Only `completed` + `success` is green. A `cancelled` run (superseded by a newer push) is not a failure: re-run or push again.
+- `manual`: push, end the turn with the commit id and ask for the result.
 
-1. Push the branch and end the turn with the commit id and a request for the result.
-2. The developer (or reviewer) reports whether CI passed or failed.
-3. If it failed, the agent reads the failure, fixes it and pushes again. If it passed, the pipeline is accepted and the
-   work continues. A silent pipeline is not a reason to poll.
-4. Never call an unreported pipeline "verified". Say "pushed; CI result awaited from the developer".
-
-A developer saying "CI passed" counts as the run having shown it. The agent does not need to see the run itself.
+Either way: never call an unseen run "verified"; say "pushed; CI awaited". A developer saying "CI passed" counts as shown.
 
 ## CI mode
 
